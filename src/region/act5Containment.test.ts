@@ -94,10 +94,10 @@ describe('item 1: the Caldera region', () => {
     expect(regionAt(P.rimfoot.x, P.rimfoot.z)?.id).toBe('ashen-waste');
     expect(regionRefusesMount(CALDERA_CENTRE.x, CALDERA_CENTRE.z)).toBe(true);
   });
-  it('the Caldera floor hold is the only new hold, and it is not spread into the region', () => {
-    expect(PHASE_HOLDS.caldera).toEqual(['story.phase.foundryOpen']);
+  it('the Caldera floor hold is retired (N12 PR 2): the floor opens on M53 alone, and the region never read it', () => {
+    expect(PHASE_HOLDS.caldera).toBeUndefined();
     expect(JSON.stringify(REGION_INFO.caldera.openWhen)).not.toContain('foundryOpen');
-    expect(CALDERA_FLOOR_HOLE.openWhen).toEqual({ all: ['story.m53.complete', 'story.phase.foundryOpen'] });
+    expect(CALDERA_FLOOR_HOLE.openWhen).toEqual({ all: ['story.m53.complete'] });
   });
 });
 

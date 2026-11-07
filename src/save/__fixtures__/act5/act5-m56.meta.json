@@ -23,6 +23,7 @@
     "m49",
     "m50",
     "m51",
+    "m52",
     "m53",
     "r26",
     "r27"
@@ -32,10 +33,10 @@
     "level": 30,
     "xp": 87604
   },
-  "xp": 98800,
-  "level": 32,
+  "xp": 109000,
+  "level": 33,
   "rimGateOpen": true,
-  "foundryOpen": true,
+  "foundryOpen": false,
   "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act5Fixtures.gen",
   "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
 }

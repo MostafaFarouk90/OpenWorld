@@ -104,7 +104,8 @@
           "lore.place.rim-camp",
           "lore.person.rook",
           "lore.place.cooling-hall",
-          "lore.place.wyrm-terraces"
+          "lore.place.wyrm-terraces",
+          "howto.siege-orders"
         ]
       },
       "version": 1
@@ -117,16 +118,16 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 10985.0343,
-            "y": 281.9481,
-            "yaw": 2.7778,
-            "z": 6467.899
+            "x": 10993.8626,
+            "y": 286.687,
+            "yaw": 1.7878,
+            "z": 6529.8131
           },
           "hrolf": {
-            "x": 10985.0072,
-            "y": 281.9493,
-            "yaw": 2.8001,
-            "z": 6467.8971
+            "x": 10991.8308,
+            "y": 286.445,
+            "yaw": 3.0725,
+            "z": 6527.1945
           },
           "tobb": {
             "x": 9690,
@@ -1671,6 +1672,7 @@
           "key.music-box": 1,
           "key.oswin-silver-key": 1,
           "key.rooks-whistle": 1,
+          "key.siege-medal": 1,
           "key.silver-convoy-writ": 1,
           "key.walker-tattoo": 1,
           "key.watch-seal": 1,
@@ -1714,7 +1716,7 @@
     },
     "map": {
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AMsSgAcAPXwAPcAPAD38AD3ABwA9OAD2CQwAPeAfAD3/fwA88P8PADvA//8DADrg/v9/ADv///8HADrw//l/ADv/h/8HADrw//gfADv/D/8AO/D/gw8AO///cAA78P8fADy//x8AO/Dh/wcAPPz/AwA7gP//AwA7/v//AwA64P///wA7/v//HwA64P///wEAOUD+//4fADr//wf+AQAbIAAd8P9/AAEGABuADwAcgP//DwAd+AEAHPj//wAdgB8AHf//DwAd+AEAHPD/fwAdgA8AHYQ/AwAdYAAe8AEAPQ4AsgTwAQA8gD8APfgHADyAfwA9+AMAPIA/AD3wAQCnCOABAD0/AD3wBwA9fwA94AcAPTwAPIAHAD38AD3wDwA8gP8APfgHADzAPwA9/wA98AcAPT8APfABAD0fADyAAwA9fAA94AcAPX4AAwQAOfAH4AfwAQA4gD/A/wABPwA5/8H/D/gDADj4n///AAE/ADiA////B/ABAAXwADL4//8/AAFkAAWAHwAxgP//PwABgA8ABfgBADDg//8/AAL4AQAEgD8AMf//fwACwB8ABfgBAC+A////AAP4AAYPADD+//8AA4B/ADbg//8BAAPADwA2/v8DAAT8ADbg/w8ABMAPADb8fwAF/AMAPIB/AD3wBwA9fgA94AcAPTwAPeADAD1+AD3gBwA9PgA9wAMAlgrAAQA9PgA98AMAPT8ADsADAC3wAwAOfgAuHgAO4AcAPX4APeAHAC54AA5+AC7ADwAN4AMALvwADhgALsAfAD38AQA8wB8APfgBAD0PAPIDPAA94AcAPX4APeAPAD18AD2ABwCYCTwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF8AcAEvgBACKAAwAFfwASgB8AKfAHABLwACp/AD3gAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8AAwMAOf4BAAJ4ADnAHwAC8A8AOfgAAoD/AD38DwA8wP8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AMsSgAcAPXwAPcAPAD38AD3ABwA9OAD2CQwAPeAfAD3/fwA88P8PADvA//8DADrg/v9/ADv///8HADrw//l/ADv/h/8HADrw//gfADv/D/8AO/D/gw8AO///cAA78P8fADy//x8AO/Dh/wcAPPz/AwA7gP//AwA7/v//AwA64P///wA7/v//HwA64P///wEAOUD+//4fADr//wf+AQAbIAAd8P9/AAEGABuADwAcgP//DwAd+AEAHPj//wAdgB8AHf//DwAd+AEAHPD/fwAdgA8AHYQ/AwAdYAAe8AEAPQ4AsgTwAQA8gD8APfgHADyAfwA9+AMAPIA/AD3wAQCnCOABAD0/AD3wBwA9fwA94AcAPTwAPIAHAD38AD3wDwA8gP8APfgHADzAPwA9/wA98AcAPT8APfABAD0fADyAAwA9fAA94AcAPX4AAwQAOfAH4AfwAQA4gD/A/wABPwA5/8H/D/gDADj4n///AAE/ADiA////B/ABAAXwADL4//8/AAFkAAWAHwAxgP//PwABgA8ABfgBADDg//8/AAL4AQAEgD8AMf//fwACwB8ABfgBAC+A////AAP4AAYPADD+//8AA4B/ADbg//8BAAPADwA2/v8DAAT8ADbg/w8ABMAPADb8fwAF/AMAPIB/AD3wBwA9fgA94AcAPTwAfDwAPeAHAD1+AD3gBwA9PAA9gAEAmQnAAQA9PgA98AMAPT8ADsADAC3wAwAOfgAuHgAO4AcAPX4APeAHAC54AA5+AC7ADwAN4AMALvwADhgALsAfAD38AQA8wB8APfgBAD0PAPIDPAA94AcAPX4APeAPAD18AD2ABwCYCTwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF8AcAEvgBACKAAwAFfwASgB8AKfAHABLwACp/AD3gAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8AAwMAOf4BAAJ4ADnAHwAC8A8AOfgAAoD/AD38DwA8wP8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
       },
       "version": 2
     },
@@ -1737,7 +1739,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 430,
+        "health": 440,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -1745,10 +1747,10 @@
     },
     "player-position": {
       "data": {
-        "x": 9225.93,
-        "y": 121.8059,
+        "x": 10991.6152,
+        "y": 286.7448,
         "yaw": -3.4907,
-        "z": 5665.79
+        "z": 6530.3086
       },
       "version": 1
     },
@@ -1776,7 +1778,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 3,
-        "xp": 98800
+        "xp": 109000
       },
       "version": 2
     },
@@ -2380,6 +2382,10 @@
             "objectives": {},
             "state": "completed"
           },
+          "m52": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -2928,7 +2934,7 @@
       "data": {
         "lastShelterId": "shelter.camp-crossing.2",
         "seed": 4042,
-        "t": 1340
+        "t": 1343
       },
       "version": 1
     },
@@ -2975,6 +2981,12 @@
           "companions.a4.bond2Said.hrolf": true,
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
+          "favour.snapshot.m52.ashwalkers": 33,
+          "favour.snapshot.m52.dragons": 24,
+          "favour.snapshot.m52.grisel": 31,
+          "favour.snapshot.m52.halvard": 33,
+          "favour.snapshot.m52.oswin": 32,
+          "favour.snapshot.m52.taken": true,
           "gear.shardgem.granted.bellows-engine": true,
           "gear.shardgem.granted.corvin-skarl": true,
           "gear.shardgem.granted.eormen": true,
@@ -3392,7 +3404,7 @@
           "story.m51.complete": true,
           "story.m51.started": true,
           "story.m52.complete": true,
-          "story.phase.foundryOpen": true,
+          "story.m52.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -3659,7 +3671,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 5981,
+  "playtimeSeconds": 5984,
   "reason": "manual",
   "savedAt": 1767225600000
 }

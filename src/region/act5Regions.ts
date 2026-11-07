@@ -14,7 +14,7 @@ export const CALDERA_KILL_XP_FACTOR = 3.0;
 
 /** M47's winch (N10 writes it): the Rim Gate's face opens on it, and N1's gate structure reads it on load. */
 export const RIM_GATE_OPEN_FLAG = 'story.m47.rimGateOpen';
-/** Phase I's hold on the bowl floor (`PHASE_HOLDS.caldera`); N12 PR 2 retires it. */
+/** Phase I's hold on the bowl floor, retired by N12 PR 2 (PHASE_HOLDS.caldera is gone); kept so tests can show an old save carrying it loads cleanly. */
 export const FOUNDRY_OPEN_FLAG = 'story.phase.foundryOpen';
 /** M53 complete: the Inner Gate and the bowl floor open (with the hold retired). */
 export const INNER_GATE_FLAG = 'story.m53.complete';

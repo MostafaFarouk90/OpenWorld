@@ -8,8 +8,9 @@ import { SCENE_ACT4_CAMP } from '../dialogue/content/act4/campScene.dialogue';
 import { SIEGE_ORDER_TREES } from '../siege/orders.dialogue';
 
 describe('merge guard: PHASE_HOLDS (L13 PR 2 x N0 v0.9)', () => {
-  it('holds only the Caldera floor: the Waste hold stays retired (L13) and the Phase I hold stands (N0)', () => {
-    expect(PHASE_HOLDS).toEqual({ caldera: ['story.phase.foundryOpen'] });
+  it('holds nothing: the Waste hold stays retired (L13 PR 2) and the Caldera floor hold too (N12 PR 2)', () => {
+    expect(PHASE_HOLDS).toEqual({});
+    expect(phaseHolds('caldera')).toEqual([]);
     expect(phaseHolds('ashen-waste')).toEqual([]);
   });
 });

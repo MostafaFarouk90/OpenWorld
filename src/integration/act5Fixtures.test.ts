@@ -5,7 +5,7 @@
  * The full drift check is `CHECK_FIXTURES=1` (act5FixturesGen.ts).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ACT5_JUMP_IDS, ACT5_PREREQS, ACT5_PRESET_FAVOUR, ACT5_START_XP, Act5Jump, act5PhaseOf } from '../quests/act5Jump';
+import { ACT5_JUMP_IDS, ACT5_PREREQS, ACT5_PRESET_FAVOUR, ACT5_START_XP, ACT5_PHASE_J_START_XP, Act5Jump, act5PhaseOf, act5StartXpFor } from '../quests/act5Jump';
 import { act5JumpPorts } from '../quests/act5Jump.plugin';
 import { ACT4_JUMP_IDS } from '../quests/act4Jump';
 import { actEnding } from './actEndings';
@@ -62,11 +62,17 @@ describe('the committed Act 5 fixtures', () => {
     for (const q of meta!.injected) expect(f[`story.${q}.complete`], q).toBe(true);
     expect(f[`story.${id}.complete`], 'the target itself is not done').not.toBe(true);
     expect(meta!.rimGateOpen).toBe(id !== 'm47');
-    expect(meta!.foundryOpen).toBe(act5PhaseOf(id) === 'J');
-    expect(Boolean(f[FOUNDRY_OPEN_FLAG])).toBe(act5PhaseOf(id) === 'J');
-    // no preset is baked in: the snapshot flags come only from a preset applied on load
-    expect(Object.keys(f).filter((k) => k.startsWith('favour.snapshot.'))).toEqual([]);
-    expect(meta!.xp).toBeGreaterThanOrEqual(ACT5_START_XP);
+    // N12 PR 2 retired the Phase I hold: no fixture carries its flag, Phase J included
+    expect(meta!.foundryOpen).toBe(false);
+    expect(f[FOUNDRY_OPEN_FLAG]).toBeUndefined();
+    // no preset is baked in: a snapshot is only one an injected quest took itself on completion (N10's M52 snapshot, from
+    // the base's own favour, since N10's real M52 is in the stack); a preset applied on load writes the design's table
+    const snaps = new Set(Object.keys(f).filter((k) => k.startsWith('favour.snapshot.')).map((k) => k.split('.')[2]));
+    for (const q of snaps) expect(meta!.injected, `snapshot ${q}`).toContain(q);
+    // Phase I targets start at 98,800, Phase J targets at their own 109,000 (ruling L1)
+    expect(meta!.xp).toBeGreaterThanOrEqual(act5StartXpFor(id));
+    if (act5PhaseOf(id) === 'J') expect(meta!.xp).toBeGreaterThanOrEqual(ACT5_PHASE_J_START_XP);
+    else expect(meta!.xp).toBeLessThan(ACT5_PHASE_J_START_XP);
   });
 
   it('has nothing beyond the two bases, the 17 ids and the named extras', () => {
