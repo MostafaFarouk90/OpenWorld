@@ -19,7 +19,7 @@ import { f1, f6, f8, guardsTurned } from '../readers';
 import { scarBand } from '../scars';
 import { R27_CHARGES, R27_ENTERED, R27_LAMPS, R27_PROPS } from '../r27.quest';
 import { R28_BURN_COST, R28_LIGHT, R28_PYRE_NS, R28_RITE } from '../r28.quest';
-import { R30_ANVIL, R30_SUNG } from '../r30.quest';
+import { R30_ANVIL, R30_SUNG, R30_YSMERYTH_USE } from '../r30.quest';
 import { M53_WITHDRAWN } from '../m53.quest';
 import { D09_ENTERED, D09_FLOOD_S, D09_LESSON_AFTER, D09_SLUICE_ORDER, D09_SLUICE_USE } from '../d09.quest';
 import { D09_GUARD_PAIR_ARM } from '../spawners';
@@ -112,6 +112,13 @@ export function installR30(k: Kit, offs: Off[], now: () => number = () => perfor
   });
   k.on('interact', (e) => {
     if (e.action === 'interact' && e.interactableId === R30_ANVIL && k.active('r30') && k.objCurrent('r30', 'tune')) run.press(2);
+  });
+  // Ysmeryth perches (no NPC of her own): her prop opens her tree, whose line sets her flag
+  k.on('interact', (e) => {
+    if (e.action !== 'interact' || e.interactableId !== R30_YSMERYTH_USE || !k.active('r30') || !k.objCurrent('r30', 'lines')) return;
+    k.later(() => {
+      if (!k.ctx.services.get('dialogue')?.start('npc-ysmeryth', 'ysmeryth')) k.warn(`${LOG} R30: Ysmeryth's tree did not open`);
+    });
   });
   k.every(6, () => run.update());
   k.on('save.loaded', () => run.reset());
