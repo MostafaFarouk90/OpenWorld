@@ -7,6 +7,7 @@ import { parseAct1 } from '../quests/act1Jump';
 import { parseAct2 } from '../quests/act2Jump';
 import { parseAct3 } from '../quests/act3Jump';
 import { parseAct4 } from '../quests/act4Jump';
+import { parseAct5 } from '../quests/act5Jump';
 import type { Action } from '../input/actions';
 import { STARTER_KIT } from '../inventory/items';
 import { heightAt } from '../terrain/heightfield';
@@ -90,9 +91,9 @@ function writeCompletion(): void {
 /** `?tutorial=full|veteran|kettlewick|t09`: skip the start screen (tests and smoke runs). */
 export function tutorialFromQuery(search: string): { mode: TutorialMode; at?: BeatId } | null {
   const raw = new URLSearchParams(search).get('tutorial');
-  // A valid `?act1=`, `?act2=` or `?act3=` jump (dev) finishes the tutorial itself from a Kettlewick start: no start screen.
+  // A valid `?act1=` to `?act5=` jump (dev) finishes the tutorial itself from a Kettlewick start: no start screen.
   if (!raw) {
-    const jump = import.meta.env.DEV ? parseAct1(search) ?? parseAct2(search) ?? parseAct3(search) ?? parseAct4(search) : null;
+    const jump = import.meta.env.DEV ? parseAct1(search) ?? parseAct2(search) ?? parseAct3(search) ?? parseAct4(search) ?? parseAct5(search) : null;
     return jump && !('error' in jump) ? { mode: 'kettlewick' } : null;
   }
   if (raw === 'full' || raw === 'veteran' || raw === 'kettlewick') return { mode: raw };
