@@ -144,6 +144,8 @@ const plugin: GamePlugin = {
       ev.on('siege.order', () => router.order()),
       ev.on('siege.ally.arrived', (e) => router.allyArrived(e)),
       ...Object.keys(RAM_SFX_ACT5).map((name) => named(name, () => router.ram(name))),
+      named('siege.dragon.breath', () => router.dragonBreath()),
+      named('siege.gong', () => router.gong()),
       named('enemies.shieldLine.broken', () => router.lineBroken()),
       named('dragon.flight', ((e: { actorId: string; on: boolean }) => router.dragonFlight(e)) as (e: never) => void),
       ev.on('telegraph', (e) => router.telegraph(e)),
