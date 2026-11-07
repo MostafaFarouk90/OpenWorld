@@ -476,3 +476,37 @@ describe('clarity wiring on the real game', () => {
     expect(fires).toHaveLength(0);
   });
 });
+
+describe('forgiven hits on the real game (Act 4 L14)', () => {
+  const hitOnPlayer = (t: Awaited<ReturnType<typeof boot>>, attackerId: string) =>
+    t.game.ctx.events.emit('damage.dealt', {
+      attackerId, targetId: t.game.ctx.player.actor.id, outcome: 'hit', kind: 'physical', dealt: 1, killed: false,
+    } as never);
+
+  it('a pity credit in T09 counts a block and flashes the block prompt', async () => {
+    const t = await boot();
+    t.director.begin('full', 't09');
+    t.run(2);
+    const soldier = t.game.ctx.actors.spawn({ kind: 'l14-test-foe', team: 'hostile', maxHealth: 10 });
+    expect(soldier).toBeDefined();
+    const prompts = t.game.ctx.services.get('prompts')!;
+    const before = prompts.count('block');
+    for (let i = 0; i < 3; i++) hitOnPlayer(t, soldier!.id);
+    expect(prompts.count('block')).toBe(before + 1);
+  });
+
+  it('pity from T09 does not carry into the next lesson', async () => {
+    const t = await boot();
+    t.director.begin('full', 't09');
+    t.run(2);
+    const soldier = t.game.ctx.actors.spawn({ kind: 'l14-test-foe', team: 'hostile', maxHealth: 10 });
+    hitOnPlayer(t, soldier.id);
+    hitOnPlayer(t, soldier.id); // one short of a pity credit
+    t.director.begin('full', 't10');
+    t.run(2);
+    const prompts = t.game.ctx.services.get('prompts')!;
+    const before = prompts.count('dodge');
+    hitOnPlayer(t, soldier.id); // would be the third without the reset
+    expect(prompts.count('dodge')).toBe(before);
+  });
+});

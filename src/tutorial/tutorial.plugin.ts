@@ -1,4 +1,4 @@
-import { CombatForgiveness, lessonVerb, type LessonVerb } from './forgiveness';
+import { CombatForgiveness, lessonKey, lessonVerb, verbMechanic, type LessonVerb } from './forgiveness';
 import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
 import type { GameContext } from '../core/Game';
@@ -55,13 +55,13 @@ export const DRILLS: Record<string, DrillDef & { labelKey: string }> = {
     id: 'block',
     labelKey: 'tutorial.replay.block',
     waves: [{ spawnerId: 'replay.blocker', moves: ['soldier.chop'], aggro: true }],
-    steps: [[{ kind: 'count', event: 'blocked', count: 3 }], [{ kind: 'cleared', spawnerIds: ['replay.blocker'] }]],
+    steps: [[{ kind: 'count', event: 'blocked', count: 2 }], [{ kind: 'cleared', spawnerIds: ['replay.blocker'] }]],
   },
   dodge: {
     id: 'dodge',
     labelKey: 'tutorial.replay.dodge',
     waves: [{ spawnerId: 'replay.dodge', moves: ['wraith.sweep'], aggro: true }],
-    steps: [[{ kind: 'count', event: 'dodged', count: 3 }], [{ kind: 'cleared', spawnerIds: ['replay.dodge'] }]],
+    steps: [[{ kind: 'count', event: 'dodged', count: 2 }], [{ kind: 'cleared', spawnerIds: ['replay.dodge'] }]],
   },
   lockon: {
     id: 'lockon',
@@ -130,7 +130,11 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void, lesson:
     if (r.targetId === PLAYER_ID && r.outcome === 'hit' && r.kind !== 'status' && ctx.actors.get(r.attackerId ?? '')?.team === 'hostile') {
       const verb = lesson();
       const credit = verb ? forgiveness.onHitTaken(ctx.clock.seconds, verb) : null;
-      if (credit) send({ type: credit });
+      if (credit) {
+        // a forgiven hit flashes the prompt like a clean block or dodge (CombatVerbs) would
+        ctx.services.get('prompts')?.success(verbMechanic(credit));
+        send({ type: credit });
+      }
     }
     if (r.attackerId !== PLAYER_ID || r.dealt <= 0) return;
     const i = r.attackId ? ATTACK_SLOTS.indexOf(r.attackId) : -1;
@@ -421,12 +425,21 @@ const tutorial: GamePlugin = {
     });
     directorRef = director;
     const forgiveness = new CombatForgiveness();
-    routeEvents(ctx, (e) => director.onEvent(e), () => lessonVerb(director.beat, director.currentStep), forgiveness);
+    routeEvents(ctx, (e) => director.onEvent(e), () => lessonVerb(director.beat, director.currentStep, director.drillActive, director.drillStep), forgiveness);
+    let lastLesson = '';
     ctx.systems.add({
       id: 'tutorial-forgiveness',
       fixedPhase: 'input',
       order: 110,
-      fixedUpdate: () => forgiveness.observe(ctx.clock.seconds, ctx.input.actions.pressed('dodge'), ctx.input.actions.down('block')),
+      fixedUpdate: () => {
+        // a new beat, step or drill starts its pity count from zero
+        const key = lessonKey(director.beat, director.currentStep, director.drillActive, director.drillStep);
+        if (key !== lastLesson) {
+          lastLesson = key;
+          forgiveness.reset();
+        }
+        forgiveness.observe(ctx.clock.seconds, ctx.input.actions.pressed('dodge'), ctx.input.actions.down('block'));
+      },
     });
     // A skipped beat's lines, and the last beat's once it ends, are about a beat that is over: drop them (the
     // `?act1=` jump skips T15 at once, which left Gaut's and Aelfreda's T15 lines up over Brightwater).
