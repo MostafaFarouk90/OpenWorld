@@ -18,7 +18,7 @@
 import type { ChapterHarness } from './chapterHarness';
 import { carryTo, ensure } from './phaseA';
 import {
-  fightGroups, followEscort, playBeat, playQuest, pressAt, sitThrough, tick, useProp, waitFor,
+  fightGroups, followEscort, holdGround, playBeat, playQuest, pressAt, sitThrough, tick, useProp, waitFor,
   type DriverTable, type Handler, type PhaseGRun,
 } from './phaseGDriver';
 import { WAYSTONE_TUNING } from '../waystones/tuning';
@@ -32,6 +32,9 @@ import { RIM_A5_CARRY } from '../quests/content/act5/rim/carry';
 import { M50_CHAMBER_TRIGGER, M50_ORDER, M50_WHEEL, type M50Channel } from '../quests/content/act5/rim/m50.quest';
 import { M51_REPORT, M51_TALK, TERRACES_WAYSTONE, type M51Dragon } from '../quests/content/act5/rim/m51.quest';
 import { M51_HORN } from '../quests/content/act5/rim/director/camp';
+import { M52_START_TRIGGER } from '../quests/content/act5/rim/m52.quest';
+import { SIEGE_POINTS } from '../caldera/calderaSites';
+import { heightAt } from '../terrain/heightfield';
 import { ACT5_PHASE_I } from '../quests/act5Jump';
 
 export type PhaseIQuest = (typeof ACT5_PHASE_I)[number];
@@ -81,7 +84,8 @@ const rekindle = (waystoneId: string): Handler => async (r, q, o) => {
  * (caldera.q.m49.post.wall at 10984,6496); reported to N10. Until it moves, the driver stands at the nearest point inside the
  * span and runs the prop's own interact (its onInteract and the `interact` event, as InteractionSystem.complete does).
  */
-export const PHASE_I_OUT_OF_REACH: ReadonlySet<string> = new Set(['use:m49-post-wall']);
+// N10 moved it (1feb920, with fogFaces.test.ts): the set is empty and stays as the place to name the next one.
+export const PHASE_I_OUT_OF_REACH: ReadonlySet<string> = new Set<string>();
 type Item = { id: string; kind: string; onInteract(a: unknown): void };
 async function pressOutOfReach(r: PhaseGRun, id: string): Promise<void> {
   const { h } = r;
@@ -137,8 +141,12 @@ const brake = (n: 1 | 2): Handler => async (r, q, o) => {
   if (!flag(h, R26_BRAKED(n))) await useProp(r, R26_BRAKE(n));
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 20);
 };
+/** A halt step is current from the load on (N10's `when`): follow the column to the halt, set the brake there, wait out the wall. */
 const halt = (n: 1 | 2): Handler => async (r, q, o) => {
-  await waitFor(r, () => flag(r.h, R26_WAITED(n)) || qs(r.h).objectiveDone(q, o.id), `${q}.${o.id}: the 30 s storm wall`, 90);
+  const { h } = r;
+  await followEscort(r, () => flag(h, R26_AT_HALT(n)) || qs(h).objectiveDone(q, o.id), `${q}.${o.id} (to the halt)`, 2700);
+  if (!qs(h).objectiveDone(q, o.id) && !flag(h, R26_BRAKED(n))) await useProp(r, R26_BRAKE(n));
+  await waitFor(r, () => flag(h, R26_WAITED(n)) || qs(h).objectiveDone(q, o.id), `${q}.${o.id}: the 30 s storm wall`, 90);
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 10);
 };
 
@@ -159,6 +167,34 @@ const channel = (c: M50Channel): Handler => async (r, q, o) => {
     await tick(r, 30, `${q}.${o.id}`);
   }
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 20);
+};
+
+// ---- M52 ---------------------------------------------------------------------------------------------------------------
+/**
+ * A siege step: Cael holds at the gate line's lee (14 m behind the gate) and fights whatever comes within reach of the gate,
+ * the court and the stairs' upper leg, until the step is done. No orders are given (each order is a one-press dialogue; the
+ * driver lets N4's defaults stand) and the ram is fought as it comes.
+ */
+const SIEGE_DEBUG = !!((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PHASE_I_DEBUG);
+/** The reach the siege steps fight at (the lane heads stand ~300 m from the gate's lee). */
+export const SIEGE_REACH_M = 450;
+const siegeStep: Handler = async (r, q, o) => {
+  const { h } = r;
+  const [x, z] = SIEGE_POINTS.lee;
+  const f = h.ctx.player.feet;
+  if (Math.hypot(f.x - x, f.z - z) > 30) await h.approach({ x, y: heightAt(x, z), z }, 1);
+  if (SIEGE_DEBUG) {
+    const siege = h.ctx.services.get('siege') as { current: unknown } | undefined;
+    const hostiles = [...h.ctx.actors.all()].filter((a) => (a as { team?: string }).team === 'hostile' && !a.dead)
+      .map((a) => { const p = (a as { root?: { position: { x: number; z: number } } }).root?.position; return `${a.kind}@${p ? `${p.x.toFixed(0)},${p.z.toFixed(0)}` : '?'}`; });
+    console.log(`[phaseI] ${q}.${o.id}: siege ${JSON.stringify(siege?.current)} hostiles ${hostiles.length}: ${hostiles.slice(0, 12).join(' ')}`);
+  }
+  // N4 bug (reported 2026-11-07): spawned siege foes keep their aggro pending until they see Cael (18 m), so they stand idle at the
+  // lane heads ~300 m down the stairs, outside the siege keep-in. Until the march lands, they are fought at range by script.
+  await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 900);
+  const note = `m52 siege: the foes stood idle at the lane heads (~300 m, outside the keep-in); fought at range by script (N4 bug)`;
+  if (!r.watch.notes.includes(note)) r.watch.notes.push(note);
+  r.trail.scripted.push(`${q}.${o.id}: fought at range by script`);
 };
 
 // ---- M51 ---------------------------------------------------------------------------------------------------------------
@@ -202,6 +238,14 @@ const HANDLERS: Record<string, Handler> = {
   'm51.hathren': dragon('hathren'),
   'm51.fires': scene,
   'm51.report': prop(M51_REPORT, 60),
+  'm52.stairs': scene,
+  'm52.start': trigger(M52_START_TRIGGER),
+  'm52.wave1': siegeStep,
+  'm52.wave2': siegeStep,
+  'm52.wave3': siegeStep,
+  'm52.guard': siegeStep,
+  'm52.wave4': siegeStep,
+  'm52.holds': scene,
 };
 
 export const PHASE_I_TABLE: DriverTable = { handlers: HANDLERS, groups: RIM_A5_GROUPS };

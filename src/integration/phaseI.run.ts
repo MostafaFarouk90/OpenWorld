@@ -27,7 +27,10 @@ import { act5PacingReport, act5TimingMarkdown, estimateAct5Row, phaseIGate, type
 import { readAct5Base, readAct5BaseMeta } from '../save/__fixtures__/act5';
 import { RIM_A5_PACE, paceAt, type RimPaceRow } from '../quests/content/act5/rim/pacing';
 import { ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
-import { FAVOUR_TRACKS } from '../state/favour';
+import { FAVOUR_TRACKS, snapshotFlag } from '../state/favour';
+import { M52_SPARED_ANY, M52_STOOD, M52_STOOD_ROWS, M52_WAVE4_HELD, M52_WOUNDED } from '../quests/content/act5/rim/m52.quest';
+import { RIM_CARD_SEEN_FLAG } from './phaseICard';
+import { INSIDE_FLOOR_POINT } from './act5Fixtures';
 import { R26_CHOICE } from '../quests/content/act5/rim/r26.quest';
 
 const prog = (h: ChapterHarness) => h.ctx.services.require('progression') as unknown as { xp: number; level: number };
@@ -62,6 +65,9 @@ export interface PhaseIResult {
   report: Act5PacingReport;
   gate: { share: number; ok: boolean; reasons: string[] };
   outcomes: { r26: string | undefined };
+  /** M52: the siege's own outcome flags, the snapshot it took, the card and the hold at the phase's end */
+  siege: { wounded: unknown; wave4Held: boolean; sparedAny: boolean; stood: Record<string, boolean>; snapshot: Record<string, unknown> };
+  end: { cardShown: boolean; cardSeen: boolean; floorShut: boolean; foundryHoldMet: boolean };
 }
 
 /** N10's Rim row as Act 5's estimator row: its two local beats are Act 5's `crossing` and `order`. */
@@ -105,7 +111,15 @@ export async function runPhaseI(
     let atAnvil: number | null = null;
     let anvilQuest: string | null = null;
     let current = '';
+    // the Rim card is phase-i's own ActEndingCard (phaseI.plugin.ts), not Act 4's service
+    const card = (globalThis as { __phaseICard?: { readonly active: boolean; readonly visible: boolean; dismiss(): void } }).__phaseICard;
+    let cardShown = false;
     watch.poll = (hh) => {
+      // the card ("The Rim holds") comes up on M52's completion, mid-step: the HUD updates on render
+      if (current === 'm52' && card && !cardShown) {
+        hh.ctx.hud.update(0);
+        if (card.visible) { cardShown = true; card.dismiss(); }
+      }
       cap.push(...capOffenders(hh.ctx.actors.all() as Iterable<CapActor>, prog(hh).level, seen));
       if (atAnvil === null && anvil) {
         const f = hh.ctx.player.feet;
@@ -143,6 +157,26 @@ export async function runPhaseI(
       atAnvil = gold(h);
       anvilQuest = 'after the phase (walked there)';
     }
+    // the card ("The Rim holds") on M52's completion: the HUD updates on render
+    for (let i = 0; i < 60 && played.includes('m52') && !cardShown; i++) {
+      h.ctx.hud.update(0.5);
+      if (card?.visible) { cardShown = true; card.dismiss(); break; }
+      await h.runAsync(15);
+    }
+    const st = h.ctx.state;
+    const containment = h.ctx.services.require('containment');
+    const siege: PhaseIResult['siege'] = {
+      wounded: st.getFlag(M52_WOUNDED as never),
+      wave4Held: st.getBool(M52_WAVE4_HELD as never),
+      sparedAny: st.getBool(M52_SPARED_ANY as never),
+      stood: Object.fromEntries(M52_STOOD_ROWS.map((row) => [row, st.getBool(M52_STOOD(row) as never)])),
+      snapshot: Object.fromEntries(['taken', ...FAVOUR_TRACKS].map((t) => [t, st.getFlag(snapshotFlag('m52', t as never) as never)])),
+    };
+    const end: PhaseIResult['end'] = {
+      cardShown, cardSeen: st.getBool(RIM_CARD_SEEN_FLAG as never),
+      floorShut: !containment.isOpen(INSIDE_FLOOR_POINT.x, INSIDE_FLOOR_POINT.z),
+      foundryHoldMet: st.getBool('story.phase.foundryOpen' as never),
+    };
     const rows = RIM_A5_PACE.filter((row) => trails[row.quest]).map((row) => estimateAct5Row(rimToAct5Row(row), paceAt, trailNodes(trails[row.quest]!)));
     const report = act5PacingReport(rows);
     const g = phaseIGate(report, played);
@@ -165,6 +199,7 @@ export async function runPhaseI(
       report,
       gate: { share: report.phases.I?.share ?? 0, ok: g.ok, reasons: g.reasons },
       outcomes: { r26: h.ctx.state.getString(R26_CHOICE) },
+      siege, end,
     };
     if (atEnd) await atEnd(h, result, trails);
     return result;
@@ -190,6 +225,10 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
       expect(r.cap).toEqual([]);
       expect(r.deaths).toBe(0);
       expect(r.gold.atAnvil).not.toBeNull();
+      expect(r.missing, 'every Phase I quest in the build').toEqual([]);
+      // the phase's end: the card once, the Foundry still shut (the hold PR 2 retires)
+      expect(r.end).toEqual({ cardShown: true, cardSeen: true, floorShut: true, foundryHoldMet: false });
+      expect(r.siege.snapshot.taken).toBe(true);
       expect(r.report.failures, 'no quest under the 40% floor').toEqual([]);
       if (run === 'a') expect(r.gate.ok, `Phase I at ${(r.gate.share * 100).toFixed(1)}%`).toBe(true);
     }, 3_600_000);
