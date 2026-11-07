@@ -1,3 +1,4 @@
+import { ACT5_QUEST_DEFS } from '../content/act5';
 import { ACT4_QUEST_DEFS } from '../content/act4';
 import { describe, expect, it } from 'vitest';
 import { questDefs } from '../content';

@@ -41,6 +41,8 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'caldera.inner-gate.',
   'caldera.anvil.causeway',
   'caldera.siege.',
+  // N11: the Foundry quests' own anchors (src/quests/content/act5/foundry/anchors.ts)
+  'caldera.q.f.',
 ];
 const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   // N2: the Act 5 interiors
@@ -53,6 +55,8 @@ const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   'trg.caldera.terraces',
   'trg.caldera.cooling-hall',
   'trg.caldera.tunnel',
+  // N11: the Foundry quests' triggers
+  'trg.caldera.q.f.',
 ];
 
 describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {

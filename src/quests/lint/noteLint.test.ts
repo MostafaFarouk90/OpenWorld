@@ -1,3 +1,4 @@
+import { ACT5_QUEST_NOTES } from '../content/act5';
 import { describe, expect, it } from 'vitest';
 import { NOTES_UNDER_NPCS } from '../content/act2/notes';
 import { QUEST_NOTES } from '../content/notes';
