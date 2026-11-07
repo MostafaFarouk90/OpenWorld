@@ -33,8 +33,9 @@ import { R27_CAPTAIN } from '../quests/content/act5/foundry/r27.quest';
 import { AELFREDA_COMPANION_DIALOGUE } from '../companions/aelfreda';
 import { D09_SLUICE_ORDER, D09_SLUICE_USE } from '../quests/content/act5/foundry/d09.quest';
 import { M55_TRIAL_USE, M55_ULTHRED } from '../quests/content/act5/foundry/m55.quest';
-import { ULTHRED_OUTCOME } from '../quests/content/act5/foundry/flags';
-const ULTHRED_BOSS = 'ulthred';
+import { winUlthredForTest } from '../bosses/act5/ulthred/testing';
+import { HALL as ULTHRED_HALL, SLAM } from '../bosses/act5/ulthred/tuning';
+import { TRIAL_KIND } from '../bosses/act5/ulthred/hammerTrial';
 import { D10_VENTS, D10_VENT_USE } from '../quests/content/act5/foundry/d10.quest';
 import { M56_COMPANY_USE, M56_YSMERYTH_USE } from '../quests/content/act5/foundry/m56.quest';
 import { M56_CHOICE_FLAG } from '../quests/content/act5/foundry/flags';
@@ -167,38 +168,58 @@ const vey: Handler = async (r, q, o) => {
   try {
     res = winVeyForTest({ ctx: h.ctx, step: () => h.run(1) }, asJ(r).jc.vey);
   } catch (e) {
-    // N6's helper strikes once just after the grace; on this save the strike lands before the window counts as past its
-    // grace (held at 1 HP), so the helper gives up at 2 s. One more blow in the open window strikes him down, as in play.
+    // On this save N6's strike (retried for 2 s) still lands inside the grace and is held at 1 HP; a blow after that, with
+    // the window still open, strikes him down, as in play. Reported to N6.
     const st = h.ctx.bosses.state(VEY_BOSS_ID);
     if (asJ(r).jc.vey !== 'defeated' || !st?.releaseOpen || !/the outcome did not happen/.test((e as Error).message)) throw e;
     h.ctx.damage.apply({ attackerId: h.ctx.player.actor.id, targetId: st.actorId, amount: 1, poise: 0, kind: 'melee', attackId: '1H_Melee_Attack_Chop' });
     await waitFor(r, () => h.ctx.state.getFlag(`boss.${VEY_BOSS_ID}.outcome` as never) === 'defeated' && !h.ctx.bosses.state(VEY_BOSS_ID), 'd09 Vey struck down', 10);
     res = { seconds: 0 };
-    r.trail.scripted.push('d09 Vey: N6 helper strike held at 1 HP; a second blow in the open window struck him down');
+    r.trail.scripted.push('d09 Vey: N6 helper strike held at 1 HP for 2 s; a later blow in the open window struck him down');
   }
   r.trail.scripted.push(`d09 Vey: ${asJ(r).jc.vey} through N6's winVeyForTest (bars chopped and broken by heavy blows), ${res.seconds.toFixed(0)} s`);
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 30);
 };
 
 // ---- M55, D10 (N6 PR 2's trial and Ulthred) -----------------------------------------------------------------------------
+/** M55's hammer trial (N6): Cael waits on the slam's line and steps 3.5 m aside half way through each tell, as N6's own test
+ * dodges, so every slam is aimed at him and misses; three rounds of five win it. */
 const trial: Handler = async (r, q, o) => {
   const { h } = r;
-  if (!h.ctx.services.get('hammerTrial' as never)) {
-    // N6 PR 2's hammer trial is not in this stack yet: N11's stand-in (its director takes the trial's own win event).
-    h.ctx.events.emit('ulthred.trial.won' as never, {} as never);
-    r.trail.scripted.push('m55 trial: N6 PR 2 not in the stack, ulthred.trial.won emitted (stand-in)');
-  } else await useProp(r, M55_TRIAL_USE);
-  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 600);
+  await useProp(r, M55_TRIAL_USE);
+  const svc = h.ctx.services.require('hammerTrial');
+  ensure(svc.running, `${q}.${o.id}: the trial started`);
+  let tells = h.of('telegraph').filter((e) => e.attackId === SLAM.attackId).length;
+  let side = 1;
+  let stepAt = -1;
+  let dodges = 0;
+  for (let i = 0; i < 60 * 600 && svc.running; i++) {
+    const seen = h.of('telegraph').filter((e) => e.attackId === SLAM.attackId).length;
+    if (seen > tells) { tells = seen; stepAt = i + Math.round((SLAM.windupSeconds / 2) * 60); }
+    if (i === stepAt) {
+      const opp = [...h.ctx.actors.all()].find((a) => a.kind === TRIAL_KIND);
+      if (opp?.root) {
+        const yaw = opp.root.rotation.y;
+        const f = h.ctx.player.feet;
+        h.ctx.player.teleport({ x: f.x + Math.cos(yaw) * 3.5 * side, y: f.y, z: f.z - Math.sin(yaw) * 3.5 * side }, 0);
+        side = -side;
+        dodges++;
+      }
+    }
+    h.run(1);
+    if (i % 30 === 29) await h.flush();
+  }
+  r.trail.scripted.push(`m55 trial: N6's real trial, ${dodges} side-steps half way through the tells`);
+  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 30);
 };
+/** D10's Ulthred through N6's winUlthredForTest, from the Hammer Hall's centre. */
 const ulthred: Handler = async (r, q, o) => {
   const { h } = r;
-  if (!h.ctx.bosses.state(ULTHRED_BOSS)) {
-    // N6 PR 2's Ulthred is not in this stack yet: the outcome he writes and the event D10 listens for (stand-in).
-    h.ctx.state.setFlag(ULTHRED_OUTCOME as never, 'defeated' as never);
-    h.ctx.events.emit('boss.defeated' as never, { bossId: ULTHRED_BOSS } as never);
-    r.trail.scripted.push('d10 Ulthred: N6 PR 2 not in the stack, boss.ulthred.outcome defeated + boss.defeated emitted (stand-in)');
-  }
-  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 900);
+  await ensureSpace(h, h.anchor(ULTHRED_HALL.centre));
+  await h.approach(h.anchor(ULTHRED_HALL.centre), 4);
+  const res = await winUlthredForTest({ ctx: h.ctx, step: () => h.run(1) });
+  r.trail.scripted.push(`d10 Ulthred: N6's winUlthredForTest (bars, the drop, cracked anvils, the Heartshard), ${res.seconds.toFixed(0)} s`);
+  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 60);
 };
 const vents: Handler = async (r, q, o) => {
   for (const n of D10_VENTS) if (!flag(r.h, `story.d10.vent${n}`)) await useProp(r, D10_VENT_USE(n));
