@@ -12,8 +12,8 @@
  * - R29: each part carried by the shipped carry kit to the gong frame, the gong hung, struck in Ansgar's count on the beat.
  * - M50: in each chamber the three sluice wheels turned in the chart's order before the gauge fills.
  * - M51: the horn-stone at the camp opens the quest; the dragons are spoken to by their talk props on the terraces.
- * - M52: Wystan's brief and war post, the stairs scene, the start point; the waves held from the gate's lee (going out to foes that
- *   stop short), the household guard, the holds scene, the wounded companion (by their companion tree), Wystan.
+ * - M52: Wystan's brief and war post, the stairs scene, the start point; the waves held from the gate's lee (the foes march on
+ *   it), the household guard, the holds scene, the wounded companion (by their companion tree), Wystan.
  * What has no cheap driver is named in `trail.scripted`.
  */
 import type { ChapterHarness } from './chapterHarness';
@@ -153,32 +153,8 @@ const siegeStep: Handler = async (r, q, o) => {
   const [x, z] = SIEGE_POINTS.lee;
   const f = h.ctx.player.feet;
   if (Math.hypot(f.x - x, f.z - z) > 30) await h.approach({ x, y: heightAt(x, z), z }, 1);
-  // the foes march on the gate line (N4 94da66a, src/siege/march.ts): Cael fights what comes within reach of the lee. A foe that
-  // stops short and stands (as a player would see it) is gone out to: Cael walks to the nearest one and fights there.
-  let walks = 0;
-  for (let round = 0; round < 30 && !done(r, q, o.id)(); round++) {
-    try { await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 30); } catch (e) {
-      // only the round running out (holdGround's own timeout) sends Cael further; any other failure is the run's
-      if (!String((e as Error).message).includes(`${q}.${o.id} (30 s;`)) throw e;
-    }
-    if (done(r, q, o.id)()) break;
-    const f = h.ctx.player.feet;
-    let best: { x: number; y: number; z: number } | null = null;
-    let bestD = Infinity;
-    for (const a of h.ctx.actors.all() as Iterable<{ team?: string; dead?: boolean; spawnTag?: string; root?: { getWorldPosition(v: unknown): { x: number; y: number; z: number } } }>) {
-      if (a.team !== 'hostile' || a.dead || !a.root || !(a.spawnTag ?? '').startsWith('m52.')) continue;
-      const p = a.root.getWorldPosition(f.clone());
-      const d = Math.hypot(p.x - f.x, p.z - f.z);
-      if (d < bestD) { bestD = d; best = { x: p.x, y: p.y, z: p.z }; }
-    }
-    if (best && bestD > SIEGE_REACH_M * 0.5) { await h.approach(best, 3); walks++; }
-  }
-  ensure(done(r, q, o.id)(), `${q}.${o.id} (feet ${h.ctx.player.feet.toArray().map((v) => v.toFixed(0))})`);
-  if (walks) {
-    r.trail.scripted.push(`${q}.${o.id}: went out to foes standing short of the gate ${walks} times`);
-    const note = 'm52 siege: some foes stop short of the gate and stand in "notice" (below the landing); Cael goes out to them';
-    if (!r.watch.notes.includes(note)) r.watch.notes.push(note);
-  }
+  // the foes march on the gate line and wear it (N4 2c83867, src/siege/march.ts): Cael fights what comes within reach of the lee
+  await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 900);
 };
 
 /**
