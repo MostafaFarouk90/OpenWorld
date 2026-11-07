@@ -6,9 +6,10 @@ import { FOUNDRY_A5_NOTE_LIST } from '../../../../quests/content/act5/foundry/no
 import { extendTree, type BuiltTree } from '../../act2/build';
 import { EDRIC_A5F, R30_LINE_TREES, ROOK_A5F, TOBB_A5F, WENNA_A5F, WULFHILD_A5F } from './camp.dialogue';
 import { ALRIC_A5F, ALRIC_BASE, ALRIC_BASE_STRINGS, CAPTAIN_TREE, MOURNER_TREES, STOKER_TREE, VEY_TRUCE_TREE } from './foundry.dialogue';
+import { M56_COMPANY_TREE_DEF, ULTHRED_SPIRIT_TREE, ULTHRED_VOICE_TREE } from './descent.dialogue';
 
 /** New trees (the Foundry quests' own cast). */
-export const FOUNDRY_A5_TREES: readonly BuiltTree[] = [CAPTAIN_TREE, ...MOURNER_TREES, VEY_TRUCE_TREE, STOKER_TREE];
+export const FOUNDRY_A5_TREES: readonly BuiltTree[] = [CAPTAIN_TREE, ...MOURNER_TREES, VEY_TRUCE_TREE, STOKER_TREE, ULTHRED_VOICE_TREE, ULTHRED_SPIRIT_TREE, M56_COMPANY_TREE_DEF];
 /** Extensions of shipped (or Rim) trees: their rules go first. */
 export const FOUNDRY_A5_EXTENSIONS: readonly BuiltTree[] = [WENNA_A5F, WULFHILD_A5F, TOBB_A5F, EDRIC_A5F, ROOK_A5F, ALRIC_A5F, ...R30_LINE_TREES];
 

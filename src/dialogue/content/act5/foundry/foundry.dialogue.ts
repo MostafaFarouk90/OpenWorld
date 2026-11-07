@@ -11,6 +11,7 @@ import { M53_VEY } from '../../../../quests/content/act5/foundry/m53.quest';
 import { R28_MOURNER, R28_PYRE_NS } from '../../../../quests/content/act5/foundry/r28.quest';
 import { R27_CAPTAIN, R27_CHOSEN_EVENT } from '../../../../quests/content/act5/foundry/r27.quest';
 import { C, all, any, at, flagIs, not, offer, open, qActive, voice } from './common';
+import { ALRIC_DESCENT_RULES, ALRIC_DESCENT_SEGMENTS } from './descent.dialogue';
 
 const CA = voice(R27_CAPTAIN);
 const VE = voice(M53_VEY);
@@ -210,8 +211,10 @@ export const ALRIC_A5F: BuiltTree = buildTree({
     { when: offer('d09'), seg: 'a5f-d09-brief' },
     { when: at('d09', 'after'), seg: 'a5f-d09-after' },
     { when: all(qActive('d09'), at('d09', 'enter')), seg: 'a5f-d09-wait' },
+    ...ALRIC_DESCENT_RULES,
   ],
   segments: {
+    ...ALRIC_DESCENT_SEGMENTS,
     'a5f-d09-brief': {
       lines: [
         AL('The Foundry. I worked here once, before Vey, when the vats only held iron.'),

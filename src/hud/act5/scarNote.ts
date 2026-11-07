@@ -1,5 +1,6 @@
 // Act 5 N9 (plans/act5-N9.md section 4, Q13): the Scar line and the Rite note before M56's choice. Pure.
 import { REKINDLE_SCAR_LIMIT } from './ports';
+import { openRimQuests, RIM_OPTIONAL } from '../../quests/content/act5/foundry/readers';
 
 export interface ScarPorts {
   flag(key: string): boolean;
@@ -22,7 +23,7 @@ export function scarNote(p: ScarPorts, limit = REKINDLE_SCAR_LIMIT): { id: strin
   return { id: 'scars.a5', title: p.t('hud.journal.scars.title'), lines };
 }
 
-export const LAST_CHANCE_QUESTS: readonly string[] = ['r28', 'r29', 'r30'];
+export const LAST_CHANCE_QUESTS: readonly string[] = RIM_OPTIONAL;
 
 export interface LastChancePorts {
   flag(key: string): boolean;
@@ -38,14 +39,11 @@ export function lastChanceNote(p: LastChancePorts): { id: string; title: string;
   if (p.flag(SCAR_NOTE_FROM_FLAG)) return null;
   if (p.questState('m54') !== 'inactive') return null;
   if (p.questState('d09') !== 'completed' || p.questState('r27') !== 'completed') return null;
-  const open = LAST_CHANCE_QUESTS.filter((q) => {
-    const s = p.questState(q);
-    // QuestState has no 'offered': an unstarted quest counts as open only when every quest its `startWhen` needs is done.
-    const def = p.questDef(q);
-    if (!def) return false;
-    if (s === 'active') return true;
-    return s === 'inactive' && (p.needs?.(q) ?? []).every((n) => p.questState(n) === 'completed');
-  });
+  // N11's openRimQuests decides what is still open (an unstarted quest counts only when every quest its `startWhen` needs is done).
+  const open = openRimQuests({
+    state: (q) => p.questState(q) as 'inactive' | 'active' | 'completed' | 'failed',
+    canStart: (q) => (p.needs?.(q) ?? []).every((n) => p.questState(n) === 'completed'),
+  }).filter((q) => p.questDef(q) !== undefined);
   if (open.length === 0) return null;
   return {
     id: 'lastchance.m54',

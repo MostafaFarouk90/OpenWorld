@@ -10,7 +10,8 @@ import { R27_CAPTAIN } from './r27.quest';
 import { R28_MOURNER, R28_PYRE_NS } from './r28.quest';
 import { M53_VEY, M53_WITHDRAWN } from './m53.quest';
 import { D09_ENTERED, D09_STOKER } from './d09.quest';
-import { D09_GUARDS_DOWN, VEY_OUTCOME } from './flags';
+import { D09_GUARDS_DOWN, M54_ENTERED, ULTHRED_OUTCOME, VEY_OUTCOME } from './flags';
+import { M55_ULTHRED } from './m55.quest';
 
 const def = (id: string, model: NpcModelId, extra: { scale?: number; tint?: number | null } = {}): NpcDef => ({
   id, nameKey: `npc.${id}.name`, model, scale: extra.scale ?? 1, tint: extra.tint ?? null, dialogueId: `npc-${id}`, idleClip: 'Idle',
@@ -24,6 +25,8 @@ export const FOUNDRY_A5_NPC_DEFS: NpcDef[] = [
   ...R28_PYRE_NS.map((n) => def(R28_MOURNER(n), n === 4 ? 'rogueHooded' : 'rogue', { scale: 0.97, tint: MOURNER_TINT[n - 1]! })),
   def(M53_VEY, 'knight', { scale: 1.08, tint: 0x3a2a24 }),
   def(D09_STOKER, 'rogue', { scale: 0.95, tint: 0x6a5a4a }),
+  // Ulthred, the First Smith, before his fight: the Knight at 1.8 in ember tones (design 9; N6's boss is its own actor)
+  def(M55_ULTHRED, 'knight', { scale: 1.8, tint: 0xd8743a }),
 ];
 
 export const FOUNDRY_A5_NPC_STRINGS: Record<string, string> = {
@@ -34,6 +37,7 @@ export const FOUNDRY_A5_NPC_STRINGS: Record<string, string> = {
   [`npc.${R28_MOURNER(4)}.name`]: 'Wenyth, an Ashwalker',
   [`npc.${M53_VEY}.name`]: 'Morcant Vey, the Regent',
   [`npc.${D09_STOKER}.name`]: 'Old Tam, a stoker',
+  [`npc.${M55_ULTHRED}.name`]: 'Ulthred, the First Smith',
 };
 
 const S = (q: string, s: 'started' | 'complete'): string => `story.${q}.${s}`;
@@ -42,6 +46,8 @@ export const FOUNDRY_A5_NPCS: NpcSpec[] = [
   ...R28_PYRE_NS.map((n): NpcSpec => ({ id: R28_MOURNER(n), post: FA.mourner(n), presentWhen: S('r28', 'started'), absentWhen: S('r28', 'complete') })),
   { id: M53_VEY, post: FA.m53Vey, presentWhen: S('m53', 'started'), absentWhen: M53_WITHDRAWN },
   { id: D09_STOKER, post: FA.d09Stoker, presentWhen: D09_ENTERED, absentWhen: S('d09', 'complete') },
+  // Ulthred stands at the hall's far end once M54 opens its gate, until D10 starts (then N6's boss takes his place)
+  { id: M55_ULTHRED, post: 'caldera.int.hammer.ulthred', presentWhen: S('m54', 'complete'), absentWhen: S('d10', 'started') },
 ];
 
 const active = (q: string): Condition => ({ quest: q, state: 'active' });
@@ -62,6 +68,10 @@ export const FOUNDRY_A5_POST_ROWS: readonly PostRule[] = [
   },
   {
     npcId: 'alric', home: 'npc-post.alric.rim', posts: [
+      // M56: on the Anvil of Ages once Ulthred has fallen
+      { when: { any: [{ quest: 'd10', state: 'completed' }, { all: [active('d10'), flag(ULTHRED_OUTCOME, 'defeated')] }] }, anchorId: FA.m56Alric },
+      // M54 (once Cael is below) to D10: in the Hammer Hall's approach
+      { when: { any: [{ all: [active('m54'), flag(M54_ENTERED)] }, { quest: 'm54', state: 'completed' }] }, anchorId: 'caldera.int.hammer.alric' },
       // after Vey's fight, at the Foundry's foot for D09's last talk
       { when: { all: [active('d09'), { any: [flag(VEY_OUTCOME, 'spared'), flag(VEY_OUTCOME, 'defeated')] }] }, anchorId: FA.d09AlricFoot },
       { when: { all: [{ any: [{ quest: 'm53', state: 'completed' }, active('d09')] }, { not: flag(D09_ENTERED) }, { not: { quest: 'd09', state: 'completed' } }] }, anchorId: FA.d09Alric },

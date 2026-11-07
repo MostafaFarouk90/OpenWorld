@@ -8,6 +8,8 @@ import { R28_NAME_NOTE } from './r28.quest';
 import { R30_PAGE } from './r30.quest';
 import { M53_NOTES } from './m53.quest';
 import { D09_NOTES } from './d09.quest';
+import { M54_MURAL_NOTE } from './m54.quest';
+import { D10_MARK_NOTE } from './d10.quest';
 
 const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string[], look: Act2Note['look'] = 'page'): Act2Note =>
   ({ id, anchorId, speaker, lines, look });
@@ -77,4 +79,24 @@ export const FOUNDRY_A5_NOTE_LIST: Act2Note[] = [
     'A map on stoker\'s vellum, older than the Foundry. Seven anvils marked across lands I do not know, each with a hammer drawn beside it. Only one of them is ours.',
     'Alric will want to see this.',
   ]),
+  // M54: the four murals of the Hammer Hall's approach, in walking order (the central mystery's answer, design 7.8)
+  n(M54_MURAL_NOTE(1), 'caldera.int.hammer.mural.1', 'cael', [
+    'The first panel: a king with a hammer stands on a mountain that is still burning. Around him, seven great shapes with wings curl like sleeping dogs. Under his feet the words "the land was cold".',
+  ], 'grave'),
+  n(M54_MURAL_NOTE(2), 'caldera.int.hammer.mural.2', 'cael', [
+    'The second: the king holds out his hand and the shapes come to him. He is smiling. Each one has a chain in its mouth, and each chain runs to an anvil.',
+  ], 'grave'),
+  n(M54_MURAL_NOTE(3), 'caldera.int.hammer.mural.3', 'cael', [
+    'The third: the anvil glows and the keepers sleep around it, their hearts drawn as small suns, fed into the fire one at a time. The land around the mountain is painted green.',
+    'Someone has scratched the king\'s face out of this one, very carefully.',
+  ], 'grave'),
+  n(M54_MURAL_NOTE(4), 'caldera.int.hammer.mural.4', 'cael', [
+    'The last: the king, old, kneels at the anvil and lays his own crown on it. The chains are gone. In their place, a single shard of light, held in a hand that is not his.',
+    'The keepers were never sleeping. They were bound. And the hand at the end could be mine.',
+  ], 'grave'),
+  // D10: the stokers' last marks beside the hall's last door
+  n(D10_MARK_NOTE(1), FA.d10Mark(1), 'note', ['Scratched into the stone at knee height: a hammer, and under it "Tam was here". Old Tam\'s hand, younger.']),
+  n(D10_MARK_NOTE(2), FA.d10Mark(2), 'note', ['A row of stokers\' marks, one for each who went through this door. The last nine have no second mark beside them, the one that meant "came back".']),
+  n(D10_MARK_NOTE(3), FA.d10Mark(3), 'note', ['In careful letters: "He speaks to you on the way in. Do not answer him on the way out."']),
+  n(D10_MARK_NOTE(4), FA.d10Mark(4), 'cael', ['A child\'s drawing, scratched with a nail: a dragon, a sun, and a little figure between them with a hammer. Someone has drawn a heart around all three.']),
 ];

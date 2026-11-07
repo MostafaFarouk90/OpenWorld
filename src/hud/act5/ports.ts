@@ -1,11 +1,8 @@
 // Act 5 N9 (plans/act5-N9.md section 14): the values other Act 5 threads own, behind one port each with a documented
 // default. When the owner's module exists, the default is replaced by an import in this one file.
 
-/**
- * Rekindle takes Cael's life at this many Scars or more (plan Part 2.7, Q13). N11 PR 2 owns the rule
- * (`story.m56.caelLives`); until its export exists this is the plan's figure.
- */
-export const REKINDLE_SCAR_LIMIT = 8;
+/** Rekindle takes Cael's life at this many Scars or more (plan Part 2.7, Q13): N11's rule, imported so the two never disagree. */
+export { REKINDLE_SCAR_LIMIT } from '../../quests/content/act5/foundry/scars';
 
 /**
  * The siege ids the HUD draws: N4 confirmed `m52` and `r27` (plans/act5-N4.md section 12). An id that is not listed hides the

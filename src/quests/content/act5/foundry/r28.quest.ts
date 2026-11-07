@@ -1,7 +1,7 @@
 import type { Condition, QuestDef } from '../../../types';
 import { reads, story } from '../../act2/helpers';
 import { R28_LAID, R28_LIT, R28_PYRES, R28_RISEN_DOWN } from './flags';
-import { phaseJOpen } from './phase';
+import { NOT_DESCENDED, phaseJOpen } from './phase';
 import { rewardOf } from './rewards';
 
 export const R28_PYRE_NS = [1, 2, 3, 4] as const;
@@ -34,7 +34,7 @@ export const r28: QuestDef = {
   titleKey: 'quest.r28.title',
   summaryKey: 'quest.r28.summary',
   sequential: false,
-  startWhen: phaseJOpen(),
+  startWhen: { all: [phaseJOpen(), NOT_DESCENDED] },
   objectives: [
     { id: 'brief', type: 'talk', target: 'wulfhild', textKey: 'quest.r28.brief' },
     ...R28_PYRE_NS.flatMap((n) => [
