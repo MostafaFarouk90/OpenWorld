@@ -25,6 +25,7 @@ export const CAPTAIN_TREE: BuiltTree = buildTree({
   id: `npc-${R27_CAPTAIN}`,
   start: [
     { when: at('r27', 'captain'), seg: 'r27-captain' },
+    { when: at('r27', 'ready'), seg: 'r27-ready' },
     { when: at('r27', 'choose'), seg: 'r27-choose' },
     { when: qActive('r27'), seg: 'r27-wait' },
     { when: all(), seg: 'idle' },
@@ -37,9 +38,19 @@ export const CAPTAIN_TREE: BuiltTree = buildTree({
         { s: R27_CAPTAIN, t: 'The keep sent me stewards. Good with ledgers, bad with rock. They will hold the posts if someone shows them which end of a spear is which.', when: r10('stewards') },
         { s: R27_CAPTAIN, t: 'The keep sent me half miners and half stewards. They argue. That is fine; it keeps them awake.', when: r10('compromise') },
         { s: R27_CAPTAIN, t: 'The keep sent me nobody. Wenna\'s diggers and me. We will make do; we always have.', when: not(any(r10('miners'), r10('stewards'), r10('compromise'))) },
+        CA('Vey\'s people dug through from the Waste side. We heard them stop an hour ago. That is not a good sound.'),
+        C('How long have we got?'),
         CA('Three props on the old shoring, four lamps along the gallery, three charges on the near seal. Do them in any order. Do them fast.'),
         { s: R27_CAPTAIN, t: 'And the far door is open. Some fool in the keep sent only the leaders up the stairs, so nobody sealed the far end. They will come from both sides.', when: leaders },
         CA('When it is ready, stand at the line by the second post and we will see who is louder, them or us.'),
+      ],
+    },
+    'r27-ready': {
+      lines: [
+        CA('Props in, lamps lit, charges set. I checked them twice; you did them right. That is rarer than you would think.'),
+        CA('Wenna\'s people on the left posts, mine on the right. You in the middle, because you are the one with the shard.'),
+        C('And if the line breaks?'),
+        CA('Then we fall back past the lamps and do it again. Nobody dies in my tunnel today. That is an order, and I outrank the rock.'),
       ],
     },
     'r27-choose': {
@@ -64,26 +75,30 @@ export const CAPTAIN_TREE: BuiltTree = buildTree({
 });
 
 // ---- the mourners: R28 ------------------------------------------------------------------------------------------------------
-const MOURNER: Record<number, { dead: string; lines: readonly [string, string, string]; answer: string }> = {
+const MOURNER: Record<number, { dead: string; lines: readonly [string, string, string]; answer: string; last: string }> = {
   1: {
     dead: 'Ceolwin',
     lines: ['That is Ceolwin under the cloak. We drew bows together on the first stair. She would not fall back when the horn went.', 'Her name is inside her shield, where only she would see it. She painted it the night before the gate.', 'Take her bowstring to the pyre. She said a string should burn with the archer, or it pulls crooked for the next one.'],
     answer: 'I will see her off with it.',
+    last: 'Thank you. She hated being late for anything.',
   },
   2: {
     dead: 'Osric',
     lines: ['Osric drove my carts up the rim stairs. Forty crates. He would have made it forty-one if they had let him.', 'His tally-stick will have his name on it. He cut it deep on the last notch, like he knew.', 'His driving gloves. Put them on the wood, knight. And careful: he twitched when they carried him. The heat is in him.'],
     answer: 'If he rises, I will lay him down gently.',
+    last: 'He would have counted the steps up to the wood. Forty-one, I expect.',
   },
   3: {
     dead: 'Edda',
     lines: ['Edda Tallowhand. She dug Deepdelve before any of us were born, and she dug the Rim when Wenna asked.', 'Look on her pick handle for the name. Miners burn them there so the rock knows who to thank.', 'And this: her tallow lamp. It never once stayed lit in a draught. She will want it anyway.'],
     answer: 'The rock will know who to thank.',
+    last: 'Go on, then. Before I start laughing at her myself.',
   },
   4: {
     dead: 'Hrefna',
     lines: ['Hrefna walked with us from the Waste. She carried water for the lowlanders on the stairs, under the arrows.', 'Her name is in the knot-cord on her spear. Four turns, a loop, three. Wulfhild taught you the count?', 'Lay her water-skin on the pyre. And be ready. She did not want to die. I think she still does not.'],
     answer: 'I will be ready.',
+    last: 'Walk soft by her pyre. The ash listens.',
   },
 };
 export const MOURNER_TREES: readonly BuiltTree[] = R28_PYRE_NS.map((n) => {
@@ -93,7 +108,7 @@ export const MOURNER_TREES: readonly BuiltTree[] = R28_PYRE_NS.map((n) => {
     id: `npc-${R28_MOURNER(n)}`,
     start: [{ when: open('r28', `mourner${n}`), seg: 'r28-mourner' }, { when: all(), seg: 'idle' }],
     segments: {
-      'r28-mourner': { lines: [MO(m.lines[0]), MO(m.lines[1]), MO(m.lines[2]), C(m.answer)] },
+      'r28-mourner': { lines: [MO(m.lines[0]), MO(m.lines[1]), MO(m.lines[2]), C(m.answer), MO(m.last)] },
       idle: { lines: [MO(`${m.dead} would have liked the fire. Thank you.`)] },
     },
   });
@@ -113,6 +128,8 @@ const VEY_TRUCE_BUILT: BuiltTree = buildTree({
     'm53-truce': {
       lines: [
         VE('You came. Edric said you would; he always thought better of people than I taught him to.'),
+        VE('Sit, if you like. No? You stand like your old captain did. He also never sat with me.'),
+        C('Say what you came to say.'),
         VE('Hear me first. The Forge under this mountain is dying. Not sleeping: dying. Its fire goes out a little more every year, and the blight comes in where the warmth was.'),
         {
           s: M53_VEY, t: 'It cannot be mended. Everything that is broken, stays broken. I have read every page there is.',
@@ -126,6 +143,7 @@ const VEY_TRUCE_BUILT: BuiltTree = buildTree({
     },
     'm53-part2': {
       lines: [
+        VE('So be it. You hold to hope. I held to it for thirty years, and I watched it cost us a village a winter.'),
         VE('Then it must be made into something else. A weapon. Dragon hearts in the Foundry\'s crucibles, and the fire turned outward to burn the blight to the root.'),
         {
           s: M53_VEY, t: 'Three hearts would do it. Perhaps four. What are four dragons against a kingdom?',
@@ -140,6 +158,8 @@ const VEY_TRUCE_BUILT: BuiltTree = buildTree({
     },
     'm53-part3': {
       lines: [
+        VE('You think me a monster. Perhaps. Monsters keep the lamps lit while good men argue about the price of oil.'),
+        C('You keep hearts in jars, Vey.'),
         VE('And then there is you. You carry the Heartshard. It is a piece of the Forge\'s own fire, and it is the only key the Foundry\'s last door will take.'),
         ...([
           ['light', 'It is not yours. It never was.', not(any(scars('heavy'), scars('grave')))],
@@ -158,6 +178,8 @@ const VEY_TRUCE_BUILT: BuiltTree = buildTree({
     'm53-end': {
       lines: [
         VE('So. I expected nothing else. I had to ask; a regent always has to ask.'),
+        VE('Tell Edric I kept his mother\'s letters. They are in the Foundry, with the rest of what I could not throw away.'),
+        C('Tell him yourself.'),
         VE('The truce holds until I am through the Foundry door. After that, come down if you must. I will be waiting where the iron is hottest.', [{ setFlag: M53_TRUCE_SEEN, value: true }]),
       ],
     },
@@ -172,7 +194,11 @@ export const VEY_TRUCE_TREE: BuiltTree = {
   ...VEY_TRUCE_BUILT,
   def: {
     ...VEY_TRUCE_BUILT.def,
-    nodes: VEY_TRUCE_BUILT.def.nodes.map((n) => (n.id === 'm53-part3-2' ? { ...n, next: 'm53-part3-3' } : n.id === 'm53-part3-3' ? { ...n, next: 'm53-part3-4' } : n)),
+    nodes: (() => {
+      const nodes = VEY_TRUCE_BUILT.def.nodes;
+      const bands = nodes.filter((n) => n.choices?.some((c) => c.id === 'eormen')).map((n) => n.id);
+      return nodes.map((n) => { const i = bands.indexOf(n.id); return i >= 0 && i + 1 < bands.length ? { ...n, next: bands[i + 1]! } : n; });
+    })(),
   },
 };
 
@@ -193,6 +219,8 @@ export const ALRIC_A5F: BuiltTree = buildTree({
         AL('Below it, the vat gallery, where he kept the hearts. Grisel guards. Paid men. Some of them still have families on the rim.'),
         C('And Vey?'),
         AL('At the bottom, at the great crucible. He will have his household with him, and the people he made watch.'),
+        C('You know the way well.'),
+        AL('I carried coal down it for eleven years. I could walk it blind. Some nights I still do, in my sleep.'),
         AL('I will not go in with you. My hands shake near those vats now. But I will be at the foot of the stair when it is done, one way or the other.'),
         AL('The door shuts behind whoever enters. Take what you need from the camp first.'),
         {
@@ -212,6 +240,11 @@ export const ALRIC_A5F: BuiltTree = buildTree({
         { s: 'alric', t: 'He is dead. He fought to the last, and the iron took him. I find I cannot hate him now. I tried.', when: not(spared) },
         C('There is a door past the crucible. Older than all of this.'),
         AL('The Hammer Hall. The first king\'s forge. Something is awake down there, and it has been listening to us.'),
+        C('You knew.'),
+        AL('I suspected. When I was a boy the stokers left bread at that door. Nobody said why. You do not ask why in a foundry.'),
+        AL('The hum in the walls. You have heard it too, since the Waste. It is louder here.'),
+        C('It sounds like a song.'),
+        AL('It sounds like a music box. My mother had one. That is the part I do not like.'),
         { s: 'alric', t: 'Halvard will want the Regent alive for the courts. Oswin will want him hanged. Neither will thank you.', when: spared },
         { s: 'alric', t: 'Halvard will call it justice. Oswin will call it a waste of a good trial. Both will remember it.', when: not(spared) },
         AL('Rest first. When you are ready, I will show you the way down.', [{ setFlag: D09_OUTCOME_SEEN, value: true }]),
@@ -240,6 +273,11 @@ export const STOKER_TREE: BuiltTree = buildTree({
         TA('The order is on the plate by the basin. I scratched it there myself, so the next fool would not drown.'),
         C('And the wrong order?'),
         TA('Then the runnel fills and throws you off it like a cat off a stove. You will live. You will not enjoy it.'),
+        C('Why did they chain you here?'),
+        TA('Because I would not feed the vats. Hearts burn hot, they said. Forty years of iron and I never once put a living thing in a crucible.'),
+        TA('The Regent came down himself to ask me. Polite as a priest. I told him where to put his hearts.'),
+        TA('He laughed. He said I was the only honest man in the Foundry. Then he had them bring the chain.'),
+        C('There is a shift board by the lift. Is your name on it?'),
         TA('Right. Now cut the chain. I am going up, and I am never coming down again.'),
       ],
     },
@@ -254,6 +292,8 @@ export const WENNA_D09_SEGMENT: Record<string, { lines: Line[] }> = {
       WE('Down here. Quietly. Those are my family\'s guards at the vats, and I have been talking to them for an hour.'),
       { s: 'wenna', t: 'All four will stand down. They knew my mother. They are tired of guarding hearts.', when: flagIs(D09_TURNED, 4) },
       { s: 'wenna', t: 'Two of them will stand down. The other two have Vey\'s gold in their teeth. I could not reach them.', when: not(flagIs(D09_TURNED, 4)) },
+      C('And you? Vey\'s household is below.'),
+      WE('I am a Grisel. We are very good at not being where the fighting is. My mother taught me that, and you taught me when to stop.'),
       WE('Go on. I will take the ones who listened up the stair.', [{ setFlag: D09_WENNA_MET, value: true }]),
     ],
   },

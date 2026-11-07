@@ -26,6 +26,9 @@ export const FOUNDRY_A5_NOTE_LIST: Act2Note[] = [
     'An iron door is bricked into the wall by the mouth, its hinges the size of my arm. Someone chiselled a hammer over the lintel and then, later, scratched it out.',
     'The bricks are old. The mortar between the bottom rows is not.',
   ], 'box'),
+  n(R27_NOTES.roster, FA.tunnelNote('roster'), 'note', [
+    'A slate hung on a nail, the garrison\'s roster in Dagna\'s hand: twelve names, a post for each, and beside every name the word "stays".',
+  ]),
   // R28: the names
   ...[1, 2, 3, 4].map((i) => n(R28_NAME_NOTE(i), FA.name(i), 'cael', [
     [
@@ -50,6 +53,13 @@ export const FOUNDRY_A5_NOTE_LIST: Act2Note[] = [
     'A wax seal pressed into the truce banner\'s cord: a rearing bear, Aldous Grisel\'s mark. Under it, scratched: "For the boy king. Not for him."',
   ]),
   // D09
+  n(D09_NOTES.shift, FA.d09Shift, 'note', [
+    'A stokers\' shift board by the lift, chalk names in three columns. Most are struck through. One near the bottom is circled twice: "Tam. Floor one. Do not feed."',
+  ]),
+  n(D09_NOTES.letters, FA.d09Letters, 'cael', [
+    'A bundle of letters tied with a black cord, set on the last step as if for someone to find. The seal on each is Edric\'s mother\'s.',
+    'The top one is unopened. On the back, in Vey\'s hand: "For the boy, when he is old enough to hate me properly."',
+  ]),
   n(D09_NOTES.plate, FA.d09Plate, 'note', [
     'A stokers\' plate bolted to a pillar beside the sluices: three wheels drawn as circles, numbered in the old way. The west wheel first, then the east, then the middle. "Never the middle first," someone has scratched. "It floods the runs."',
   ]),

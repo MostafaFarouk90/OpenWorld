@@ -13,7 +13,7 @@ export const R27_CAPTAIN = 'tunnel-captain';
 export const R27_ENTERED = 'story.r27.entered';
 /** Raised by the choice line (the step is done on the flag, not on a talk ending). */
 export const R27_CHOSEN_EVENT = 'story.r27.chosen';
-export const R27_NOTES = { tally: 'note-r27-tally', door: 'note-r27-old-door' } as const;
+export const R27_NOTES = { tally: 'note-r27-tally', door: 'note-r27-old-door', roster: 'note-r27-roster' } as const;
 export { R27_CHARGE, R27_LAMP, R27_PROP };
 
 /**
@@ -35,7 +35,8 @@ export const r27: QuestDef = {
     interacts('props', 'quest.r27.props', R27_PROPS.map(R27_USE.prop)),
     interacts('lamps', 'quest.r27.lamps', R27_LAMPS.map(R27_USE.lamp)),
     interacts('charges', 'quest.r27.charges', R27_CHARGES.map(R27_USE.charge)),
-    reads('signs', 'quest.r27.signs', [R27_NOTES.tally, R27_NOTES.door], { optional: false }),
+    reads('signs', 'quest.r27.signs', [R27_NOTES.tally, R27_NOTES.door, R27_NOTES.roster], { optional: false }),
+    { id: 'ready', type: 'talk', target: R27_CAPTAIN, textKey: 'quest.r27.ready' },
     story('hold', 'quest.r27.hold', R27_HELD, { doneWhen: { flag: R27_HELD, equals: true } }),
     story('choose', 'quest.r27.choose', R27_CHOSEN_EVENT, { doneWhen: { any: [{ flag: R27_CHOICE, equals: 'collapse' }, { flag: R27_CHOICE, equals: 'keep' }] } }),
     { id: 'report', type: 'talk', target: 'wenna', textKey: 'quest.r27.report' },
