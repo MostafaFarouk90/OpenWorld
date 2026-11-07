@@ -74,7 +74,7 @@ describe('forging at the rim anvil', () => {
       const slot = TIER5_ROWS.find((r) => r.id === to)!.slot;
       expect(c.materials).toEqual([{ itemId: FORGE_HEART_FRAGMENT, count: slot === 'offhand' ? 1 : 2 }]);
       expect(c.ingots).toBe(0);
-      expect(c.gold).toBe(slot === 'weapon' ? 500 : slot === 'armour' ? 400 : 300);
+      expect(c.gold).toBe(slot === 'weapon' ? 300 : slot === 'armour' ? 250 : 300);
     }
   });
   it('turns the tier 4 piece into the Sunforged one, taking fragments and gold, keeping it equipped', () => {
@@ -86,7 +86,7 @@ describe('forging at the rim anvil', () => {
     expect(inv.equipped('weapon')).toBe('sunforged-dawnbrand');
     expect(inv.gear('sunforged-dawnbrand')).toEqual({ temper: 0 });
     expect(inv.count(FORGE_HEART_FRAGMENT)).toBe(1);
-    expect(inv.gold).toBe(100);
+    expect(inv.gold).toBe(300);
   });
   it('lets a Knight forge Dawnbrand from the M39 Oathblade', () => {
     const inv = testInventory({ 'gauts-oathblade': 1, [FORGE_HEART_FRAGMENT]: 2 }, 500);
@@ -96,7 +96,7 @@ describe('forging at the rim anvil', () => {
   it.each([
     ['1 fragment held', { 'wyrm-tempered-oathblade': 1, [FORGE_HEART_FRAGMENT]: 1 }, 999, 'no-materials'],
     ['no fragments', { 'wyrm-tempered-oathblade': 1 }, 999, 'no-materials'],
-    ['no gold', { 'wyrm-tempered-oathblade': 1, [FORGE_HEART_FRAGMENT]: 2 }, 499, 'no-gold'],
+    ['no gold', { 'wyrm-tempered-oathblade': 1, [FORGE_HEART_FRAGMENT]: 2 }, 299, 'no-gold'],
     ['piece not held', { [FORGE_HEART_FRAGMENT]: 2 }, 999, 'not-held'],
     ['already owned', { 'wyrm-tempered-oathblade': 1, 'sunforged-dawnbrand': 1, [FORGE_HEART_FRAGMENT]: 2 }, 999, 'owned'],
   ] as const)('refuses %s and takes nothing', (_n, items, gold, reason) => {
@@ -135,7 +135,7 @@ describe('the session modes', () => {
   it('forges tier 5 at the rim and shows the cost', () => {
     const t = make(HELD, 600, true);
     expect(t.s.open('rim')).toBe(true);
-    expect(row(t.s, 'wyrm-tempered-oathblade').forge).toMatchObject({ to: 'sunforged-dawnbrand', gold: 500, canAfford: true, materials: [{ itemId: FORGE_HEART_FRAGMENT, count: 2 }] });
+    expect(row(t.s, 'wyrm-tempered-oathblade').forge).toMatchObject({ to: 'sunforged-dawnbrand', gold: 300, canAfford: true, materials: [{ itemId: FORGE_HEART_FRAGMENT, count: 2 }] });
     t.s.forge('wyrm-tempered-oathblade');
     expect(t.s.view().lastResult).toEqual({ ok: true, perfect: false, forged: 'sunforged-dawnbrand' });
   });
