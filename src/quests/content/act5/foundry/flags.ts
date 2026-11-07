@@ -40,6 +40,8 @@ export const R30_TUNE_FAILS = 'story.r30.tuneFails';
 export const M53_TRUCE_SEEN = 'story.m53.truce';
 export const M53_BROKEN_ARM = 'story.m53.brokenArmed';
 export const M53_BROKEN_DOWN = 'story.m53.brokenDown';
+/** The Scar band (scars.ts `scarBand`) the director writes while the truce runs, so Vey's third part can pick its lines. */
+export const M53_SCAR_BAND = 'story.m53.scarBand';
 
 // ---- D09 -------------------------------------------------------------------------------------------------------------------
 /** The slag is routed and the lift gate opens (N2's `foundry.lift.gate` reads it). */
@@ -51,6 +53,8 @@ export const D09_TURNED = 'story.d09.turned';
 export const D09_PATROL_ARM = 'story.d09.patrolArmed';
 export const D09_PATROL_DOWN = 'story.d09.patrolDown';
 export const D09_GUARDS_ARM = 'story.d09.guardsArmed';
+/** F1 Spy: Wenna has met the player in the vat gallery (her talk's last line); the untouched guard pairs arm after it. */
+export const D09_WENNA_MET = 'story.d09.wennaMet';
 export const D09_GUARDS_DOWN = 'story.d09.guardsDown';
 export const VEY_OUTCOME = 'boss.vey.outcome';
 

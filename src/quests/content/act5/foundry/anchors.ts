@@ -30,6 +30,7 @@ export const FA = {
   m53Edric: `${F}.m53.edric`,
   r28Wulfhild: `${F}.r28.wulfhild`,
   d09Alric: `${F}.d09.alric`,
+  d09AlricFoot: `${F}.d09.alric-foot`,
   m53Vey: `${F}.m53.vey`,
   m53Note: (k: string) => `${F}.m53.note.${k}`,
   m53Foe: (n: number) => `${F}.m53.foe.${n}`,
@@ -69,4 +70,6 @@ export const NEAR_ANCHORS: readonly NearAnchor[] = [
   // D09: the captive stoker on floor 1 (near the checkpoint), the sluices' plate (3 m in front of the first sluice)
   near(FA.d09Stoker, `${FD}.checkpoint.1`, 3, 2),
   near(FA.d09Plate, `${FD}.sluice.1`, 4, 5),
+  // D09: Alric comes down to the foot once Vey's fight is over (beside the link to the Hammer Hall)
+  near(FA.d09AlricFoot, `${FD}.link.hammer`, 2, -3),
 ];

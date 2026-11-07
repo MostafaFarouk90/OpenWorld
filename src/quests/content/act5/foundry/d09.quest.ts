@@ -50,7 +50,8 @@ export const d09: QuestDef = {
   ],
   rewards: [
     ...rewardOf('d09'),
-    // design 3: spared O +4 H -4; struck down H +4 O -2
-    { if: { flag: VEY_OUTCOME, equals: 'spared' }, then: [{ favour: 'oswin', delta: 4 }, { favour: 'halvard', delta: -4 }], else: [{ favour: 'halvard', delta: 4 }, { favour: 'oswin', delta: -2 }] },
+    // design 3: spared O +4 H -4; struck down H +4 O -2. The Spare's O +4 is paid by N6's BOSS_MERCY row (the hold-T mercy
+    // tally, as Redmane and Skarl), so only the rest is paid here.
+    { if: { flag: VEY_OUTCOME, equals: 'spared' }, then: [{ favour: 'halvard', delta: -4 }], else: [{ favour: 'halvard', delta: 4 }, { favour: 'oswin', delta: -2 }] },
   ],
 };
