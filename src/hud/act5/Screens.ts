@@ -117,7 +117,7 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
     this.age = 0;
     this.fade = 0;
     this.held = 0;
-    setShown(this.element, true);
+    setShown(this.element, true, 'flex');
     return new Promise((res) => {
       this.resolve = res;
     });
