@@ -62,6 +62,8 @@ export const VEY = {
   releaseWindowSeconds: 6,
   /** Bar floors (health fractions): bar k holds health here until break k + 1; the last is the Spare window's floor. */
   floors: [0.75, 0.5, 0.25, 0.04] as readonly number[],
+  /** Hits in this long after the window opens are held at 1 HP, not a strike (a volley or a spell tick already in flight). */
+  strikeGrace: 0.4,
   /** A break counts only with his health within this share of max above the bar's floor. */
   floorMargin: 0.01,
   floorModifierOrder: 99,
@@ -158,6 +160,8 @@ export const BOLT_CACHES = {
   fillTo: 40,
   /** The crate's top (N2's prop height). */
   top: 0.9,
+  /** N2's cache anchor stands this far in front of its crate (yaw 0 faces -Z). */
+  reach: 1.3,
 } as const;
 
 export const PRESENTATION = {
