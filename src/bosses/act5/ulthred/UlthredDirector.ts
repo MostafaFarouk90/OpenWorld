@@ -110,13 +110,14 @@ export class UlthredDirector {
             anvil: () => this.anvil,
             piece: (id, state) => this.setPiece(id, state),
             teleportToAnvil: () => this.teleportToAnvil(),
+            toHallMouth: () => void this.toMouth(),
             say: (key) => this.say(key),
           },
           onEnd: () => onEnd(),
         }),
       makeModel: opts.makeModel,
       modelState: opts.modelState,
-      armed: () => ctx.state.hasFlag(D10_STARTED_FLAG),
+      armed: () => ctx.state.hasFlag(D10_STARTED_FLAG) && !ctx.services.get('hammerTrial')?.running,
       gateClear: (feet) => this.gateClear(feet),
       insideForReload: (feet) => this.onHallFloor(feet, 0),
       warn: this.warn,
@@ -189,8 +190,18 @@ export class UlthredDirector {
     const arenas = this.ctx.services.get('bossArena');
     if (!arenas) return;
     const interiors = this.ctx.services.get('interiors');
-    // solid = closed: the floor blocker is a flat floor until the floor breaks.
-    this.floorPiece = new BreakingFloor({ solids: [{ setSolid: (s) => void interiors?.setBlocker(HALL.floorBlocker, s) }], warn: this.warn });
+    // solid = closed: the floor blocker is a flat floor until the floor breaks. The piece only ever opens it: closing it again
+    // (a reset, a load, the fight's end) is N2's pit guard, which never closes it over a Cael standing in the pit.
+    this.floorPiece = new BreakingFloor({
+      solids: [
+        {
+          setSolid: (s) => {
+            if (!s) void interiors?.setBlocker(HALL.floorBlocker, false);
+          },
+        },
+      ],
+      warn: this.warn,
+    });
     const plats = this.ctx.services.get('platforms');
     if (plats && this.anvil && this.anvil.platforms.length > 0) {
       const c = this.anvil.centre;
