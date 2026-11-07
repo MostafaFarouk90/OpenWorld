@@ -61,7 +61,7 @@ export const QUEST_WORLD_ANCHORS: readonly WorldAnchor[] = [
   at(FA.r28Wulfhild, off(COURT, -30, 30), 90),
   // R30: the camp's old anvil (Tobb drums the tune on it) and the three scattered pages
   at(FA.r30Anvil, off(FIRE, 20, -12)),
-  at(FA.r30Page(1), off(FIRE, -48, 18)), at(FA.r30Page(2), off(FIRE, 62, 30)), at(FA.r30Page(3), off(COURT, 30, -10)),
+  at(FA.r30Page(1), off(FIRE, -48, 18)), at(FA.r30Page(2), off(FIRE, 62, 30)), at(FA.r30Page(3), off(COURT, 10, -10)),
   // M53: the truce on the Inner Gate's apron; Vey 10 m nearer the face; the three things read; the foes' ground
   at(FA.m53Truce, GATE), at(FA.m53Vey, off(GATE, 0, 10), 0), at(FA.m53Edric, off(GATE, -4, -4), 0),
   // D09: Alric waits outside the Foundry door (the offer stands outside the lock)
