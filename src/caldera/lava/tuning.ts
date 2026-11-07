@@ -6,6 +6,12 @@ export const LAVA = {
   throwAfterS: 0.4,
   /** A grounded player within this many metres of a lip (outside lava) has "passed" it: the last safe lip. */
   lipPassRadius: 3,
+  /** Default depth a volume reads as lava under its surface (LavaFieldDef.depth). */
+  defaultDepth: 4,
+  /** Airborne feet up to this high over a surface count as over it (the lava-stair push during a Leap or a jump). */
+  overHeight: 12,
+  /** nearest(): volumes whose surface is more than this far above or below the given height are skipped. */
+  nearestBand: 40,
 } as const;
 
 export const VENT = {
@@ -29,9 +35,12 @@ export const CROSSING = {
   overshoot: 0.6,
   minDistance: 4,
   maxDistance: 7.5,
-  /** Every crossing's span must lie in this range (the lint; the shipped Leap is 6 m). */
+  /**
+   * Every crossing's span must lie in this range (the lint; the shipped Leap is 6 m). The top is maxDistance - overshoot
+   * - radius, so a Leap aimed from anywhere inside the radius always reaches the far lip.
+   */
   minSpan: 3.5,
-  maxSpan: 6.9,
+  maxSpan: 5.4,
 } as const;
 
 export const HAZE = {

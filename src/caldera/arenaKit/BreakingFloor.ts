@@ -54,6 +54,7 @@ export class BreakingFloor implements ArenaPiece {
     }
     if (state === this.s) return;
     if (state === 'whole') return this.reset();
+    if (this.s === 'broken') this.reset(); // broken -> cracked: the tiles come back first
     for (const u of this.opts.crackUniforms ?? []) u.value = 1;
     if (state === 'broken') {
       for (const t of this.opts.tiles ?? []) for (const c of t.colliders ?? []) c.setEnabled(false);

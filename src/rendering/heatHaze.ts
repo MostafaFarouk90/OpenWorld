@@ -97,6 +97,7 @@ export class HeatHaze implements HeatHazeService {
       side: THREE.DoubleSide,
     });
     this.material.name = 'caldera-haze';
+    this.material.forceSinglePass = true; // transparent and double-sided: one pass, not three's back-then-front two
   }
 
   get enabled(): boolean {

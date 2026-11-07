@@ -160,7 +160,8 @@ describe('LavaField: the throw', () => {
     expect(t.pushes.length).toBe(0);
     t.field.step(DT, { x: 0, y: 2, z: 0 }, false); // a jump over the channel
     expect(t.pushes.length).toBe(1);
-    expect(t.pushes[0]!()).toEqual({ position: { x: 5, y: 0.5, z: 0 }, yaw: 0 });
+    // the save point faces away from the lava (east lip: toward +X, yaw -PI/2)
+    expect(t.pushes[0]!()).toEqual({ position: { x: 5, y: 0.5, z: 0 }, yaw: expect.closeTo(-Math.PI / 2, 6) });
     t.field.step(DT, { x: -5, y: 0.5, z: 0 }, true); // landed on the west lip
     expect(t.releases()).toBe(1);
     expect(t.field.lastSafeLip).toEqual({ x: -5, y: 0.5, z: 0 });
@@ -184,7 +185,7 @@ describe('LavaField: the throw', () => {
     const t = rig();
     t.field.add(channel());
     t.field.step(DT, { x: -12, y: 0.5, z: 0 }, true);
-    expect(t.field.safePoint()).toEqual({ position: { x: -5, y: 0.5, z: 0 }, yaw: 0 });
+    expect(t.field.safePoint()).toEqual({ position: { x: -5, y: 0.5, z: 0 }, yaw: expect.closeTo(Math.PI / 2, 6) });
   });
 });
 
@@ -215,6 +216,46 @@ describe('LavaField: shapes and crusts', () => {
     expect(t.field.lips('test.channel')).toEqual([{ x: 0, y: 3, z: 20 }]);
   });
 
+  it('a volume reads as lava only to its depth: the ground under an interior\'s lava is safe', () => {
+    const t = rig();
+    t.field.add(channel({ id: 'interior', surfaceY: 150 }));
+    expect(t.field.at(0, 149, 0)).toBe('interior');
+    expect(t.field.at(0, 146.5, 0)).toBe('interior');
+    expect(t.field.at(0, 145, 0)).toBeNull(); // deeper than the default 4 m
+    expect(t.field.at(0, 1, 0)).toBeNull(); // 150 m below
+    expect(t.field.over(0, 3, 0)).toBe(false); // a jump on the ground under it
+    expect(t.field.over(0, 155, 0)).toBe(true);
+    expect(t.field.nearest(10, 0, 0)).toBeNull();
+    expect(t.field.nearest(10, 0, 148)!.volumeId).toBe('interior');
+    t.field.add(channel({ id: 'deep', shape: { kind: 'circle', x: 100, z: 0, r: 5 }, surfaceY: 0, depth: 20 }));
+    expect(t.field.at(100, -15, 0)).toBe('deep');
+    expect(validateVolume(channel({ id: 'bad', depth: -1 }))).toMatch(/depth/);
+  });
+
+  it('a load during a throw: the old throw does not overwrite the load\'s state', async () => {
+    const t = rig();
+    let release: (ok: boolean) => void = () => {};
+    t.throwTo.mockImplementationOnce(() => new Promise<boolean>((r) => (release = r)));
+    t.field.add(channel());
+    for (let i = 0; i < 30; i++) t.field.step(DT, { x: 0, y: -0.5, z: 0 }, true);
+    expect(t.field.isThrowing).toBe(true);
+    await t.field.onLoaded({ x: 20, y: 1, z: 0 }); // loaded on dry ground
+    release(true);
+    await flush();
+    expect(t.field.lastSafeLip).toBeNull();
+    expect(t.thrown).toEqual([]);
+    expect(t.field.isThrowing).toBe(false);
+  });
+
+  it('crusts on a profiled channel must be ribbons; a volume with crusts does not rise', () => {
+    const t = rig();
+    t.field.add(channel({ id: 'r', shape: { kind: 'ribbon', points: [[0, 0], [0, 20]], halfWidth: 2 }, profile: [5, 0] }));
+    expect(() => t.field.addCrust('v1', 'r', { kind: 'box', x0: -2, z0: 9, x1: 2, z1: 11 })).toThrow(/ribbon/);
+    expect(() => t.field.addCrust('v2', 'nope', { kind: 'box', x0: -2, z0: 9, x1: 2, z1: 11 })).toThrow(/unknown/);
+    t.field.addCrust('v3', 'r', { kind: 'ribbon', points: [[0, 9], [0, 11]], halfWidth: 2 });
+    expect(t.field.setSurface('r', 9)).toBe(false);
+  });
+
   it('an open crust reads as ground; closed it is lava again', () => {
     const t = rig();
     t.field.add(channel());
@@ -223,7 +264,7 @@ describe('LavaField: shapes and crusts', () => {
     t.field.setCrustSolid('vent.a', true);
     expect(t.field.at(0, -0.1, 0)).toBeNull();
     expect(t.field.at(0, -0.1, 5)).toBe('test.channel');
-    expect(t.field.over(0, 0)).toBe(false);
+    expect(t.field.over(0, 0, 0)).toBe(false);
     t.field.setCrustSolid('vent.a', false);
     expect(t.field.at(0, -0.1, 0)).toBe('test.channel');
   });

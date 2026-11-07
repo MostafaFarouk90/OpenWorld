@@ -54,6 +54,18 @@ describe('BreakingFloor', () => {
     expect(t.meshes.every((m) => m.visible)).toBe(true);
   });
 
+  it('broken then cracked brings the tiles back, still glowing', () => {
+    const t = floor();
+    t.f.apply('broken');
+    for (let i = 0; i < 120; i++) t.f.update(DT);
+    t.f.apply('cracked');
+    expect(t.f.state).toBe('cracked');
+    expect(t.colliders.every((c) => c.on)).toBe(true);
+    expect(t.meshes.every((m) => m.visible)).toBe(true);
+    expect(t.solid.s).toBe(true);
+    expect(t.crack.value).toBe(1);
+  });
+
   it('an unknown state warns once and changes nothing; "whole" is a reset; a floor with only external solids works', () => {
     const t = floor();
     t.f.apply('molten');

@@ -9,6 +9,11 @@ export interface LavaFieldDef extends LavaVolumeDef {
    * surface at a point off the line is the height at its nearest point on the line. Absent: `surfaceY` everywhere.
    */
   profile?: readonly number[];
+  /**
+   * How deep the lava reads under its surface (m; default LAVA.defaultDepth). Feet deeper than this are not in it, so an
+   * interior's lava (150 m up) never burns the ground under its footprint.
+   */
+  depth?: number;
 }
 
 /** A vent with the crust it cools: part of one lava volume that reads as solid ground while the vent is open. */
