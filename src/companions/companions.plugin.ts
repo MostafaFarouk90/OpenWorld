@@ -94,6 +94,9 @@ export function createCompanionsService(
     },
     active,
     maxActive,
+    sitOut(id, anchorId) {
+      return byId(id)?.sitOut(anchorId) ?? (() => {});
+    },
     setActive(ids) {
       const ok =
         ids.length <= maxActive() &&

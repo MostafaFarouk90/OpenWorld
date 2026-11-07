@@ -21,6 +21,11 @@ export interface TauntSource {
   radius: number;
   /** How long the taunt lasts from registration. */
   seconds: number;
+  /**
+   * N4 (Act 5 siege): which enemies take this bait (the gate draws only foes Cael has not hit in the last 8 s). Absent:
+   * every enemy in reach, the shipped rule.
+   */
+  accepts?(enemyId: ActorId): boolean;
 }
 
 export interface TauntPick {
@@ -67,13 +72,14 @@ export class TauntRegistry implements TauntService {
    * the enemy is already drawn to (`holding`) keeps it until it is `TAUNT_RELEASE_MARGIN` beyond its radius, so an enemy at the
    * edge does not flip between targets every tick.
    */
-  pick(from: { x: number; z: number }, holding: ActorId | null = null): TauntPick | null {
+  pick(from: { x: number; z: number }, holding: ActorId | null = null, enemyId?: ActorId): TauntPick | null {
     if (this.entries.size === 0) return null;
     let best: TauntSource | null = null;
     let bestAt: TauntFeet | null = null;
     let bestD = Infinity;
     for (const e of this.entries.values()) {
       if (e.left <= 0 || !e.alive()) continue;
+      if (e.accepts && enemyId !== undefined && !e.accepts(enemyId)) continue;
       const at = e.position();
       if (!at) continue;
       const d = Math.hypot(at.x - from.x, at.z - from.z);
