@@ -196,6 +196,25 @@ describe('M43 What the Walkers Know', () => {
     expect(r.num('story.m43.pyreCount')).toBe(1);
   }, T);
 
+  it('takes Hrodna\'s first "Now." while her talk is still open and starts the bout once it closes (L13 M2)', () => {
+    phaseG(); doM42();
+    r.begin('m43', 'wulfhild');
+    expect(r.current('m43', 'danceTalk')).toBe(true);
+    r.dialogue.active = true; // her tree is open: the choice raises the ask before the talk step completes
+    r.emit(M43_DANCE_ASKED); r.step(13);
+    expect(r.trials.running).toBeNull();
+    r.dialogue.active = false;
+    r.talk(M43_MASTER.dance); // the talk ends: danceTalk completes
+    r.step(13);
+    expect(r.trials.running?.id).toBe(M43_DANCE_TRIAL);
+  }, T);
+
+  it('drops an ask from another quest state (M43 not running)', () => {
+    phaseG();
+    r.emit(M43_DANCE_ASKED); r.step(13);
+    expect(r.trials.running).toBeNull();
+  }, T);
+
   it('lets Hrodna win and dances again on the next ask', () => {
     phaseG(); doM42();
     r.begin('m43', 'wulfhild'); r.talk(M43_MASTER.dance);
