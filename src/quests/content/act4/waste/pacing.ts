@@ -28,11 +28,11 @@ const q = (s: string): string => `${W}.${s}`;
 const n3 = [1, 2, 3] as const;
 
 /**
- * Dialogue nodes of each quest's shorter branch: its talk rows (talks.ts), R24's choice, the notes its search steps read
- * (2 lines each) and its scene lines (M45's voice 6, M46's rim 3; the dream has none). D08's report counts its shorter
- * outcome (the released one).
+ * Dialogue nodes of each quest's shorter branch, by the shipped convention (L13, ruled 2026-11-07): its talk rows (talks.ts)
+ * and R24's choice. A note read is one `search` beat, never dialogue; scene lines are not dialogue. D08's report counts its
+ * shorter outcome (the released one).
  */
-export const WASTE_A4_NODES = { m42: 23, m43: 35, m44: 29, r25: 18, r24: 20, m45: 29, d08: 25, m46: 32 } as const;
+export const WASTE_A4_NODES = { m42: 24, m43: 31, m44: 24, r25: 15, r24: 18, m45: 11, d08: 17, m46: 21 } as const;
 
 export const WASTE_A4_PACE: readonly Act4PaceRow[] = [
   // M42: Wulfhild and Hild at Ashgate, the gate arch, then the storm along the rope: each shelter's flap, the striders 40 m off
@@ -40,7 +40,7 @@ export const WASTE_A4_PACE: readonly Act4PaceRow[] = [
   build('m42', 50, q('post.wulfhild.ashgate'), [
     ...foot(L1.hildPost, q('m42.gate')),
     ...storm(q('m42.flap.1'), q('m42.striders.2'), q('m42.flap.2'), q('m42.pack'), q('m42.flap.3'), q('m42.wraiths.2'), q('m42.flap.4'), q('m42.knot'), q('m42.camp')),
-    ...foot(WU),
+    ...foot(L1.walkerPost(1), WU),
   ], WASTE_A4_NODES.m42, { shelterWait: 4, killUnit: 6, interact: 4, search: 2, set: 1 }),
   // M43: Osgar and the Storm Walk (five knots in a storm, two lees, the count), Aelfgifu and the three pyres, the torch, Hrodna
   // and the ring (a loss and a win), the count-stones and the spear-rack, Wulfhild
@@ -53,7 +53,7 @@ export const WASTE_A4_PACE: readonly Act4PaceRow[] = [
   // music box, the graves behind the chapel, Ebba; the dream
   build('m44', 40, L1.ebbaChapel, [
     ...foot(q('post.chapel-keeper'), q('m44.house.1'), q('m44.house.1.b'), q('m44.nest.3'), q('m44.house.2'), q('m44.house.2.b'),
-      q('m44.house.3'), q('m44.house.3.b'), L1.musicBox, q('m44.graves'), L1.ebbaChapel),
+      q('m44.house.3'), q('m44.house.3.b'), L1.musicBox, q('m44.graves'), q('post.chapel-keeper'), L1.ebbaChapel),
   ], WASTE_A4_NODES.m44, { search: 7, killUnit: 6, interact: 1, set: 1 }),
   // R25: Ebba's candles, each burned village's name and hearth (the husk knot at the third), the register inside the chapel
   build('r25', 35, L1.ebbaChapel, [
@@ -61,7 +61,7 @@ export const WASTE_A4_PACE: readonly Act4PaceRow[] = [
     ...door(q('r25.register')),
     ...foot(q('r25.letter')),
     ...door(L1.chapelDoor),
-    ...foot(L1.ebbaChapel),
+    ...foot(q('post.chapel-keeper'), L1.ebbaChapel),
   ], WASTE_A4_NODES.r25, { search: 5, interact: 3, killUnit: 5 }),
   // R24: Wulfhild, the walk out to the spring, Brand, the count, the casks; the cart home along the rope (two storms, two
   // attacks, the brakes); the choice and the casks unloaded at the gate
