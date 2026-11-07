@@ -69,6 +69,13 @@ export const FOUNDRY_A5_POST_ROWS: readonly PostRule[] = [
   },
 ];
 
+const QUEST_ROW_SET = new Set(FOUNDRY_A5_POST_ROWS.flatMap((r) => r.posts));
+/** A rule without this block's rows (tests that pin an older block's rows strip them, as Act 4's blocks do). */
+export function withoutFoundryQuestRows(rule: PostRule): PostRule {
+  const posts = rule.posts.filter((p) => !QUEST_ROW_SET.has(p));
+  return posts.length === rule.posts.length ? rule : { ...rule, posts };
+}
+
 /** The rules with this block's rows put first (the first matching row wins); never reorders or drops a row. */
 export function withFoundryQuestPosts(rules: PostRule[]): PostRule[] {
   const out = [...rules];
