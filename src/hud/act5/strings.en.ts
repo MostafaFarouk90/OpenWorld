@@ -23,6 +23,8 @@ export const ACT5_HUD_STRINGS_EN: Record<string, string> = {
   'hud.siege.ally.healers': 'Healers',
   'hud.siege.ally.dragon': 'Dragon',
   'hud.siege.ally.company': 'Company',
+  'hud.spare.line': 'Spare him (hold T) or strike him down',
+  'hud.spare.count': '{s} s',
   'hud.lava.entered': 'The lava burns.',
   'hud.lava.thrown': 'The stair throws you back.',
   'hud.vent.open': 'Vent open: {s} s',
