@@ -165,6 +165,14 @@ describe('M52', () => {
   });
 });
 
+describe('after the siege', () => {
+  it('Alric points Cael at the rim anvil and at selling Oswin\'s note once M52 is done', () => {
+    const { dr } = setup({ states: { ...PARENTS.m52!, m52: 'completed' } });
+    dr.start('npc-alric', 'alric');
+    expect(dr.view()!.nodeId).toBe('m52-anvil');
+  });
+});
+
 describe('strings', () => {
   it('every node and choice of the Rim trees resolves, and no line says Cael or uses a dash', () => {
     const strings = { ...all, ...RIM_A5_DIALOGUE_STRINGS };
