@@ -622,8 +622,8 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
 
   it('nothing is reserved any more (the Act 3 tracks are built) and both Act 2 tracks are registered', () => {
     // v0.8 item 19 reserved the two Act 4 ids; L8 built them, so nothing is reserved.
-    // v0.9 item 17 reserves the Caldera's track until N8 builds it.
-    expect(RESERVED_TRACK_IDS).toEqual(['heart-of-the-anvil']);
+    // v0.9 item 17 reserved the Caldera's track; N8 built it.
+    expect(RESERVED_TRACK_IDS).toEqual([]);
     expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
     expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
     expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);
@@ -845,4 +845,66 @@ describe('v0.8 item 19: Harrowmark track from story.gate.a4', () => {
     expect(e.audio.swapMusic).not.toHaveBeenCalled();
     expect(e.services.get('music')!.beat()!.bpm).toBe(DUST_CHANT.bpm);
   }, 30_000);
+});
+
+// Act 5 (N8): the cue slot plays a track no region owns (an ending theme, the credits) under one of its mix keys.
+describe('music.setCue (Act 5 cue tracks)', () => {
+  const lastMix = (e: ReturnType<typeof makeEnv>): Record<string, number> => {
+    const m = e.mixers[e.active()];
+    const calls = m.setMix.mock.calls as unknown as Array<[Record<string, number>]>;
+    return calls[calls.length - 1][0];
+  };
+  const swapTo = async (e: ReturnType<typeof makeEnv>): Promise<void> => {
+    await flush();
+    e.tick(0.1);
+    e.tick(e.mixers[1 - e.active()].startedAt! - clockRef.t + 0.05);
+  };
+
+  it('plays the cue track in place of the region, holds against the region poll, steps its mix and gives the region back', { timeout: 30_000 }, async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    const music = e.services.get('music')!;
+    expect(music.beat()!.bpm).toBe(92);
+    music.setCue!('credits', 'credits.verse1');
+    await swapTo(e);
+    expect(music.beat()!.bpm).toBe(72);
+    e.tick(1);
+    expect(lastMix(e)['vocal']).toBe(1); // the first-verse mix, started once the track committed
+    expect(lastMix(e)['verse-gaut']).toBe(0);
+    e.tick(5); // several region polls: the Brightwater track must not take over again
+    expect(music.beat()!.bpm).toBe(72);
+    music.setCueMix!('credits.gaut');
+    e.tick(0.5);
+    expect(lastMix(e)['verse-gaut']).toBe(1);
+    music.setCue!(null);
+    await swapTo(e);
+    expect(music.beat()!.bpm).toBe(92);
+  });
+
+  it('an unknown cue track warns and changes nothing; a step with no cue is a no-op', { timeout: 30_000 }, async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    const music = e.services.get('music')!;
+    music.setCue!('nope', 'x');
+    music.setCueMix!('credits.gaut');
+    e.tick(1);
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('unknown cue track'))).toHaveLength(1);
+    expect(music.beat()!.bpm).toBe(92);
+  });
+
+  it('a load clears the cue, so the region track returns', { timeout: 30_000 }, async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    const music = e.services.get('music')!;
+    music.setCue!('ending.rekindle', 'theme');
+    await swapTo(e);
+    expect(music.beat()!.bpm).toBe(100);
+    e.events.emit('save.loaded', {} as never);
+    await swapTo(e);
+    expect(music.beat()!.bpm).toBe(92);
+  });
 });

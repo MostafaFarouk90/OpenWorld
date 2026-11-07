@@ -26,7 +26,10 @@ function sum(track: TrackDef, stems: Record<string, Float32Array>, mix: StemMix)
 
 const db = (x: number): number => 20 * Math.log10(x);
 
+/** Act 5 (N8): the ending themes and the credits are cue tracks no region plays; they get the ceiling checks and their own band. */
+const CUE_IDS: readonly string[] = ['ending.rekindle', 'ending.let-it-die', 'credits'];
 const ALL = Object.values(TRACKS_BY_ID);
+const REGION_TRACKS = ALL.filter((t) => !CUE_IDS.includes(t.id));
 
 describe.each(ALL)('$id levels', (track) => {
   const stems = rendered(track);
@@ -49,7 +52,8 @@ describe.each(ALL)('$id levels', (track) => {
     for (const [name, mix] of variants) expect(sum(track, stems, mix).peak, name).toBeLessThan(1);
   });
 
-  it('explore is audible, combat and boss are louder than it, and the quiet states are not far below it', () => {
+  const regionOnly = CUE_IDS.includes(track.id) ? it.skip : it;
+  regionOnly('explore is audible, combat and boss are louder than it, and the quiet states are not far below it', () => {
     const rms = (state: keyof TrackDef['mixes']): number => db(sum(track, stems, track.mixes[state]).rms);
     const explore = rms('explore');
     expect(explore).toBeGreaterThan(-30);
@@ -68,8 +72,8 @@ describe.each(ALL)('$id levels', (track) => {
 // spread of the Acts 1 and 2 tracks (explore -24.5 to -27.4 dBFS, combat -18.0 to -19.6) with a little room each side.
 // The Act 3 tracks sat 3 to 6 dB above it before their `trimDb`.
 describe('every region track sits in one loudness band', () => {
-  const renders = new Map(ALL.map((t) => [t.id, rendered(t)]));
-  it.each(ALL.map((t) => [t.id, t] as const))('%s', (_id, track) => {
+  const renders = new Map(REGION_TRACKS.map((t) => [t.id, rendered(t)]));
+  it.each(REGION_TRACKS.map((t) => [t.id, t] as const))('%s', (_id, track) => {
     const stems = renders.get(track.id)!;
     const explore = db(sum(track, stems, track.mixes.explore).rms);
     const combat = db(sum(track, stems, track.mixes.combat).rms);
@@ -80,8 +84,22 @@ describe('every region track sits in one loudness band', () => {
   });
 
   it('a hot track fails the band (the guard is live)', () => {
-    const hot: TrackDef = { ...ALL[0], id: 'hot', synth: { ...ALL[0].synth!, trimDb: 5 } };
+    const hot: TrackDef = { ...REGION_TRACKS[0], id: 'hot', synth: { ...REGION_TRACKS[0].synth!, trimDb: 5 } };
     const explore = db(sum(hot, rendered(hot), hot.mixes.explore).rms);
     expect(explore).toBeGreaterThan(-23.5);
+  });
+});
+
+// Act 5 (N8): the cue tracks sit in a band of their own (they are heard alone, over a cutscene or the credits roll).
+describe('the Act 5 cue tracks sit in one band', () => {
+  it.each(CUE_IDS)('%s', (id) => {
+    const track = TRACKS_BY_ID[id];
+    const stems = rendered(track);
+    const mixes: StemMix[] = [track.mixes.explore, ...Object.values(track.bossMixes ?? {}).flatMap((d) => d.phases)];
+    for (const m of mixes) {
+      const level = db(sum(track, stems, m).rms);
+      expect(level, id).toBeGreaterThan(-27);
+      expect(level, id).toBeLessThan(-17);
+    }
   });
 });
