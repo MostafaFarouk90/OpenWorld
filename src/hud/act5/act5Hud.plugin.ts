@@ -23,7 +23,7 @@ declare module '../../core/Services' {
 }
 
 export const ACT5_HUD_CSS = `
-.owg-siege{width:300px;pointer-events:none;margin-top:6px;font:12px/1.25 system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
+.owg-siege{width:300px;pointer-events:none;margin-top:56px;font:12px/1.25 system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
 .owg-siege-wave{font-weight:700;color:#f0d890;margin-bottom:3px}
 .owg-siege-gate .owg-bar-fill{background:#4a90c0}
 .owg-siege-warn .owg-bar-fill{background:#d8a040}
