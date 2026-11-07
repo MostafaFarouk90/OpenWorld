@@ -91,6 +91,8 @@ export class VeyEncounter implements VeyHooks {
   private registered = false;
   private ended = false;
   private windowOpen = false;
+  /** Seconds the window has been open (the strike grace). */
+  private windowT = 0;
   private poiseIdle = 0;
   private telegraphT = -1;
   private telegraphLead = 1;
@@ -153,6 +155,7 @@ export class VeyEncounter implements VeyHooks {
       ctx.events.on('boss.releaseWindow', (p) => {
         if (!mine(p)) return;
         this.windowOpen = p.open;
+        this.windowT = 0;
         this.brain.onReleaseWindow(p.open);
       }),
       ctx.events.on('boss.spared', (p) => {
@@ -228,6 +231,7 @@ export class VeyEncounter implements VeyHooks {
     if (this.ended || this.outcomeKind) return;
     this.move(dt, player, dist);
     this.glow(dt);
+    if (this.windowOpen) this.windowT += dt;
     const st = this.brain.state;
     if (st !== 'broken' && st !== 'window' && st !== 'roar' && st !== 'surgeTell') {
       this.poiseIdle += dt;
@@ -378,7 +382,7 @@ export class VeyEncounter implements VeyHooks {
    * plain stagger: he flinches and his poise refills (Eormen's lesson: stray early breaks made a two-minute fight).
    */
   private acceptBreak(): boolean {
-    const floor = barFloorHealth(this.actor.maxHealth, VEY.floors, this.breaks);
+    const floor = barFloorHealth(this.actor.maxHealth, VEY.floors, Math.min(this.breaks, VEY.floors.length - 1));
     if (this.actor.health <= floor + this.actor.maxHealth * VEY.floorMargin) return true;
     this.earlyStaggers++;
     this.actor.restorePoise();
@@ -401,11 +405,13 @@ export class VeyEncounter implements VeyHooks {
   private floor(req: ModifiableRequest): void {
     if (req.targetId !== this.actor.id || !this.registered || this.outcomeKind) return;
     if (this.windowOpen) {
-      if (req.attackerId === this.ctx.player.actor.id && req.outcome === 'hit' && req.kind !== 'status') req.amount = Math.max(req.amount, this.actor.health);
+      const struck = req.attackerId === this.ctx.player.actor.id && req.outcome === 'hit' && req.kind !== 'status' && this.windowT >= VEY.strikeGrace;
+      if (struck) req.amount = Math.max(req.amount, this.actor.health);
       else req.amount = Math.min(req.amount, Math.max(0, this.actor.health - 1));
       return;
     }
-    const floor = barFloorHealth(this.actor.maxHealth, VEY.floors, this.breaks);
+    // Past the last bar (a lapsed window) he fights on at the last floor, so the next break reopens the window there.
+    const floor = barFloorHealth(this.actor.maxHealth, VEY.floors, Math.min(this.breaks, VEY.floors.length - 1));
     clampToFloor(req, this.actor.health, floor || 1);
   }
 

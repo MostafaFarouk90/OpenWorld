@@ -11,7 +11,7 @@ import { BossArena, type BossModelState } from '../../arena/BossArena';
 import { AshVeil } from '../../prior/priorFx';
 import { VeyEncounter, type VeyPlaces } from './VeyEncounter';
 import type { VeyModel } from './VeyModel';
-import { ARENA, D09_STARTED_FLAG, LOOK, PRESENTATION, VEY_BOSS_ID, veyLevel } from './tuning';
+import { ARENA, BOLT_CACHES, D09_STARTED_FLAG, LOOK, PRESENTATION, VEY_BOSS_ID, veyLevel } from './tuning';
 
 export const INTRO_SOURCE = 'bosses.vey.intro';
 export const OUTCOME_FLAG = bossOutcomeFlag(VEY_BOSS_ID);
@@ -120,7 +120,8 @@ export class VeyDirector {
       this.outside = 0;
       return;
     }
-    this.outside = this.onFloor(this.ctx.player.feet, 0.5) ? 0 : this.outside + dt;
+    // Measured from the gate's arena face, not the ring's edge: Cael backed into the gate alcove is still in the fight.
+    this.outside = this.onFloor(this.ctx.player.feet, 0.5, ARENA.gateLocalZ - 0.5) ? 0 : this.outside + dt;
     if (this.outside >= ARENA.abandonSeconds) this.abandon();
   }
 
@@ -183,13 +184,15 @@ export class VeyDirector {
     return { x: entry.position.x - ARENA.entryLocal.x, y: entry.position.y, z: entry.position.z - ARENA.entryLocal.z };
   }
 
-  private onFloor(feet: THREE.Vector3Like, margin: number): boolean {
+  /** On the ring floor (grown by `margin`); `z0` replaces the floor's near edge (the abandon rule reaches the gate). */
+  onFloor(feet: THREE.Vector3Like, margin: number, z0?: number): boolean {
     const o = this.offset();
     if (!o) return false;
     const r = ARENA.rect;
     const x = feet.x - o.x;
     const z = feet.z - o.z;
-    return x >= r.x0 - margin && x <= r.x1 + margin && z >= r.z0 - margin && z <= r.z1 + margin && Math.abs(feet.y - o.y) < 6;
+    const near = z0 ?? r.z0 - margin;
+    return x >= r.x0 - margin && x <= r.x1 + margin && z >= near && z <= r.z1 + margin && Math.abs(feet.y - o.y) < 6;
   }
 
   private gateClear(feet: THREE.Vector3Like): boolean {
@@ -220,7 +223,8 @@ export class VeyDirector {
     const caches = ARENA.caches
       .map((id) => a.find(id))
       .filter((c): c is NonNullable<typeof c> => !!c)
-      .map((c) => new THREE.Vector3(c.position.x, c.position.y, c.position.z));
+      // N2's cache anchors are stand points facing their crate: the bolts sit on the crate, `BOLT_CACHES.reach` ahead.
+      .map((c) => new THREE.Vector3(c.position.x - Math.sin(c.yaw) * BOLT_CACHES.reach, c.position.y, c.position.z - Math.cos(c.yaw) * BOLT_CACHES.reach));
     return {
       centre: new THREE.Vector3(centre.position.x, centre.position.y, centre.position.z),
       centreYaw: centre.yaw,

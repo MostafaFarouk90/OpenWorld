@@ -302,6 +302,11 @@ describe('Morcant Vey on the real core', () => {
     const t = await setup();
     t.startFight();
     toWindow(t);
+    // inside the grace a hit (a volley already in flight) is held at 1 HP
+    t.hit(10_000, 0);
+    expect(t.ctx.state.hasFlag(OUTCOME_FLAG)).toBe(false);
+    expect(t.state()!.health).toBe(1);
+    t.runHealed(VEY.strikeGrace + 0.05);
     t.hit(1, 0);
     expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBe('defeated');
     expect(t.of('boss.releaseWindow').at(-1)).toEqual({ bossId: 'vey', open: false });
@@ -347,9 +352,12 @@ describe('Morcant Vey on the real core', () => {
     t.breakBar();
     t.settle();
     expect(t.blockers).toContain(`${ARENA.gate}:true`);
+    expect(t.spawned).toEqual([...CROWD.groups]);
+    const resetsBefore = t.resets.length;
     t.game.events.emit('save.loaded', {} as never);
     t.run(2);
     expect(t.boss()).toBeNull();
+    expect(t.resets.slice(resetsBefore)).toEqual(expect.arrayContaining([...CROWD.groups]));
     expect(t.arenas().state(VEY_ARENA_ID, 'lights')).toBeUndefined();
     expect(t.blockers.at(-1)).toBe(`${ARENA.gate}:false`);
     const mouth = t.ctx.anchors.find(ARENA.mouth)!.position;
@@ -358,6 +366,45 @@ describe('Morcant Vey on the real core', () => {
     t.startFight();
     expect(t.state()!.health).toBe(t.state()!.maxHealth);
     expect(t.state()!.breaks).toBe(0);
+    t.teardown();
+  });
+
+  it('a parried third hit leaves him open 1.2 s (the brain), with the clash; then he fights on', async () => {
+    const t = await setup();
+    // Stand-in for a timed block: the guard's parry turns the hit to 'parried' (CombatVerbs does this for a block pressed in time).
+    t.ctx.damage.addModifier('test.parry', (req) => {
+      if (req.attackId === COMBO.hits[COMBO.parryIndex]!.attackId) req.outcome = 'parried';
+    }, 50);
+    t.startFight();
+    const b = t.boss()!.root!.position;
+    const yaw = t.boss()!.root!.rotation.y;
+    t.ctx.player.teleport({ x: b.x - Math.sin(yaw) * 2, y: b.y, z: b.z - Math.cos(yaw) * 2 }, 0);
+    let seen = false;
+    for (let i = 0; i < secs(6) && !seen; i++) {
+      t.game.fixedUpdate();
+      t.heal();
+      seen = t.enc().brain.state === 'parried';
+    }
+    expect(seen).toBe(true);
+    expect(t.enc().parries).toBe(1);
+    t.runHealed(COMBO.parriedSeconds + 0.1);
+    expect(t.enc().brain.state).not.toBe('parried');
+    t.teardown();
+  });
+
+  it('backing into the closed gate alcove is still the fight; leaving past the gate for 3 s ends it', async () => {
+    const t = await setup();
+    t.startFight();
+    t.ctx.player.teleport(t.loc(0, 138), 0);
+    t.runHealed(1);
+    expect(veyDirector()!.gateIsClosed).toBe(true);
+    t.ctx.player.teleport(t.loc(0, 132.6), 0);
+    t.runHealed(4);
+    expect(veyDirector()!.current?.contested).toBe(true);
+    t.ctx.player.teleport(t.loc(0, 128), 0);
+    t.runHealed(3.5);
+    expect(veyDirector()!.current).toBeNull();
+    expect(veyDirector()!.resetsAnnounced).toBe(1);
     t.teardown();
   });
 
