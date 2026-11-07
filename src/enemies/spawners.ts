@@ -187,7 +187,7 @@ export class SpawnerRegistry {
         ...(def.skin ? { skin: def.skin } : {}),
         ...(area ? { area } : {}),
         ...(def.role ? { role: def.role } : {}),
-        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
+        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard ?? (def.role ? def.role === 'shield' : undefined), ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
       if (actorId === null) continue;

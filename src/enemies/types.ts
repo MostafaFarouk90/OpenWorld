@@ -57,7 +57,10 @@ export type EnemyKind =
   // Act 4 (L5): the Ashen Waste's own kinds.
   | 'waste-strider'
   | 'husk-knight'
-  | 'cinder-gnat-swarm';
+  | 'cinder-gnat-swarm'
+  // Act 5 (N5): Vey's warhost.
+  | 'warhost-soldier'
+  | 'warhost-guard';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -84,8 +87,8 @@ export const ACT4_ENEMY_KINDS: readonly Act4EnemyKind[] = ['waste-strider', 'hus
  * Act 5 kind ids (v0.9 item 11), reserved the same way: N5 moves `warhost-soldier` into `EnemyKind` with its def. Grisel's
  * footmen, the stokers and the lava golems are shipped kinds in skins (skins.ts).
  */
-export type Act5EnemyKind = 'warhost-soldier';
-export const ACT5_ENEMY_KINDS: readonly Act5EnemyKind[] = ['warhost-soldier'];
+export type Act5EnemyKind = 'warhost-soldier' | 'warhost-guard';
+export const ACT5_ENEMY_KINDS: readonly Act5EnemyKind[] = ['warhost-soldier', 'warhost-guard'];
 
 /** v0.9: a warhost member's role in its line (`SpawnerDef.role`, carried as `actor.data.spawn.role`). */
 export type WarhostRole = 'shield' | 'pike' | 'torch';
@@ -268,7 +271,7 @@ export interface EnemyDef {
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
    * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless). K6a: `ysmeryth-trial` (wyrm/ysmeryth/overlay.ts).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial' | 'strider' | 'husk-knight' | 'gnats';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial' | 'strider' | 'husk-knight' | 'gnats' | 'warhost';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
