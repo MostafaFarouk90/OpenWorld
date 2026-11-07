@@ -147,4 +147,5 @@ export const QUESTS_SAVE_VERSION = 2;
 export interface DialogueSaveData { seen: string[] }
 
 /** Effect `event` names are limited to these namespaces so data cannot forge combat events. */
-export const EFFECT_EVENT_PATTERN = /^((tutorial|cutscene|reward|story|npc)\.[a-zA-Z0-9_.-]+|classes\.trainer\.open)$/;
+// N4 (Act 5): `siege.order.<id>`, the war post's orders between siege waves.
+export const EFFECT_EVENT_PATTERN = /^((tutorial|cutscene|reward|story|npc)\.[a-zA-Z0-9_.-]+|classes\.trainer\.open|siege\.order\.[a-z-]+)$/;

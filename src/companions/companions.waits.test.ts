@@ -457,3 +457,24 @@ describe('Tobb on horseback', () => {
     t.done();
   });
 });
+
+describe('N4 (Act 5): sitOut, the siege wounded beat', () => {
+  it('sits out at the anchor over every derived wait, follows again on release; an unknown id is a no-op', async () => {
+    const t = await joined();
+    expect(t.distToPlayer()).toBeLessThan(5);
+    const svc = t.svc();
+    const release = svc.sitOut!('tobb', HOLD);
+    t.run(1);
+    expect(t.dist(t.posts[HOLD].position)).toBeLessThan(0.01);
+    // A derived wait (M06's gate) does not pull him off the aid post.
+    t.quests.states.set('m06', 'active');
+    t.run(30);
+    expect(t.dist(t.posts[HOLD].position)).toBeLessThan(0.01);
+    t.quests.states.set('m06', 'completed');
+    release();
+    for (let i = 0; i < 60 * 20 && t.distToPlayer() > 5; i++) t.run(1);
+    expect(t.distToPlayer()).toBeLessThan(5);
+    expect(() => svc.sitOut!('nobody', HOLD)()).not.toThrow();
+    t.done();
+  });
+});

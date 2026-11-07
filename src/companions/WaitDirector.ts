@@ -3,7 +3,7 @@
 // load re-derives them and a chase retry does not release him.
 import type { Vec3 } from './FollowModel';
 
-export type WaitReason = 'gate' | 'keep' | 'stealth' | 'chase' | 'party';
+export type WaitReason = 'gate' | 'keep' | 'stealth' | 'chase' | 'party' | 'sitOut';
 
 /**
  * A wait holds while its quest is active and `until` is not done, or while the player is inside `interior`, or (A5's

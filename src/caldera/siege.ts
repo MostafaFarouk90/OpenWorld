@@ -23,9 +23,9 @@ export interface AllySquadDef {
   track?: FavourTrack;
 }
 
-/** Orders Cael gives during the siege (plan 3.5). N4 may add ids. */
-export type SiegeOrderId = 'hold' | 'fall-back' | 'loose' | 'brace' | 'sally';
-export const SIEGE_ORDER_IDS: readonly SiegeOrderId[] = ['hold', 'fall-back', 'loose', 'brace', 'sally'];
+/** Orders Cael gives during the siege (plan 3.5). N4 may add ids: N4 added `flasks` and `gong` (plans/act5-N4.md 6). */
+export type SiegeOrderId = 'hold' | 'fall-back' | 'loose' | 'brace' | 'sally' | 'flasks' | 'gong';
+export const SIEGE_ORDER_IDS: readonly SiegeOrderId[] = ['hold', 'fall-back', 'loose', 'brace', 'sally', 'flasks', 'gong'];
 
 export interface DragonAllyDef {
   id: string;
