@@ -37,6 +37,8 @@ export const m44: QuestDef = {
     { id: 'box', type: 'interact', target: M44_BOX, textKey: 'quest.m44.box' },
     // the village's graves behind the chapel (a pacing beat, plan 5: M44 measured under 45% on L1's close-set houses)
     reads('graves', 'quest.m44.graves', [M44_NOTES.graves]),
+    // Sister Aedre at the graves (L13 Phase H M1: M44 at 35% by the shipped count, notes as one search beat each)
+    { id: 'aedre', type: 'talk', target: CHAPEL_KEEPER, textKey: 'quest.m44.aedre' },
     { id: 'report', type: 'talk', target: EBBA, textKey: 'quest.m44.report' },
   ],
   rewards: rewardOf('m44', 800),
