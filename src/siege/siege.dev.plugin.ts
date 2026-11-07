@@ -1,4 +1,5 @@
-// `?siege=m52|r27[&favour=marshal|keepers|worst]`: dev only (the `?waves=` pattern, plans/act5-N4.md section 15).
+// `?siege=m52|r27[&favour=marshal|keepers|worst]` (or `?act5=m52&new&favour=marshal&siege=m52&siegeFavour=worst` on N1's
+// layout, where the Caldera is only open in Act 5): dev only (the `?waves=` pattern, plans/act5-N4.md section 15).
 // Writes the preset's choice flags and M52 snapshot when none was taken, defines stand-in anchors round the player for
 // any N1 or N2 has not placed, and starts the siege. `worst` is every track Hearthbound with every won choice (the
 // frame budget's case, review change i). Compiled out of production builds (import.meta.env.DEV).
@@ -26,7 +27,8 @@ export const WORST_FLAGS: Readonly<Record<string, string>> = {
 
 /** Writes a preset's flags and its M52 snapshot (only when no snapshot was taken). */
 export function applySiegePreset(ctx: Pick<GameContext, 'state'>, preset: string): boolean {
-  if (ctx.state.getFlag(snapshotFlag('m52', 'taken')) === true) return false;
+  // `worst` overwrites (it rides on N0's `?act5=m52&new` jump, which takes a preset's snapshot first).
+  if (preset !== 'worst' && ctx.state.getFlag(snapshotFlag('m52', 'taken')) === true) return false;
   const flags = preset === 'worst' ? WORST_FLAGS : ACT5_PRESET_FLAGS[preset as 'marshal' | 'keepers'];
   const five = preset === 'worst' ? [95, 95, 95, 95, 95] : ACT5_PRESET_FAVOUR[preset as 'marshal' | 'keepers']?.m52;
   if (!flags || !five) return false;
@@ -77,7 +79,8 @@ const plugin: GamePlugin = {
       console.warn(`[siege-dev] unknown siege '${id}' (m52 or r27)`);
       return;
     }
-    const preset = q?.get('favour') ?? 'marshal';
+    // `siegeFavour` (so N0's `&favour=` can carry the jump) else `favour`.
+    const preset = q?.get('siegeFavour') ?? q?.get('favour') ?? 'marshal';
     let wait = 2;
     const viaJump = q?.has('act5') === true;
     let started = false;
