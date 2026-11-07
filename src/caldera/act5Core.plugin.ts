@@ -2,9 +2,7 @@
 // world tint service. Small on purpose; the Act 5 systems are their threads' own plugins.
 import type { GamePlugin } from '../core/plugins';
 import { BossArenas } from '../bosses/arena';
-import { CALDERA_CENTRE, CALDERA_KILL_XP_FACTOR } from '../region/act5Regions';
-import { ANVIL_SHRINE_ANCHOR } from '../map/ForgeMarks';
-import { heightAt } from '../terrain/heightfield';
+import { CALDERA_KILL_XP_FACTOR } from '../region/act5Regions';
 import { WorldTint } from './worldTint';
 import './events';
 
@@ -37,11 +35,7 @@ const plugin: GamePlugin = {
     offs.push(ctx.events.on('boss.ended', (e) => arenas.onBossEnded(e.bossId)));
     offs.push(ctx.events.on('save.loaded', () => arenas.onLoaded()));
     offs.push(ctx.services.provide('worldTint', new WorldTint()));
-    // v0.9 item 13: the Anvil of Ages' shrine anchor until N1's Act 5 layout places it (N1 then drops this define).
-    if (!ctx.anchors.find(ANVIL_SHRINE_ANCHOR)) {
-      const { x, z } = CALDERA_CENTRE;
-      offs.push(ctx.anchors.define({ id: ANVIL_SHRINE_ANCHOR, position: { x, y: heightAt(x, z), z }, yaw: 0, tags: ['shrine'] }));
-    }
+    // v0.9 item 13: the Anvil of Ages' shrine anchor is N1's (caldera/caldera.layout.ts, the caldera-world plugin).
   },
   dispose() {
     for (const off of offs.splice(0).reverse()) off();
