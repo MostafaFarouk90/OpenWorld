@@ -11,6 +11,7 @@ import { registerActJump } from './actJump';
 import { ACT2_JUMP_CLASSES } from './act2Jump';
 import { ACT5_GATE_FLAG, FOUNDRY_OPEN_FLAG, RIM_CAMP_POINT, RIMFOOT_POINT, RIM_GATE_OPEN_FLAG } from '../region/act5Regions';
 import { ACT5_PHASE_I, ACT5_PHASE_J } from './lint/act5Ids';
+import { WASTE_CARD_SEEN_FLAG } from '../integration/phaseGCard';
 import { FAVOUR_TRACKS, snapshotFlag, type FavourTrack } from '../state/favour';
 
 export { ACT5_PHASE_I, ACT5_PHASE_J };
@@ -188,6 +189,9 @@ export class Act5Jump {
     if (this.finished) return;
     const p = this.ports;
     if (this.phase === 'replay') {
+      // Phase G's one-off "The Waste is next" card queues the moment M41 completes in the replay and shows even if its
+      // seen flag is set later, so it is marked seen before the replay reaches M41.
+      p.setFlag(WASTE_CARD_SEEN_FLAG, true);
       this.inner.tick();
       if (!this.inner.finished) return;
       this.phase = 'act4-end';
@@ -217,6 +221,12 @@ export class Act5Jump {
       return;
     }
     if (this.phase === 'place') {
+      // Favour from the injected quests can land after the preset (the real game showed dragons 13 for the preset 10):
+      // set the preset's live tracks again once the world is quiet, so the preset reads exactly as the design's table.
+      if (this.favour && p.setFavourTo) {
+        const live = presetLiveFavour(this.favour, this.id);
+        for (const t of FAVOUR_TRACKS) p.setFavourTo(t, live[t]);
+      }
       const land = act5Landing(this.id, p.giverPose?.(ACT5_GIVERS[this.id]));
       if (p.placePose(land.at, land.yaw)) this.phase = 'done';
     }
