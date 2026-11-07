@@ -398,7 +398,7 @@ const plugin: GamePlugin = {
     };
     const killFailsafe = new KillFailsafe({
       // the groups are gated on the tutorial's end (M01 is already active during T13 to T15)
-      targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(manager, KILL_FAILSAFE_QUESTS) : []),
+      targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(manager, KILL_FAILSAFE_QUESTS, (f) => ctx.state.getBool(f)) : []),
       live: (tag) => {
         let n = 0;
         for (const a of ctx.actors.all()) if (!a.dead && (a as { spawnTag?: string }).spawnTag === tag) n++;
