@@ -38,6 +38,7 @@ export const GEAR_STRINGS_EN: Record<string, string> = {
 
   'gear.smith.prompt': 'Press {key} to temper gear with {name}',
   'gear.anvil.locked': 'The anvil hums, but you do not yet know how to work it.',
+  'gear.screen.title.rim': "Alric's rim anvil",
   'gear.rim.cold': 'The forge is cold. Alric says the Cooling Hall comes first.',
   'gear.smith.locked': 'Dunstan will temper your gear once he has shown you the anvil.',
   'gear.screen.title.anvil': 'The Hushed Anvil',

@@ -76,10 +76,10 @@ export interface Offer {
 
 const isCount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0;
 
-/** Vendors' stock and buy-back. Every transaction validates fully, then takes gold, with no refund path. */
 /** Act 5 vendors with unlimited stock and no buying: left out of the shop save so no older save's bytes change. */
 export const ACT5_UNPERSISTED: ReadonlySet<VendorId> = new Set<VendorId>(['alric', 'maud-rim']);
 
+/** Vendors' stock and buy-back. Every transaction validates fully, then takes gold, with no refund path. */
 export class Shop {
   static readonly key = 'vendors';
   static readonly version = 1;

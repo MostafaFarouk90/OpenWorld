@@ -29,7 +29,7 @@ let offs: (() => void)[] = [];
 
 const itemsAct5Plugin: GamePlugin = {
   id: 'items-act5',
-  dependsOn: ['core', 'inventory'],
+  dependsOn: ['core', 'inventory', 'progression'],
   setup(ctx: GameContext) {
     ctx.strings.register('en', ITEMS_ACT5_STRINGS_EN);
     const inventory = ctx.services.require('inventory');
@@ -57,6 +57,7 @@ const itemsAct5Plugin: GamePlugin = {
       offs.push(
         ctx.events.on('inventory.equipped', (e) => e.slot === 'trinket' && refresh()),
         ctx.events.on('save.loaded', refresh),
+        ctx.events.on('flag.changed', (e) => e.key === AFTER_ENDING_FLAG && refresh()),
       );
     }
 

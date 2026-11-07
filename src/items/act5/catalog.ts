@@ -105,3 +105,6 @@ export function endingKeepsakeFor(choice: unknown): string | null {
   if (choice === 'let-it-die') return ACT5_KEEPSAKES.endingLongDawn;
   return null;
 }
+
+/** Every item id the Act 5 quests grant, once each. */
+export const ACT5_REWARD_IDS: readonly string[] = [...new Set(Object.values(ACT5_REWARDS).flat())];
