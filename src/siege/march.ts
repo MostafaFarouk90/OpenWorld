@@ -30,6 +30,8 @@ export interface MarchOptions {
 }
 
 const flat = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
+/** A member in one of these states with the landing mark as its target is swinging at it. */
+const SWING: ReadonlySet<string> = new Set(['telegraph', 'attack', 'recover']);
 
 export class March {
   /** The far draw's radius: past the farthest lane anchor, never under the gate's own draw. */
@@ -111,8 +113,13 @@ export class March {
   update(dt: number, members: Iterable<{ a: Actor; p: { x: number; z: number } }>): void {
     const landing = this.opts.landing;
     const live = new Set<ActorId>();
+    const enemies = this.host.services.get('enemies');
     for (const m of members) {
       live.add(m.a.id);
+      // Swinging at the mark (a torch throws from 12 m, a pike thrusts from 3): it has come up far enough.
+      if (landing && !this.passed.has(m.a.id) && this.landingActor && enemies?.ground?.get(m.a.id)?.tauntTarget === this.landingActor.id && SWING.has(enemies.view(m.a.id)?.state ?? '')) {
+        this.passed.add(m.a.id);
+      }
       // Climbed: at the landing, or already nearer the gate than the landing is (a foe that came up another way).
       if (landing && !this.passed.has(m.a.id) && (flat(m.p, landing) <= MARCH.landingReach || flat(m.p, this.opts.origin) < this.landingToGate - 1)) {
         this.passed.add(m.a.id);
@@ -122,7 +129,6 @@ export class March {
     this.alertIn -= dt;
     if (this.alertIn > 0) return;
     this.alertIn = MARCH.alertEveryS;
-    const enemies = this.host.services.get('enemies');
     if (!enemies) return;
     const player = this.host.actors.player.id;
     for (const id of live) {
