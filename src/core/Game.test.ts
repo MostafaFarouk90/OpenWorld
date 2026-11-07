@@ -331,7 +331,8 @@ describe('Game plugins', () => {
     expect(() => c.damage.addModifier('bad.mod', () => {})).not.toThrow(); // the id is free again
     expect(() => c.services.provide('bad' as never, {} as never)).not.toThrow();
     // The core plugin's own system (v0.6 `core.pull`) stays; nothing of 'bad' does.
-    expect(t.game.systems.size).toBe(before.systems + 1);
+    // v0.9: and `core.platformCamera` (the camera turning with a turning platform).
+    expect(t.game.systems.size).toBe(before.systems + 2);
     expect(t.game.systems.order('intent')).toContain('core.pull');
     expect(t.game.systems.order('rules')).not.toContain('bad.system');
     expect(() => c.interaction.register({ id: 'use:bad', kind: 'use', position: (o) => o, onInteract: () => {} })).not.toThrow();

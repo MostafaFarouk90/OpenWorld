@@ -6,10 +6,12 @@ import type { Act2Note } from '../act2/notes';
 import type { CarryItemSpec } from '../carry';
 import './harrowmark/items';
 import { HARROWMARK_A4 } from './harrowmark/harrowmark.content';
+import { WASTE_A4 } from './waste/waste.content';
 
 export { HARROWMARK_A4, HARROWMARK_A4_QUEST_IDS } from './harrowmark/harrowmark.content';
+export { WASTE_A4, WASTE_A4_QUEST_IDS } from './waste/waste.content';
 
-const BLOCKS = [HARROWMARK_A4] as const;
+const BLOCKS = [HARROWMARK_A4, WASTE_A4] as const;
 
 export const ACT4_QUEST_DEFS: QuestDef[] = BLOCKS.flatMap((b) => b.quests);
 export const ACT4_PROPS = BLOCKS.flatMap((b) => b.props);

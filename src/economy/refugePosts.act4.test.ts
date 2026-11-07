@@ -92,7 +92,8 @@ describe('Act 4 vendor open rules', () => {
 
 describe('wired into L0\'s tables', () => {
   it('VENDOR_OPEN_WHEN and VENDOR_POSTS carry the L7 rows', () => {
-    expect(VENDOR_OPEN_WHEN).toEqual(ACT4_VENDOR_OPEN_WHEN);
+    // v0.9 item 15 adds the two Act 5 vendors, closed until N7.
+    expect(VENDOR_OPEN_WHEN).toEqual({ ...ACT4_VENDOR_OPEN_WHEN, alric: { any: ['region.never'] }, 'maud-rim': { any: ['region.never'] } });
     expect(VENDOR_POSTS).toEqual(ACT4_VENDOR_POSTS);
   });
   it('each refuge shop stands in the city before M38 and at the refuge after M41; Aldous stays put and closes', () => {

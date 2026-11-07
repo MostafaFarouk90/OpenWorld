@@ -47,7 +47,7 @@ const plateau = (id: string, minX: number, maxX: number, minZ: number, maxZ: num
 
 export const ASHGATE_PLATEAU = plateau('ashgate', 9560, 10060, 4340, 4480, 45, 120);
 export const M41_CAMP_PLATEAU = plateau('m41-camp', 8870, 8960, 3285, 3365, 30, 60);
-export const CROSSING_PLATEAU = plateau('waste-crossing', 10440, 10480, 5280, 5320, 121, 150);
+export const CROSSING_PLATEAU = plateau('waste-crossing', 10440, 10480, 5280, 5320, 109, 150);
 export const WALKER_CAMP_PLATEAU = plateau('walker-camp', 8300, 8500, 5800, 6000, 110, 160);
 export const CINDER_CHAPEL_PLATEAU = plateau('cinder-chapel', 7820, 7980, 8120, 8280, 70, 80);
 export const HUSK_CATHEDRAL_PLATEAU = plateau('husk-cathedral', 13740, 13860, 7870, 8040, 80, 80);

@@ -6,7 +6,7 @@ import { CarrySystem, type Carryable } from './carry';
 import { KILL_FAILSAFE_QUESTS, KillFailsafe, currentKillTargets } from './killFailsafe';
 import { VillagerBody, isModelLoader } from './carryBody';
 import {
-  buildJournalModel, createJournalPanel, createJournalToggleState, toggleJournal,
+  buildJournalModel, createJournalPanel, createJournalToggleState, toggleJournal, closeJournalOnMenu,
 } from './JournalPanel';
 import { validateQuest } from './validate';
 import { questDefs } from './content';
@@ -274,6 +274,9 @@ const plugin: GamePlugin = {
       fixedPhase: 'input',
       order: 20,
       fixedUpdate: () => {
+        // Act 4 L9 (Act 3 playthrough M3): Escape closes the journal too, as it does the map and the codex. Only while the
+        // journal is the open modal and was opened by J, so it never opens one or closes another screen.
+        if (ctx.input.actions.pressed('menu') && closeJournalOnMenu(journalHud, journalState)) return;
         if (!ctx.input.actions.pressed('journal')) return;
         const open = toggleJournal(journalHud, makeJournal, journalState);
         if (open) {

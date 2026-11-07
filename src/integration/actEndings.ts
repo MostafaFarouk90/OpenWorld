@@ -84,6 +84,53 @@ export const ACT_ENDINGS: readonly ActEndingDef[] = [
   },
 ];
 
+/**
+ * v0.9 item 9: the final ending (Act 5, plan Part 3.8). Its own row type: it has no camp scene, and it ends on a choice
+ * (`story.m56.choice`) with one cutscene per choice, the cards, the epilogue and the credits, then the world after the
+ * ending (`world.afterEnding`, Q1 (a)). The camp rows of acts 1 to 4 keep `ActEndingDef` unchanged. No director runs it
+ * until N12 PR 2. Deviation from the plan's "optional camp fields" (routine): a separate type keeps every shipped reader
+ * of the camp rows typed as before.
+ */
+export interface FinalEndingDef {
+  act: 5;
+  endingId: string;
+  requires: readonly string[];
+  /** Set when M56 completes; the epilogue and credits run from it. */
+  gateFlag: string;
+  /** The choice flag and its values (`M56_CHOICES`). */
+  choiceFlag: string;
+  /** One cutscene per choice value. */
+  cutscenes: Readonly<Record<'rekindle' | 'let-it-die', string>>;
+  /** The ending cards (id to strings key); N12 picks which show from the choice and the snapshot. */
+  cards: Readonly<Record<string, string>>;
+  /** Set when the first card is shown. */
+  cardSeenFlag: string;
+  epilogueId: string;
+  creditsId: string;
+  /** Set once the ending has played out: the world after the ending (N13). */
+  afterState: string;
+}
+
+export const ACT5_ENDING: FinalEndingDef = {
+  act: 5,
+  endingId: 'embers-or-dawn',
+  requires: ['m56'],
+  gateFlag: 'story.gate.end',
+  choiceFlag: 'story.m56.choice',
+  cutscenes: { rekindle: 'scene-ending-rekindle', 'let-it-die': 'scene-ending-let-it-die' },
+  cards: { 'last-ember': 'hud.ending.a5.lastEmber', 'last-bearer': 'hud.ending.a5.lastBearer', 'long-dawn': 'hud.ending.a5.longDawn' },
+  cardSeenFlag: 'codex.actEnding.a5.seen',
+  epilogueId: 'scene-epilogue',
+  creditsId: 'credits-main',
+  afterState: 'world.afterEnding',
+};
+
+/** v0.9: the final ending's row. */
+export function finalEnding(): FinalEndingDef {
+  return ACT5_ENDING;
+}
+
+/** The camp row of acts 1 to 4 (the final ending is `finalEnding()`). */
 export function actEnding(act: number): ActEndingDef | undefined {
   return ACT_ENDINGS.find((d) => d.act === act);
 }

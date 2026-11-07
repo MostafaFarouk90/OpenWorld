@@ -75,11 +75,15 @@ export interface CarryRouteDef {
 
 // ---- Movement modes (item 25) ----
 
-export type MovementMode = 'walk' | 'glide' | 'ferry' | 'dive' | 'haul' | 'storm' | 'escort' | 'scene';
+export type MovementMode = 'walk' | 'glide' | 'ferry' | 'dive' | 'haul' | 'storm' | 'escort' | 'scene' | 'siege' | 'lava-stair' | 'arena';
 
-/** v0.8: the modes owners push (`movementMode.push`) over K7's set mode, highest first: scene > escort > storm. */
-export type PushedMovementMode = 'storm' | 'escort' | 'scene';
-export const PUSHED_MODE_PRIORITY: Readonly<Record<PushedMovementMode, number>> = { storm: 1, escort: 2, scene: 3 };
+/**
+ * v0.8: the modes owners push (`movementMode.push`) over K7's set mode, highest first: scene > escort > storm.
+ * v0.9 item 12 (Act 5): scene 5 > siege 4 > arena 3 > escort 2 > storm 1 = lava-stair 1 (equal: the later push wins, the
+ * shipped tie rule). The shipped three keep their order.
+ */
+export type PushedMovementMode = 'storm' | 'escort' | 'scene' | 'siege' | 'lava-stair' | 'arena';
+export const PUSHED_MODE_PRIORITY: Readonly<Record<PushedMovementMode, number>> = { storm: 1, 'lava-stair': 1, escort: 2, arena: 3, siege: 4, scene: 5 };
 
 export interface MovementSafePoint {
   position: Vec3Like;
@@ -117,6 +121,12 @@ export const MOVEMENT_MODE_RULES: Readonly<Record<MovementMode, MovementModeRule
   escort: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
   // The scene's start or its last checkpoint; the scene dismisses the mount and places companions itself.
   scene: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
+  // v0.9 (Act 5, item 12). N4: the wave's start point at the gate (M52) or the tunnel mouth (R27); companions fight.
+  siege: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
+  // N3: the last safe lip passed (a getter); fast travel stays open outside fights (the waystones' own fight rule).
+  'lava-stair': { save: 'safePoint', fastTravel: 'allowed', mount: 'refused', companions: 'follow' },
+  // N6: the arena's mouth.
+  arena: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
 };
 
 /** The `movementMode` service (core provides it; K7 calls `set`). */
@@ -127,7 +137,7 @@ export interface MovementModeService {
   /** K7: enters a mode with its safe point (`walk` clears it). Emits `movement.mode` on a change. */
   set(mode: MovementMode, safePoint?: { position: Vec3Like; yaw: number } | null): void;
   /**
-   * v0.8: pushes `storm`, `escort` or `scene` over the set mode, with its safe point or a getter for it. The current mode
+   * v0.8: pushes `storm`, `escort` or `scene` (v0.9: `siege`, `lava-stair`, `arena`) over the set mode, with its safe point or a getter for it. The current mode
    * is the highest pushed (scene > escort > storm), else the set mode. Returns the release (idempotent). Emits
    * `movement.mode` when the current mode changes. A load does not clear pushed modes: their owners release them.
    */

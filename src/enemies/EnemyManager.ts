@@ -33,6 +33,7 @@ import { makeLineOfSight } from './ai/perception';
 import { drainPlayer } from './fen/drain';
 import { makeLeechBody } from './fen/leech/body';
 import { makeHawkBody } from './peak/hawk/body';
+import { makeStriderBody, makeSwarmBody } from './waste/bodies';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import type { PerksService } from '../perks/types';
@@ -342,6 +343,8 @@ export class EnemyManager {
         options: req.options,
         slot: req.slot,
         skin: req.skin,
+        ...(req.area ? { area: req.area } : {}),
+        ...(req.role ? { role: req.role } : {}),
       };
       const body = this.makeBody(def, req.skin);
       // Humanoid bodies draw the skin in the model builder (makeBody); the others (golem, crawler, quadruped, wyrm) take
@@ -399,6 +402,9 @@ export class EnemyManager {
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'leech') return makeLeechBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'bird') return makeHawkBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    // Act 4 L5: the Waste Strider (feet on the heightfield) and the Cinder Gnat cloud.
+    if (def.body === 'strider') return makeStriderBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), groundAt: (x, z) => this.host.heightAt(x, z) });
+    if (def.body === 'swarm') return makeSwarmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality: this.host.services.get('vfx')?.quality === 'low' });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });

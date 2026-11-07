@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildJournalModel, createJournalPanel, toggleJournal, createJournalToggleState,
+  buildJournalModel, createJournalPanel, toggleJournal, createJournalToggleState, closeJournalOnMenu,
   type JournalQuestView, type JournalWidget, type JournalHud,
 } from './JournalPanel';
 
@@ -85,5 +85,21 @@ describe('toggleJournal', () => {
     t.setModal(null);
     expect(toggleJournal(t.hud, t.make, st)).toBe(true);
     expect(t.c().opened).toBe(2);
+  });
+
+  it('Escape closes the open journal exactly once, never opens it and never closes another screen (Act 3 playthrough M3)', () => {
+    const t = mk(); const st = createJournalToggleState();
+    expect(closeJournalOnMenu(t.hud, st)).toBe(false);
+    expect(t.c().opened).toBe(0);
+    toggleJournal(t.hud, t.make, st);
+    expect(closeJournalOnMenu(t.hud, st)).toBe(true);
+    expect(t.c()).toEqual({ opened: 1, closed: 1, disposed: 1 });
+    expect(closeJournalOnMenu(t.hud, st)).toBe(false);
+    expect(t.c().closed).toBe(1);
+    // Another screen on top (the journal's handle is stale): Escape leaves it alone.
+    toggleJournal(t.hud, t.make, st);
+    t.setModal('inventory');
+    expect(closeJournalOnMenu(t.hud, st)).toBe(false);
+    expect(t.c().closed).toBe(1);
   });
 });

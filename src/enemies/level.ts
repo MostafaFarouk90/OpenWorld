@@ -203,15 +203,46 @@ export const ACT4_FIRST_ARRIVAL_ABOVE_PLAYER = 2;
 
 /** An Act 4 member's level: the band rolled first, then capped by the live player level (P + 2 for first arrivals). */
 export function act4Level(band: LevelBand, roll: number, playerLevel: number | undefined, firstArrival = false, cap: number | null = ACT4_CAP_ABOVE_PLAYER): number {
-  const r = isNum(roll) ? Math.min(1, Math.max(0, roll)) : 0;
-  let level = band.min + Math.round(r * (band.max - band.min));
-  const c = cap === null ? null : firstArrival ? Math.min(cap, ACT4_FIRST_ARRIVAL_ABOVE_PLAYER) : cap;
-  level = capAbovePlayer(level, playerLevel, c);
-  return Math.min(LEVEL.cap, Math.max(1, level));
+  return cappedBandLevel(band, roll, playerLevel, firstArrival ? ACT4_FIRST_ARRIVAL_ABOVE_PLAYER : null, cap);
 }
 
 /** An Act 4 boss's level (plan 6.2: the Bellows-Engine 31, Eormen 35), capped the same way as every Act 4 spawn. */
 export function act4BossLevel(base: number, playerLevel: number | undefined, cap: number | null = ACT4_CAP_ABOVE_PLAYER): number {
+  return cappedBossLevel(base, playerLevel, cap);
+}
+
+// ---- v0.9 (Act 5, contracts/CHANGES-v0.9.md item 2, Q3) ----
+
+/**
+ * Q3, a taste call Mostafa may veto: no Act 5 enemy stands more than this many levels above the player. Applied to
+ * every Caldera spawn (the `caldera` band and every `caldera-*` area, the rim stairs and the siege included) after the
+ * band roll, at spawn time, fixed for the member's life. `null` restores the design's bands.
+ */
+export const ACT5_CAP_ABOVE_PLAYER: number | null = 3;
+
+/** First-arrival groups (`SpawnerDef.firstArrival`) cap at P + 2, as in Act 4. */
+export const ACT5_FIRST_ARRIVAL_ABOVE_PLAYER = 2;
+
+/** An Act 5 member's level: the band rolled first, then capped by the live player level (P + 2 for first arrivals). */
+export function act5Level(band: LevelBand, roll: number, playerLevel: number | undefined, firstArrival = false, cap: number | null = ACT5_CAP_ABOVE_PLAYER): number {
+  return cappedBandLevel(band, roll, playerLevel, firstArrival ? ACT5_FIRST_ARRIVAL_ABOVE_PLAYER : null, cap);
+}
+
+/** An Act 5 boss's level (ACT5_BOSS_BASE_LEVEL: Vey 38, Ulthred 40), capped the same way as every Act 5 spawn. */
+export function act5BossLevel(base: number, playerLevel: number | undefined, cap: number | null = ACT5_CAP_ABOVE_PLAYER): number {
+  return cappedBossLevel(base, playerLevel, cap);
+}
+
+/** The one rule both acts share, so Act 4 and Act 5 cannot drift: roll the band, then `min(level, P + cap)`. */
+function cappedBandLevel(band: LevelBand, roll: number, playerLevel: number | undefined, firstArrivalCap: number | null, cap: number | null): number {
+  const r = isNum(roll) ? Math.min(1, Math.max(0, roll)) : 0;
+  let level = band.min + Math.round(r * (band.max - band.min));
+  const c = cap === null ? null : firstArrivalCap !== null ? Math.min(cap, firstArrivalCap) : cap;
+  level = capAbovePlayer(level, playerLevel, c);
+  return Math.min(LEVEL.cap, Math.max(1, level));
+}
+
+function cappedBossLevel(base: number, playerLevel: number | undefined, cap: number | null): number {
   const b = isNum(base) ? Math.round(base) : 1;
   return Math.min(LEVEL.cap, Math.max(1, capAbovePlayer(b, playerLevel, cap)));
 }
