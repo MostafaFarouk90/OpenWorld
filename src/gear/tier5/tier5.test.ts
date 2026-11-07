@@ -149,8 +149,8 @@ describe('the session modes', () => {
       expect(t.s.view().lastResult).toBeNull();
     }
   });
-  it('counts as the Anvil for tier 5: a tier 5 temper there marks the tier, so the smith then tempers it', () => {
-    const t = make({ 'sunforged-dawnbrand': 1, 'rime-iron': 2, 'shed-wyrm-scale': 2 }, 500, true);
+  it('counts as the Anvil for tier 5: a landed tier 5 temper there marks the tier, so the smith then tempers it', () => {
+    const t = make({ 'sunforged-dawnbrand': 1, 'rime-iron': 3, 'shed-wyrm-scale': 3 }, 900, true);
     t.s.open('smith');
     expect(row(t.s, 'sunforged-dawnbrand').blockedBy).toBe('anvil-first');
     t.s.close();
@@ -158,10 +158,23 @@ describe('the session modes', () => {
     expect(row(t.s, 'sunforged-dawnbrand').blockedBy).toBeNull();
     t.s.select('sunforged-dawnbrand');
     t.s.start();
-    // a rim temper marks tier 5 only when it lands; mark it the way a landed temper does
-    expect(t.state.anvilTiers).not.toContain(5);
+    for (let i = 0; i < 400 && t.s.state === 'rhythm'; i++) t.s.update(i * 1000);
+    if (t.s.state === 'rhythm') t.s.strike(0);
+    expect(t.state.anvilTiers).toContain(5);
+    t.s.close();
+    t.s.open('smith');
+    expect(row(t.s, 'sunforged-dawnbrand').blockedBy).toBeNull();
   });
-  it('does not mark tier 4 or spend a lesson run at the rim', () => {
+  it('tempers only tier 4 and 5 at the rim, and tier 4 keeps the Hushed Anvil rule', () => {
+    const t = make({ 'halvard-steel-blade': 1, 'wyrm-tempered-oathblade': 1, 'sunforged-dawnbrand': 1 }, 900, true);
+    t.state.anvilTiers = [];
+    t.s.open('rim');
+    expect(row(t.s, 'halvard-steel-blade').blockedBy).toBe('locked');
+    expect(row(t.s, 'wyrm-tempered-oathblade').blockedBy).toBe('anvil-first');
+    t.state.anvilTiers = [4];
+    expect(row(t.s, 'wyrm-tempered-oathblade').blockedBy).not.toBe('anvil-first');
+  });
+  it('spends no lesson run at the rim', () => {
     const t = make(HELD, 600, true);
     t.s.open('rim');
     expect(t.state.lessonRuns).toBe(0);

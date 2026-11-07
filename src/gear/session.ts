@@ -109,7 +109,13 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
   const modeUsable = (m: SessionMode | null): boolean => (m === 'anvil' ? ports.anvilUsable() : m === 'rim' ? ports.rimUsable?.() === true : ports.smithUsable());
   const blocked = (id: string): TemperRefusal | null => {
     if (!modeUsable(mode)) return 'locked';
-    if (mode === 'smith' && firstTemperOfTier(ports.state.anvilTiers, tierOf(getItem(id)))) return 'anvil-first';
+    const tier = tierOf(getItem(id));
+    if (mode === 'smith' && firstTemperOfTier(ports.state.anvilTiers, tier)) return 'anvil-first';
+    // N7: Alric's anvil tempers tier 4 and 5 only; tier 5 counts as the Anvil there, tier 4 keeps the Hushed Anvil's rule.
+    if (mode === 'rim') {
+      if (tier < 4) return 'locked';
+      if (tier < 5 && firstTemperOfTier(ports.state.anvilTiers, tier)) return 'anvil-first';
+    }
     return checkTemper(inv, id, { free: free() });
   };
 

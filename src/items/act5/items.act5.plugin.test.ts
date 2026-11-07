@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import corePlugin from '../../core/core.plugin';
 import { Game } from '../../core/Game';
 import { MoveModifiers } from '../../core/MoveModifiers';
-import type { PluginModule } from '../../core/plugins';
+import type { GamePlugin, PluginModule } from '../../core/plugins';
 import { REFUGE_ANVIL } from '../../economy/refugePosts.act4';
 import { RIM_ANVIL_ALRIC, RIM_FORGE_DUNSTAN } from '../../economy/rimCamp.act5';
 import { InputManager } from '../../input/InputManager';
@@ -65,11 +65,15 @@ async function boot() {
   };
   const mods = new Map<string, () => number>();
   const refresh = vi.fn();
-  (ctx.services as any).provide('progression', { addMaxHealthModifier: (id: string, fn: () => number) => (mods.set(id, fn), () => mods.delete(id)), refreshMaxHealth: refresh });
   const states: Record<string, string> = {};
   const rim = vi.fn(() => true);
   const smith = vi.fn(() => true);
-  const statuses = await game.loadPlugins(modules);
+  const progressionStub: GamePlugin = {
+    id: 'progression',
+    dependsOn: ['core'],
+    setup: (c) => void (c.services as any).provide('progression', { addMaxHealthModifier: (id: string, fn: () => number) => (mods.set(id, fn), () => mods.delete(id)), refreshMaxHealth: refresh }),
+  };
+  const statuses = await game.loadPlugins({ ...modules, '/src/test/progression.plugin.ts': { default: progressionStub } });
   (ctx.services as any).provide('classes', { chosen: () => true, current: () => 'knight' });
   (ctx.services as any).provide('quests', { state: (id: string) => states[id] ?? 'inactive' });
   (ctx.services as any).provide('gear', { openSmith: smith, openRimAnvil: rim });
@@ -109,7 +113,9 @@ describe('items-act5 plugin', () => {
     t.inv.equip(ACT5_TRINKETS.emberCrown);
     expect(t.refresh).toHaveBeenCalled();
     expect(warmth()).toBe(1);
+    const before = t.refresh.mock.calls.length;
     t.ctx.state.setFlag('world.afterEnding', true);
+    expect(t.refresh.mock.calls.length).toBeGreaterThan(before);
     expect(warmth()).toBeCloseTo(1.08, 5);
     t.inv.unequip('trinket');
     expect(warmth()).toBe(1);
