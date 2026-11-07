@@ -390,7 +390,8 @@ export class WaveDirector implements WavesService {
       const s = item.spawn;
       const enemies = this.host.services.get('enemies');
       const sid = spawnerId(run.def.id, run.index, s.lane, s.kind, s.role, s.line);
-      const ids = enemies?.spawnGroup(sid, { count: 1, aggro: true }) ?? [];
+      const at = this.joinPoint(run.def, world, s.lane);
+      const ids = enemies?.spawnGroup(sid, { count: 1, aggro: true, ...(at ? { at } : {}) }) ?? [];
       if (ids.length === 0) this.warnOnce(`spawn:${sid}`, `spawner '${sid}' spawned nothing (missing anchor or spawner?)`);
       wave.members.push(...ids);
       return;
@@ -423,6 +424,29 @@ export class WaveDirector implements WavesService {
         : {}),
     });
     if (cart) wave.carts.push(cart);
+  }
+
+  /**
+   * N4: where a foot spawn of `lane` joins under the set's `join` knob: `metres` short of the `toward` lane's anchor on the
+   * line from its own anchor, shifted across the line by lane so two lanes' first members do not share a point. Null (the
+   * lane anchor) without the knob, for the `toward` lane itself, for a missing anchor and for a lane already that near.
+   */
+  private joinPoint(def: WaveSetDef, world: World, lane: string): Vec3 | null {
+    const join = def.join;
+    if (!join || lane === join.toward) return null;
+    const p = world.lanes.get(lane);
+    const t = world.lanes.get(join.toward);
+    if (!p || !t) return null;
+    const dx = p.x - t.x;
+    const dz = p.z - t.z;
+    const len = Math.hypot(dx, dz);
+    if (!(len > join.metres)) return null;
+    const k = join.metres / len;
+    const feet = Object.keys(def.lanes).filter((l) => l !== join.toward);
+    const side = (feet.indexOf(lane) - (feet.length - 1) / 2) * DIRECTOR.joinSpacing;
+    const nx = -dz / len;
+    const nz = dx / len;
+    return { x: t.x + dx * k + nx * side, y: t.y + (p.y - t.y) * k, z: t.z + dz * k + nz * side };
   }
 
   private onCart(cart: Cart, how: CartOutcome): void {
