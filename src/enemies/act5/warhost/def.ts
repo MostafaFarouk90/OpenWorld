@@ -41,7 +41,7 @@ export const WARHOST_ROLE_MOVES: Readonly<Record<WarhostRole, ReadonlySet<string
 export const WARHOST_SOLDIER: EnemyDef = {
   kind: 'warhost-soldier',
   nameKey: 'enemies.name.warhost-soldier',
-  model: { prefer: [], tint: 0x2b2622, emissive: 0x3a2a08, weapons: 'sword-shield' },
+  model: { prefer: [], tint: 0x2b2622, emissive: 0x3a2a08, weapons: 'sword-shield', hide: ['Knight_Helmet'] },
   maxHealth: WARHOST.maxHealth,
   maxPoise: WARHOST.maxPoise,
   walkSpeed: WARHOST.walkSpeed,
@@ -59,7 +59,7 @@ export const WARHOST_SOLDIER: EnemyDef = {
 export const WARHOST_GUARD_DEF: EnemyDef = {
   kind: 'warhost-guard',
   nameKey: 'enemies.name.warhost-guard',
-  model: { prefer: [], tint: 0x1c1916, emissive: 0x4a3408, weapons: 'sword-shield', scale: WARHOST_GUARD.scale },
+  model: { prefer: [], tint: 0x1c1916, emissive: 0x4a3408, weapons: 'sword-shield', hide: ['Knight_Helmet'], scale: WARHOST_GUARD.scale },
   maxHealth: WARHOST_GUARD.maxHealth,
   maxPoise: WARHOST_GUARD.maxPoise,
   walkSpeed: WARHOST.walkSpeed,
