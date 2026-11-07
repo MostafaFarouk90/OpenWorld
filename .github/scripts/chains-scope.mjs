@@ -14,6 +14,12 @@ export const CHAIN_PATHS = [
   'src/scenes/',
   'src/save/',
   'src/waystones/',
+  // Phase H playthrough (2026-11-07, coordinator ruling): the Waste, the enemies, the bosses and the regions are what
+  // the Act 4 chain plays too.
+  'src/waste/',
+  'src/enemies/',
+  'src/bosses/',
+  'src/region/',
   '.github/workflows/ci.yml',
   '.github/scripts/chains-scope.mjs',
   'vitest.chains.ts',
