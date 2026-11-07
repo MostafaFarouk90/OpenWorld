@@ -1,6 +1,7 @@
 // Act 4 world data (contracts v0.8 item 3, plan Part 3.4): where the new fog faces stand. `fog.waste-edge` stands across
 // the Ash Road's end, 30 m inside the corridor north of Ashgate; the four Caldera rim faces stand 30 m outside the
-// Caldera's box on the Waste side (the south one at Rimfoot). L1 may move them with the real road; the anchors are
+// Caldera's box on the Waste side (the south one at Rimfoot). v0.9 (Act 5 N1): the south one is three spans on one line,
+// the Rim Gate's 28 m in the middle (opened by M47's winch) and two that never open. L1 may move them with the real road; the anchors are
 // defined by the act4-world plugin from act4World.layout.ts.
 import { WALL_CULL } from '../act2/act2World';
 import { ASHGATE_POINT } from '../act4Containment';
@@ -14,6 +15,15 @@ export const ACT4_FACE_INSET = 30;
 /** How far behind an Act 4 face the push-back reaches: past it containment holds. */
 export const ACT4_FACE_PUSH_DEPTH = 100;
 
+/**
+ * v0.9 (Act 5 N1, plans/act5-N1.md section 3): the Rim Gate's span of the south rim, 28 m wide at the box's centre line,
+ * the only part of the south face M47's winch opens. The rest of the line is `fog.caldera-rim.sw` and `.se`.
+ */
+export const RIM_GATE_X = (CALDERA.x0 + CALDERA.x1) / 2;
+export const RIM_GATE_HALF = 14;
+/** Each never-open south span's half length: from the box's corner (plus the inset) to the gate's span. */
+export const RIM_SIDE_HALF = (CALDERA.x1 - CALDERA.x0 + 2 * ACT4_FACE_INSET - 2 * RIM_GATE_HALF) / 4;
+
 export const ACT4_FOG_FACE_POINTS: Readonly<Record<Act4FogFaceId, { x: number; z: number }>> = {
   'fog.waste-edge': { x: ASHGATE_POINT.x, z: ASHGATE_POINT.z + 20 },
   /** L1: beside the shipped fog.wyrmwatch-waste (x 11500 to 15000), mirroring it on the Dragonspine side, x 10000 to 11500. */
@@ -22,6 +32,9 @@ export const ACT4_FOG_FACE_POINTS: Readonly<Record<Act4FogFaceId, { x: number; z
   'fog.caldera-rim.s': { x: (CALDERA.x0 + CALDERA.x1) / 2, z: CALDERA.z0 - ACT4_FACE_INSET },
   'fog.caldera-rim.e': { x: CALDERA.x1 + ACT4_FACE_INSET, z: (CALDERA.z0 + CALDERA.z1) / 2 },
   'fog.caldera-rim.w': { x: CALDERA.x0 - ACT4_FACE_INSET, z: (CALDERA.z0 + CALDERA.z1) / 2 },
+  // v0.9 (Act 5 N1): the south rim's two never-open spans either side of the Rim Gate's (all three on one line).
+  'fog.caldera-rim.sw': { x: (CALDERA.x0 - ACT4_FACE_INSET + RIM_GATE_X - RIM_GATE_HALF) / 2, z: CALDERA.z0 - ACT4_FACE_INSET },
+  'fog.caldera-rim.se': { x: (CALDERA.x1 + ACT4_FACE_INSET + RIM_GATE_X + RIM_GATE_HALF) / 2, z: CALDERA.z0 - ACT4_FACE_INSET },
 };
 
 export const ACT4_FOG_FACE_ANCHORS: Readonly<Record<Act4FogFaceId, string>> = {
@@ -31,6 +44,8 @@ export const ACT4_FOG_FACE_ANCHORS: Readonly<Record<Act4FogFaceId, string>> = {
   'fog.caldera-rim.s': 'waste.fog.caldera-rim.s',
   'fog.caldera-rim.e': 'waste.fog.caldera-rim.e',
   'fog.caldera-rim.w': 'waste.fog.caldera-rim.w',
+  'fog.caldera-rim.sw': 'waste.fog.caldera-rim.sw',
+  'fog.caldera-rim.se': 'waste.fog.caldera-rim.se',
 };
 
 const RIM_HALF = (CALDERA.x1 - CALDERA.x0) / 2 + ACT4_FACE_INSET;
@@ -51,7 +66,9 @@ export const ACT4_FOG_WALLS: readonly FogWallDef[] = [
   face('fog.waste-edge', 'z', 400, 1),
   face('fog.waste-north', 'z', 760, -1),
   face('fog.caldera-rim.n', 'z', RIM_HALF, -1),
-  face('fog.caldera-rim.s', 'z', RIM_HALF, 1),
+  face('fog.caldera-rim.s', 'z', RIM_GATE_HALF, 1),
+  face('fog.caldera-rim.sw', 'z', RIM_SIDE_HALF, 1),
+  face('fog.caldera-rim.se', 'z', RIM_SIDE_HALF, 1),
   face('fog.caldera-rim.e', 'x', RIM_HALF, -1),
   face('fog.caldera-rim.w', 'x', RIM_HALF, 1),
 ];

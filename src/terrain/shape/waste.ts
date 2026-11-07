@@ -9,6 +9,7 @@
 import { TERRAIN } from '../../config/constants';
 import { createNoise2D } from '../noise';
 import type { FlatDef, PlateauDef, RoadDef, ShapeBox, UpliftDef } from '../shaping';
+import { CALDERA_WASTE_SIDE_ZONES } from './caldera';
 
 export type XZ = readonly [number, number];
 
@@ -225,7 +226,15 @@ for (const r of WASTE_ROADS) {
     zones.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, hw: r.halfWidth, rect: false });
   }
 }
-for (const p of WASTE_PLATEAUS) zones.push({ ax: p.box.minX, az: p.box.minZ, bx: p.box.maxX, bz: p.box.maxZ, hw: 0, rect: true });
+// Act 5 (N1): the rim stairs and the warhost camp's ground (caldera.ts) stand on the Waste's side of the rim.
+for (const r of CALDERA_WASTE_SIDE_ZONES.roads) {
+  for (let i = 1; i < r.points.length; i++) {
+    const a = r.points[i - 1];
+    const b = r.points[i];
+    zones.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z, hw: r.halfWidth, rect: false });
+  }
+}
+for (const p of [...WASTE_PLATEAUS, ...CALDERA_WASTE_SIDE_ZONES.plateaus]) zones.push({ ax: p.box.minX, az: p.box.minZ, bx: p.box.maxX, bz: p.box.maxZ, hw: 0, rect: true });
 
 function zoneDistance(zn: Zone, x: number, z: number): number {
   if (zn.rect) return boxDistance({ x0: zn.ax, z0: zn.az, x1: zn.bx, z1: zn.bz }, x, z);

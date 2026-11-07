@@ -31,8 +31,15 @@ export const M56_CHOICES: readonly M56Choice[] = ['rekindle', 'let-it-die'];
 
 /** The Caldera box's centre, where the Anvil stands (the Anvil of Ages shrine, item 13; N1 may move it). */
 export const CALDERA_CENTRE = { x: 11000, z: 8000 } as const;
-/** Placeholder bowl floor radius (m) for `hole.caldera.floor`; N1 sets it from the floor wall. */
-export const CALDERA_FLOOR_RADIUS = 900;
+/**
+ * The bowl floor's radius (m) for `hole.caldera.floor`: N1's floor wall (`FLOOR_WALL_RADIUS` in
+ * src/terrain/shape/caldera.ts; caldera.test.ts checks they agree). The Inner Gate's face stands on this circle.
+ */
+export const CALDERA_FLOOR_RADIUS = 520;
+/** The Anvil's island and its lake (N1): held until D10 starts (or Ulthred's fight has an outcome). */
+export const CALDERA_ANVIL_RADIUS = 260;
+export const D10_STARTED_FLAG = 'story.d10.started';
+export const ULTHRED_OUTCOME_FLAG = 'boss.ulthred.outcome';
 /** Rimfoot, on the Waste side below the Rim Gate (M47's landing until its giver is placed). */
 export const RIMFOOT_POINT = { x: 11000, z: 6200 } as const;
 /** The Rim Camp placeholder, just inside the Rim Gate (every later Phase I and Phase J landing until givers are placed). */

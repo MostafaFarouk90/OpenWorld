@@ -36,7 +36,16 @@ export const ACT4_SHIPPED_FACE_RULES = {
   'fog.fen-waste': { toastWhen: ASHGATE_ONLY_TOASTS },
 } as const satisfies Record<string, Partial<Pick<FogWallDef, 'openWhen' | 'toastWhen'>>>;
 
-export type Act4FogFaceId = 'fog.waste-edge' | 'fog.waste-north' | 'fog.caldera-rim.n' | 'fog.caldera-rim.e' | 'fog.caldera-rim.s' | 'fog.caldera-rim.w';
+export type Act4FogFaceId =
+  | 'fog.waste-edge'
+  | 'fog.waste-north'
+  | 'fog.caldera-rim.n'
+  | 'fog.caldera-rim.e'
+  | 'fog.caldera-rim.s'
+  | 'fog.caldera-rim.w'
+  // v0.9 (Act 5 N1): the south rim splits round the Rim Gate's span.
+  | 'fog.caldera-rim.sw'
+  | 'fog.caldera-rim.se';
 export type Act4FogFace = Pick<FogWallDef, 'openWhen' | 'toastKey' | 'toastWhen'> & { id: Act4FogFaceId };
 
 /**
@@ -49,7 +58,7 @@ export const ACT4_FOG_FACES: readonly Act4FogFace[] = [
   { id: 'fog.waste-edge', openWhen: WASTE_EDGE_OPEN_WHEN, toastKey: FOG_TOAST_WASTE_HILD, toastWhen: WASTE_EDGE_TOASTS },
   { id: 'fog.waste-north', openWhen: NEVER, toastKey: FOG_TOAST_ASHGATE_ONLY },
   // v0.9: Act 5's rules (act5Fog.ts): the south face is the Rim Gate; Act 4's own toast stays the default before the gate.
-  ...(['n', 'e', 's', 'w'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, toastKey: FOG_TOAST_CALDERA_RIM, ...ACT5_RIM_FACE_RULES[`fog.caldera-rim.${d}`] })),
+  ...(['n', 'e', 's', 'w', 'sw', 'se'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, toastKey: FOG_TOAST_CALDERA_RIM, ...ACT5_RIM_FACE_RULES[`fog.caldera-rim.${d}`] })),
 ];
 
 export function act4FogFace(id: Act4FogFaceId): Act4FogFace {
