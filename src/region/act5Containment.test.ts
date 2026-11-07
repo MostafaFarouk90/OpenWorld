@@ -39,7 +39,10 @@ const SIEGE: Flags = { ...PHASE_I, 'story.m52.started': true };
 const AFTER_SIEGE: Flags = { ...SIEGE, 'story.m52.complete': true };
 const PHASE_J: Flags = { ...AFTER_SIEGE, 'story.phase.foundryOpen': true };
 const AFTER_M53: Flags = { ...PHASE_J, 'story.m53.complete': true };
-const AFTER_ENDING: Flags = { ...AFTER_M53, 'story.m56.complete': true, 'story.gate.end': true, [AFTER_ENDING_FLAG]: true };
+// N1: the Anvil's island holds until D10 starts, and opens on Ulthred's outcome too (a load after the fight).
+const D10_RUNNING: Flags = { ...AFTER_M53, 'story.d10.started': true };
+const ULTHRED_DONE_ONLY: Flags = { ...AFTER_M53, 'boss.ulthred.outcome': true };
+const AFTER_ENDING: Flags = { ...D10_RUNNING, 'boss.ulthred.outcome': true, 'story.d10.complete': true, 'story.m56.complete': true, 'story.gate.end': true, [AFTER_ENDING_FLAG]: true };
 
 const reader = (flags: Flags) => ({ getFlag: (k: string) => flags[k] });
 function containment(flags: Flags): Containment {
@@ -67,7 +70,9 @@ const GRID: readonly [string, Flags, Row][] = [
   ['M52 running (the keep-in)', SIEGE, { rimfoot: false, gateOut: true, gateIn: true, camp: true, terraces: false, floor: false, anvil: false, beyondEast: false }],
   ['Phase I after M52 (the hold)', AFTER_SIEGE, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: false, anvil: false, beyondEast: true }],
   ['Phase J before M53', PHASE_J, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: false, anvil: false, beyondEast: true }],
-  ['Phase J after M53', AFTER_M53, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: true, anvil: true, beyondEast: true }],
+  ['Phase J after M53 (the Anvil held until D10)', AFTER_M53, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: true, anvil: false, beyondEast: true }],
+  ['D10 started', D10_RUNNING, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: true, anvil: true, beyondEast: true }],
+  ['Ulthred has an outcome (no D10 start flag)', ULTHRED_DONE_ONLY, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: true, anvil: true, beyondEast: true }],
   ['after the ending', AFTER_ENDING, { rimfoot: true, gateOut: true, gateIn: true, camp: true, terraces: true, floor: true, anvil: true, beyondEast: true }],
 ];
 

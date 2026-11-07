@@ -1,5 +1,6 @@
 // Act 4 thread L1: the Waste's terrain fitted on the real ground (plans/act4-L1.md section 3). Grades are true by
 // construction (core's shaper); what can fail is the fit, the guards, the floor and the dune mask.
+import { CALDERA_ROADS } from './caldera';
 import { describe, expect, it } from 'vitest';
 import { engineBox } from '../../region/regions';
 import { heightAt, worldRoads } from '../heightfield';
@@ -60,7 +61,8 @@ describe('the Waste in the world shape', () => {
     expect(WORLD_SHAPE.flats).toEqual(expect.arrayContaining([...WASTE_FLATS]));
     expect(WORLD_SHAPE.uplifts).toEqual(expect.arrayContaining([...WASTE_UPLIFTS]));
     expect(WORLD_SHAPE.plateaus).toEqual(expect.arrayContaining([...WASTE_PLATEAUS]));
-    expect(WORLD_SHAPE.roads.slice(-WASTE_ROADS.length)).toEqual(WASTE_ROADS);
+    // Act 5 (N1): the Caldera's roads come after the Waste's.
+    expect(WORLD_SHAPE.roads.slice(-WASTE_ROADS.length - CALDERA_ROADS.length, -CALDERA_ROADS.length)).toEqual(WASTE_ROADS);
   });
 
   it('no Act 3 flat, uplift or trough reaches the Waste (the guarantee its old guard gave)', () => {
