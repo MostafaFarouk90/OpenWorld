@@ -6,13 +6,15 @@ import * as THREE from 'three';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import corePlugin from '../../core/core.plugin';
 import type { Game } from '../../core/Game';
+import type { GamePlugin } from '../../core/plugins';
+import type { QualityStep } from '../../vfx/tuning';
 import { PLUGIN_TEST_TIMEOUT, bootPlugins, makeTestGame } from '../../core/testing/bootPlugins';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import heatHazePlugin from '../../rendering/heatHaze.plugin';
 import { heightAt } from '../../terrain/heightfield';
 import waystonesPlugin from '../../waystones/waystones.plugin';
 import { HAZE_FLAG, VENT_OPEN_S } from '../lava';
-import lavaPlugin from './lava.plugin';
+import lavaPlugin, { LAVA_ATTACK_ID } from './lava.plugin';
 import { LAVA_STRINGS_EN } from './strings.en';
 import { LAVA_STRING_KEYS, VENT } from './tuning';
 
@@ -32,11 +34,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function boot() {
+async function boot(extra: GamePlugin[] = []) {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   const game = makeTestGame(physics);
   games.push(game);
-  const statuses = await bootPlugins(game, [corePlugin, waystonesPlugin, lavaPlugin, heatHazePlugin]);
+  const statuses = await bootPlugins(game, [corePlugin, waystonesPlugin, lavaPlugin, heatHazePlugin, ...extra]);
   for (const s of statuses) expect(s.state, s.id).toBe('ok');
   const ctx = game.ctx;
   const events: { name: string; e: unknown }[] = [];
@@ -165,5 +167,45 @@ describe('caldera-lava plugin', () => {
     expect(t.lava.volumes().map((v) => v.id)).toEqual(['test.pool']);
     expect(t.lava.at(X, t.g0, Z)).toBe('test.pool');
     expect(t.lava.nearest(X + 10, Z)!.distance).toBeCloseTo(7, 6);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('a damage modifier that makes a burn tick lethal is caught: Cael stays at the floor', async () => {
+    const t = await boot();
+    const a = t.ctx.player.actor;
+    t.ctx.damage.addModifier('test.brutal', (req) => {
+      if (req.attackId === LAVA_ATTACK_ID) req.amount *= 1000;
+    });
+    t.ctx.damage.apply({ attackerId: null, targetId: a.id, amount: a.health - a.maxHealth * 0.5, poise: 0, kind: 'script', unblockable: true });
+    t.place(X, Z);
+    await t.run(4);
+    expect(a.dead).toBe(false);
+    expect(a.health).toBeGreaterThanOrEqual(a.maxHealth * 0.1 - 1e-6);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('haze follows a quality service that sets up after it: off on Low, on once Medium', async () => {
+    let step: QualityStep = 'low';
+    const subs: Array<(s: QualityStep) => void> = [];
+    const lateQuality: GamePlugin = {
+      id: 'zz-quality',
+      dependsOn: ['core'],
+      setup(ctx) {
+        ctx.services.provide('quality', { get step() { return step; }, setStep(s: QualityStep) { step = s; subs.forEach((f) => f(s)); }, subscribe: (f: (s: QualityStep) => void) => (subs.push(f), () => {}) });
+      },
+    };
+    const t = await boot([lateQuality]);
+    t.game.render(1, 1 / 60);
+    const haze = t.ctx.services.get('heatHaze')!;
+    expect(haze.enabled).toBe(false);
+    t.ctx.services.get('quality')!.setStep('medium');
+    expect(haze.enabled).toBe(true);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('crossings get one instanced lip marker for every end', async () => {
+    const t = await boot();
+    const undo = t.lava.addCrossing({ id: 'test.x', from: { x: X + 3.5, y: t.g0, z: Z }, to: { x: X - 1, y: t.g0, z: Z } });
+    const m = t.ctx.scene.getObjectByName('caldera-lava:lips') as THREE.InstancedMesh;
+    expect(m.count).toBe(2);
+    undo();
+    expect(t.ctx.scene.getObjectByName('caldera-lava:lips')).toBeUndefined();
   }, PLUGIN_TEST_TIMEOUT);
 });

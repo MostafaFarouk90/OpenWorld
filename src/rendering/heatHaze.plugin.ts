@@ -11,11 +11,21 @@ const plugin: GamePlugin = {
   id: 'heat-haze',
   dependsOn: ['core'],
   setup(ctx: GameContext) {
-    const quality = ctx.services.get('quality');
-    const haze = new HeatHaze(quality?.step ?? 'medium');
+    // The quality plugin may set up after this one (ties break by id), so the tier is looked up until it exists. Until then
+    // the pass is off: Low never sees a copy.
+    const haze = new HeatHaze('low');
     offs.push(() => haze.dispose());
     offs.push(ctx.services.provide('heatHaze', haze));
-    if (quality) offs.push(quality.subscribe((step) => haze.setStep(step)));
+    let followed = false;
+    const follow = (): void => {
+      if (followed) return;
+      const quality = ctx.services.get('quality');
+      if (!quality) return;
+      followed = true;
+      haze.setStep(quality.step);
+      offs.push(quality.subscribe((step) => haze.setStep(step)));
+    };
+    follow();
     let t = 0;
     offs.push(
       ctx.systems.add({
@@ -23,6 +33,7 @@ const plugin: GamePlugin = {
         renderPhase: 'afterCamera',
         order: 900,
         render(_alpha, frameTime) {
+          follow();
           t += Number.isFinite(frameTime) ? Math.min(0.25, Math.max(0, frameTime)) : 0;
           haze.update(ctx.camera, t);
         },

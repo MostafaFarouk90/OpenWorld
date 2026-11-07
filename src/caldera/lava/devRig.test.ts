@@ -1,6 +1,6 @@
 // N3 dev rig: it builds every piece on a reduced manifest and its console helpers drive them; and the production build
 // cannot contain it (the rig is imported only behind `import.meta.env.DEV`, which Vite replaces with false).
-import { readFileSync } from 'node:fs';
+import lavaPluginSource from './lava.plugin.ts?raw';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import act5CorePlugin from '../act5Core.plugin';
 import corePlugin from '../../core/core.plugin';
@@ -70,7 +70,7 @@ describe('the lava dev rig', () => {
   }, PLUGIN_TEST_TIMEOUT);
 
   it('is imported only behind import.meta.env.DEV (so a production build drops it)', () => {
-    const src = readFileSync(new URL('./lava.plugin.ts', import.meta.url), 'utf8');
+    const src = lavaPluginSource;
     expect(src).not.toMatch(/^import[^\n]*devRig/m);
     const at = src.indexOf("import('./devRig')");
     expect(at).toBeGreaterThan(0);

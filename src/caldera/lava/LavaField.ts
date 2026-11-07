@@ -85,9 +85,12 @@ export function nearestOnShape(shape: LavaShape, x: number, z: number): { x: num
   return best;
 }
 
+export const depthOf = (def: LavaFieldDef): number => (def.depth !== undefined && def.depth > 0 && Number.isFinite(def.depth) ? def.depth : LAVA.defaultDepth);
+
 export function validateVolume(def: LavaFieldDef): string | null {
   if (!def || typeof def.id !== 'string' || !def.id) return 'a lava volume needs an id';
   if (!Number.isFinite(def.surfaceY)) return `lava volume "${def.id}" needs a finite surfaceY`;
+  if (def.depth !== undefined && !(def.depth > 0 && Number.isFinite(def.depth))) return `lava volume "${def.id}" needs depth > 0`;
   if (!(def.damagePctPerS > 0) || !Number.isFinite(def.damagePctPerS)) return `lava volume "${def.id}" needs damagePctPerS > 0`;
   if (!Array.isArray(def.safeLips) || def.safeLips.length === 0) return `lava volume "${def.id}" needs at least one safe lip`;
   for (const l of def.safeLips) if (![l.x, l.y, l.z].every(Number.isFinite)) return `lava volume "${def.id}" has a non-finite lip`;
@@ -107,7 +110,9 @@ export class LavaField {
   /** The volume the feet were in on the last step, the entry point, and seconds in it. */
   private inside: { volumeId: string; entry: Vec3; seconds: number } | null = null;
   private throwing = false;
-  private lastLip: Vec3 | null = null;
+  /** Bumped by a load: a throw started before it ignores its own result. */
+  private generation = 0;
+  private lastLip: (Vec3 & { yaw: number }) | null = null;
   private releaseMode: (() => void) | null = null;
   private floorWarned = false;
   private lastFeet: Vec3 | null = null;
@@ -130,6 +135,10 @@ export class LavaField {
   /** A crust (a vent's) inside a volume: while solid it reads as ground, not lava. */
   addCrust(ventId: string, volumeId: string, shape: LavaShape): () => void {
     if (this.crusts.has(ventId)) throw new Error(`lava: crust "${ventId}" is already registered`);
+    const v = this.volumes.get(volumeId);
+    if (!v) throw new Error(`lava: crust "${ventId}" names an unknown volume "${volumeId}"`);
+    // a flat crust on a sloped channel would sit under the lava at one end: on a profiled ribbon, crusts are ribbons
+    if (v.def.profile && shape.kind !== 'ribbon') throw new Error(`lava: crust "${ventId}" on profiled "${volumeId}" must be a ribbon`);
     const c = { volumeId, shape, solid: false };
     this.crusts.set(ventId, c);
     return () => {
@@ -150,6 +159,8 @@ export class LavaField {
   setSurface(id: string, y: number): boolean {
     const v = this.volumes.get(id);
     if (!v || !Number.isFinite(y)) return false;
+    // a vent's crust stands at the surface it was built on: a volume with crusts does not rise
+    for (const c of this.crusts.values()) if (c.volumeId === id) return false;
     v.surfaceY = y;
     return true;
   }
@@ -178,28 +189,37 @@ export class LavaField {
     return this.volumes.get(id)?.def;
   }
 
-  /** The volume whose lava is at this point (on its shape, under its surface, not on a solid crust), or null. */
+  /** The volume whose lava is at this point (on its shape, under its surface by at most its depth, not on a solid crust), or null. */
   at(x: number, y: number, z: number): string | null {
     if (![x, y, z].every(Number.isFinite)) return null;
     for (const v of this.volumes.values()) {
       if (!onLavaShape(v.def.shape, x, z)) continue;
-      if (!(y < surfaceAt(v, x, z))) continue;
+      const s = surfaceAt(v, x, z);
+      if (!(y < s) || y < s - depthOf(v.def)) continue;
       if (this.onSolidCrust(v.def.id, x, z)) continue;
       return v.def.id;
     }
     return null;
   }
 
-  /** Over any lava shape in (x, z), whatever the height (a Leap or a jump across). */
-  over(x: number, z: number): boolean {
-    for (const v of this.volumes.values()) if (onLavaShape(v.def.shape, x, z) && !this.onSolidCrust(v.def.id, x, z)) return true;
+  /** Over a lava shape in (x, z) and at most LAVA.overHeight above its surface (a Leap or a jump across). */
+  over(x: number, y: number, z: number): boolean {
+    for (const v of this.volumes.values()) {
+      if (!onLavaShape(v.def.shape, x, z) || this.onSolidCrust(v.def.id, x, z)) continue;
+      const s = surfaceAt(v, x, z);
+      if (y >= s - depthOf(v.def) && y <= s + LAVA.overHeight) return true;
+    }
     return false;
   }
 
-  /** The nearest lava surface point in (x, z) (N8's positional loop). */
-  nearest(x: number, z: number): { volumeId: string; distance: number; point: Vec3 } | null {
+  /**
+   * The nearest lava surface point in (x, z) (N8's positional loop). With `y`, volumes whose surface is more than
+   * LAVA.nearestBand above or below it are skipped (an interior's lava 150 m up is not "near" the ground under it).
+   */
+  nearest(x: number, z: number, y?: number): { volumeId: string; distance: number; point: Vec3 } | null {
     let best: { volumeId: string; distance: number; point: Vec3 } | null = null;
     for (const v of this.volumes.values()) {
+      if (y !== undefined && Number.isFinite(y) && Math.abs(v.surfaceY - y) > LAVA.nearestBand) continue;
       const n = nearestOnShape(v.def.shape, x, z);
       if (!best || n.distance < best.distance) best = { volumeId: v.def.id, distance: n.distance, point: { x: n.x, y: surfaceAt(v, n.x, n.z), z: n.z } };
     }
@@ -207,7 +227,7 @@ export class LavaField {
   }
 
   get lastSafeLip(): Vec3 | null {
-    return this.lastLip ? { ...this.lastLip } : null;
+    return this.lastLip ? { x: this.lastLip.x, y: this.lastLip.y, z: this.lastLip.z } : null;
   }
 
   get inLava(): string | null {
@@ -220,8 +240,9 @@ export class LavaField {
 
   /** Where a save made now should put Cael: the last safe lip, else the nearest lip of the nearest volume. */
   safePoint(feet: Vec3 | null = this.lastFeet): { position: Vec3; yaw: number } | null {
-    const lip = this.lastLip ?? (feet ? this.nearestLipAnywhere(feet) : null);
-    return lip ? { position: { ...lip }, yaw: 0 } : null;
+    if (this.lastLip) return { position: { x: this.lastLip.x, y: this.lastLip.y, z: this.lastLip.z }, yaw: this.lastLip.yaw };
+    const lip = feet ? this.nearestLipAnywhere(feet) : null;
+    return lip ? { position: { x: lip.x, y: lip.y, z: lip.z }, yaw: this.awayYaw(lip) } : null;
   }
 
   /** Once per fixed tick, after the player moved. */
@@ -238,7 +259,7 @@ export class LavaField {
     if (!id) {
       this.inside = null;
       if (grounded) this.notePassedLip(feet);
-      this.setPush(!grounded && this.over(feet.x, feet.z));
+      this.setPush(!grounded && this.over(feet.x, feet.y, feet.z));
       return;
     }
     this.setPush(true);
@@ -253,9 +274,11 @@ export class LavaField {
 
   /** `save.loaded`: forget the run's state; feet loaded inside lava go to the nearest lip, with no damage. */
   async onLoaded(feet: Vec3): Promise<void> {
+    this.generation++;
     this.inside = null;
     this.throwing = false;
     this.lastLip = null;
+    this.lastSafeFeet = null;
     this.setPush(false);
     const id = this.at(feet.x, feet.y, feet.z);
     if (id) await this.throwOut(id, feet, false);
@@ -290,7 +313,16 @@ export class LavaField {
         }
       }
     }
-    if (best) this.lastLip = { ...best };
+    if (best) this.lastLip = { x: best.x, y: best.y, z: best.z, yaw: this.awayYaw(best) };
+  }
+
+  /** Facing at a lip: away from the nearest lava (yaw 0 = -Z), or 0 when it cannot tell. */
+  private awayYaw(lip: Vec3): number {
+    const n = this.nearest(lip.x, lip.z, lip.y);
+    if (!n) return 0;
+    const dx = lip.x - n.point.x;
+    const dz = lip.z - n.point.z;
+    return Math.hypot(dx, dz) > 0.05 ? yawToward(n.point.x, n.point.z, lip.x, lip.z) : 0;
   }
 
   private nearestLipAnywhere(feet: Vec3): Vec3 | null {
@@ -329,21 +361,22 @@ export class LavaField {
     const lip = nearestSafeLip(from, v.lips);
     if (!lip) return;
     this.throwing = true;
-    // face away from the lava: from where he came in, toward the lip (straight ahead when they coincide)
-    const dx = lip.x - from.x;
-    const dz = lip.z - from.z;
-    const yaw = Math.hypot(dx, dz) > 0.05 ? yawToward(from.x, from.z, lip.x, lip.z) : 0;
-    const to = { ...lip };
+    const gen = this.generation;
+    // face away from the lava at the lip; else from where he came in toward the lip
+    let yaw = this.awayYaw(lip);
+    if (yaw === 0 && Math.hypot(lip.x - from.x, lip.z - from.z) > 0.05) yaw = yawToward(from.x, from.z, lip.x, lip.z);
+    const to = { x: lip.x, y: lip.y, z: lip.z };
     let ok = false;
     try {
       ok = await this.ports.throwTo(to, yaw);
     } catch (e) {
       this.ports.warn?.(`lava: the throw to a safe lip failed (${String(e)})`);
     }
+    if (gen !== this.generation) return; // a load came in meanwhile: its own state stands
     this.throwing = false;
     this.inside = null;
     if (ok) {
-      this.lastLip = { ...to };
+      this.lastLip = { ...to, yaw };
       this.lastSafeFeet = { ...to };
       if (announce) this.ports.thrown?.(id, to);
     }

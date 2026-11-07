@@ -30,15 +30,19 @@ describe('Crossings', () => {
     expect(c.aim({ x: NaN, z: 0 }, 0)).toBeNull();
   });
 
-  it('clamps the distance, and the lint refuses spans outside 3.5 to 6.9 m', () => {
+  it('the lint refuses spans outside 3.5 to 5.4 m, so an aimed Leap from anywhere in the radius reaches the far lip', () => {
+    expect(CROSSING.maxSpan + CROSSING.radius + CROSSING.overshoot).toBeLessThanOrEqual(CROSSING.maxDistance + 1e-9);
     expect(crossingProblem({ ...lips, to: { x: 0, y: 1, z: -3 } })).toMatch(/spans 3.00/);
-    expect(crossingProblem({ ...lips, to: { x: 0, y: 1, z: -7 } })).toMatch(/spans 7.00/);
+    expect(crossingProblem({ ...lips, to: { x: 0, y: 1, z: -5.5 } })).toMatch(/spans 5.50/);
     expect(crossingProblem({ ...lips, to: { x: 0, y: NaN, z: -5 } })).toMatch(/non-finite/);
     const c = new Crossings();
     expect(() => c.add({ ...lips, to: { x: 0, y: 1, z: -8 } })).toThrow(/spans/);
-    c.add({ ...lips, to: { x: 0, y: 1, z: -6.9 } });
-    expect(c.aim({ x: 0, z: 1.4 }, 0)!.distance).toBe(CROSSING.maxDistance);
-    expect(() => c.add({ ...lips, to: { x: 0, y: 1, z: -6.9 } })).toThrow(/already/);
+    c.add({ ...lips, to: { x: 0, y: 1, z: -5.4 } });
+    // the worst case: 1.5 m behind the near lip of the longest crossing
+    const a = c.aim({ x: 0, z: CROSSING.radius }, 0)!;
+    expect(a.distance).toBeCloseTo(5.4 + CROSSING.radius + CROSSING.overshoot, 6);
+    expect(a.distance).toBeLessThanOrEqual(CROSSING.maxDistance);
+    expect(() => c.add({ ...lips, to: { x: 0, y: 1, z: -5.4 } })).toThrow(/already/);
   });
 });
 

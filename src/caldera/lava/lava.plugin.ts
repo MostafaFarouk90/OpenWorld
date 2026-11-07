@@ -7,7 +7,7 @@ import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import type { Vec3 } from '../../physics/PhysicsWorld';
 import { CALDERA_CENTRE } from '../../region/act5Regions';
-import type { LavaShape } from '../lava';
+import { LAVA_HEALTH_FLOOR, type LavaShape, type SurgeCrossingDef } from '../lava';
 import '../events';
 import './events';
 import { Crossings } from './crossings';
@@ -19,6 +19,9 @@ import { LAVA_STRINGS_EN } from './strings.en';
 import { HAZE, LAVA_STRING_KEYS, VENT } from './tuning';
 import type { CrustVentDef, LavaFieldDef, VentInfo } from './types';
 import { VentClock } from './vents';
+
+/** The burn's attack id (the lethal guard and the damage log read it). */
+export const LAVA_ATTACK_ID = 'caldera.lava';
 
 /** N7's soft heat-gear service (`heatWard`), read without its type so the two branches cannot collide. */
 type HeatWardLike = { heatWard?(): { lava?: number } } | (() => { lava?: number });
@@ -52,7 +55,7 @@ export function createLavaPlugin(): GamePlugin {
 
       const field = new LavaField({
         vitals: () => ({ health: actor().health, max: actor().maxHealth, dead: actor().dead }),
-        damage: (amount) => ctx.damage.apply({ attackerId: null, targetId: actor().id, amount, poise: 0, kind: 'script', unblockable: true }),
+        damage: (amount) => ctx.damage.apply({ attackerId: null, targetId: actor().id, amount, poise: 0, kind: 'script', unblockable: true, attackId: LAVA_ATTACK_ID }),
         heal: (amount) => ctx.damage.heal(actor().id, amount),
         throwTo: async (to, yaw) => {
           const ws = ctx.services.get('waystones');
@@ -73,11 +76,20 @@ export function createLavaPlugin(): GamePlugin {
         },
         warn,
       });
+      // Lava never kills: should a damage modifier make a burn tick lethal, this handler keeps Cael at the 10% floor.
+      cleanups.push(
+        ctx.damage.addLethalHandler(LAVA_ATTACK_ID, (target, result) => {
+          if (result.attackId !== LAVA_ATTACK_ID || target.id !== actor().id) return false;
+          target.health = Math.max(1, target.maxHealth * LAVA_HEALTH_FLOOR);
+          return true;
+        }),
+      );
       const vents = new VentClock();
       const crossings = new Crossings();
       const views = new Map<string, VolumeView>();
       const crusts = new Map<string, CrustView>();
       let time = 0;
+      let torn = false;
 
       const haze = () => ctx.services.get('heatHaze');
       const regionOffset = (o: THREE.Vector3) => ({ x: o.x - CALDERA_CENTRE.x, z: o.z - CALDERA_CENTRE.z });
@@ -140,6 +152,39 @@ export function createLavaPlugin(): GamePlugin {
         return out;
       };
 
+      const disposeCrust = (c: CrustView): void => {
+        if (c.mesh) {
+          c.mesh.removeFromParent();
+          c.mesh.geometry.dispose();
+          (c.mesh.material as THREE.Material).dispose();
+        }
+        if (ctx.physics.ready) for (const col of c.colliders) ctx.physics.removeCollider(col);
+        c.colliders = [];
+      };
+
+      // Lip markers (plan 1.3): one instanced mesh for every crossing end, a bronze stake with a glowing tip.
+      const markerGeo = new THREE.CylinderGeometry(0.07, 0.09, 1.1, 6);
+      markerGeo.translate(0, 0.55, 0);
+      const markerMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.75, 0.25) });
+      let markers: THREE.InstancedMesh | null = null;
+      const rebuildMarkers = (): void => {
+        markers?.removeFromParent();
+        markers?.dispose();
+        markers = null;
+        const ends = crossings.all().flatMap((c: SurgeCrossingDef) => [c.from, c.to]);
+        if (ends.length === 0) return;
+        const origin = ends[0]!;
+        const m = new THREE.InstancedMesh(markerGeo, markerMat, ends.length);
+        m.name = 'caldera-lava:lips';
+        m.position.set(origin.x, origin.y, origin.z); // instance offsets stay small numbers
+        const mat = new THREE.Matrix4();
+        ends.forEach((e, i) => m.setMatrixAt(i, mat.makeTranslation(e.x - origin.x, e.y - origin.y, e.z - origin.z)));
+        m.instanceMatrix.needsUpdate = true;
+        m.computeBoundingSphere();
+        ctx.scene.add(m);
+        markers = m;
+      };
+
       const setCrust = (ventId: string, open: boolean): void => {
         field.setCrustSolid(ventId, open);
         const c = crusts.get(ventId);
@@ -161,8 +206,9 @@ export function createLavaPlugin(): GamePlugin {
           }
           views.set(def.id, view);
           return () => {
+            if (torn || views.get(def.id) !== view) return;
             undo();
-            if (views.get(def.id) === view) views.delete(def.id);
+            views.delete(def.id);
             disposeView(view);
           };
         },
@@ -183,16 +229,21 @@ export function createLavaPlugin(): GamePlugin {
           const view: CrustView = { mesh, uniforms, colliders: crustColliders(def.crust, (x, z) => surf(x, z) + VENT.crustLift), target: 0 };
           crusts.set(def.id, view);
           return () => {
+            if (torn || crusts.get(def.id) !== view) return; // the plugin's teardown already freed it
             undoVent();
             undoCrust();
-            if (crusts.get(def.id) === view) crusts.delete(def.id);
-            mesh.removeFromParent();
-            mesh.geometry.dispose();
-            (mesh.material as THREE.Material).dispose();
-            for (const c of view.colliders) ctx.physics.removeCollider(c);
+            crusts.delete(def.id);
+            disposeCrust(view);
           };
         },
-        addCrossing: (def) => crossings.add(def),
+        addCrossing(def) {
+          const undo = crossings.add(def);
+          rebuildMarkers();
+          return () => {
+            undo();
+            if (!torn) rebuildMarkers();
+          };
+        },
         turnWheel(ventId) {
           const r = vents.turnWheel(ventId);
           if (r === 'hot') ctx.events.emit('hud.toast', { textKey: LAVA_STRING_KEYS.wheelHot });
@@ -211,7 +262,7 @@ export function createLavaPlugin(): GamePlugin {
           });
         },
         at: (x, y, z) => field.at(x, y, z),
-        nearest: (x, z) => field.nearest(x, z),
+        nearest: (x, z, y) => field.nearest(x, z, y),
         volumes: () => field.list(),
         vents: () =>
           vents.defs().map((d): VentInfo => {
@@ -308,13 +359,15 @@ export function createLavaPlugin(): GamePlugin {
         }
       }
       cleanups.push(() => {
+        torn = true;
         for (const v of views.values()) disposeView(v);
         views.clear();
-        for (const c of crusts.values()) {
-          c.mesh?.removeFromParent();
-          for (const col of c.colliders) if (ctx.physics.ready) ctx.physics.removeCollider(col);
-        }
+        for (const c of crusts.values()) disposeCrust(c);
         crusts.clear();
+        markers?.removeFromParent();
+        markers?.dispose();
+        markerGeo.dispose();
+        markerMat.dispose();
         field.dispose();
       });
     },

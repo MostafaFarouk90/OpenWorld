@@ -53,7 +53,7 @@ export function installLavaRig(ctx: GameContext, opts: { now?: boolean } = {}): 
     offs.push(lava.add({ id: 'dev.channel', shape: { kind: 'ribbon', points: pts, halfWidth: 2.2 }, surfaceY: g(ox, oz) + 0.6, profile: pts.map(([x, z]) => g(x, z) + 0.6), damagePctPerS: 15, safeLips: lips }));
     info.pieces.channel = at(ox, oz + 4);
     // the vent: a 4 m crust across the channel at its middle; the wheel on the south bank
-    offs.push(lava.addVent({ id: 'dev.vent', at: at(ox, oz), openS: 6, closedS: 10, wheel: 'dev.wheel', volumeId: 'dev.channel', crust: { kind: 'box', x0: ox - 2, z0: oz - 2.3, x1: ox + 2, z1: oz + 2.3 } }));
+    offs.push(lava.addVent({ id: 'dev.vent', at: at(ox, oz), openS: 6, closedS: 10, wheel: 'dev.wheel', volumeId: 'dev.channel', crust: { kind: 'ribbon', points: [[ox - 2, oz], [ox + 2, oz]], halfWidth: 2.3 } }));
     offs.push(lava.registerWheel('dev.vent', at(ox + 3, oz + 3.6, 1)));
     info.pieces.wheel = at(ox + 3, oz + 4.2);
     // the crossing: 10 m east of the vent, lips 2.7 m either side (a 5.4 m span)
