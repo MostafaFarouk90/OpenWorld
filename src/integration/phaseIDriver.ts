@@ -12,13 +12,14 @@
  * - R29: each part carried by the shipped carry kit to the gong frame, the gong hung, struck in Ansgar's count on the beat.
  * - M50: in each chamber the three sluice wheels turned in the chart's order before the gauge fills.
  * - M51: the horn-stone at the camp opens the quest; the dragons are spoken to by their talk props on the terraces.
- * - M52 is N10 PR 2's (the siege on N4's kit); its drivers are added when that branch lands.
+ * - M52: Wystan's brief and war post, the stairs scene, the start point; the waves held from the gate's lee (going out to foes that
+ *   stop short), the household guard, the holds scene, the wounded companion (by their companion tree), Wystan.
  * What has no cheap driver is named in `trail.scripted`.
  */
 import type { ChapterHarness } from './chapterHarness';
 import { carryTo, ensure } from './phaseA';
 import {
-  fightGroups, followEscort, holdGround, playBeat, playQuest, pressAt, sitThrough, tick, useProp, waitFor,
+  fightGroups, followEscort, holdGround, playBeat, readOpen, whereIs, ensureSpace, playQuest, pressAt, sitThrough, tick, useProp, waitFor,
   type DriverTable, type Handler, type PhaseGRun,
 } from './phaseGDriver';
 import { WAYSTONE_TUNING } from '../waystones/tuning';
@@ -34,6 +35,7 @@ import { M51_REPORT, M51_TALK, TERRACES_WAYSTONE, type M51Dragon } from '../ques
 import { M51_HORN } from '../quests/content/act5/rim/director/camp';
 import { M52_START_TRIGGER } from '../quests/content/act5/rim/m52.quest';
 import { SIEGE_POINTS } from '../caldera/calderaSites';
+import { AELFREDA_COMPANION_DIALOGUE } from '../companions/aelfreda';
 import { heightAt } from '../terrain/heightfield';
 import { ACT5_PHASE_I } from '../quests/act5Jump';
 
@@ -75,37 +77,6 @@ const scene: Handler = async (r, q, o) => sitThrough(r, done(r, q, o.id), `${q}.
 const rekindle = (waystoneId: string): Handler => async (r, q, o) => {
   await pressAt(r.h, `waystone:${waystoneId}`, WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 10);
-};
-
-// ---- out of reach (a bug the report lists) ----------------------------------------------------------------------------
-/**
- * Props N10 placed in the never-open south rim faces' push band (`fog.caldera-rim.sw`/`.se`: outside the Rim Gate's 28 m span,
- * 2 to 100 m inside the line), where Cael is pushed back out of the Caldera and the prop never takes focus. Found by this chain
- * (caldera.q.m49.post.wall at 10984,6496); reported to N10. Until it moves, the driver stands at the nearest point inside the
- * span and runs the prop's own interact (its onInteract and the `interact` event, as InteractionSystem.complete does).
- */
-// N10 moved it (1feb920, with fogFaces.test.ts): the set is empty and stays as the place to name the next one.
-export const PHASE_I_OUT_OF_REACH: ReadonlySet<string> = new Set<string>();
-type Item = { id: string; kind: string; onInteract(a: unknown): void };
-async function pressOutOfReach(r: PhaseGRun, id: string): Promise<void> {
-  const { h } = r;
-  const items = (h.ctx.interaction as unknown as { items: Map<string, Item> }).items;
-  for (let i = 0; i < 6 && !items.get(id); i++) await h.runAsync(30);
-  const item = items.get(id);
-  ensure(item, `an interactable ${id}`);
-  const actor = h.ctx.player.actor;
-  item.onInteract(actor);
-  h.ctx.events.emit('interact', { interactableId: id, kind: item.kind, actorId: actor.id, action: 'interact' });
-  await h.runAsync(4);
-  const note = `${id}: out of reach (in the south rim face's push band), its interact run by script`;
-  if (!r.watch.notes.includes(note)) r.watch.notes.push(note);
-  r.trail.scripted.push(note);
-}
-/** The default interact objective, with the out-of-reach stand-in. */
-const press = (id: string): Handler => async (r, q, o) => {
-  if (PHASE_I_OUT_OF_REACH.has(id)) await pressOutOfReach(r, id);
-  else await useProp(r, id);
-  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 20);
 };
 
 // ---- M48 ---------------------------------------------------------------------------------------------------------------
@@ -175,7 +146,6 @@ const channel = (c: M50Channel): Handler => async (r, q, o) => {
  * the court and the stairs' upper leg, until the step is done. No orders are given (each order is a one-press dialogue; the
  * driver lets N4's defaults stand) and the ram is fought as it comes.
  */
-const SIEGE_DEBUG = !!((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PHASE_I_DEBUG);
 /** The reach the siege steps fight at from the gate's lee: the gate line, the court and the stairs' top. */
 export const SIEGE_REACH_M = 60;
 const siegeStep: Handler = async (r, q, o) => {
@@ -183,17 +153,14 @@ const siegeStep: Handler = async (r, q, o) => {
   const [x, z] = SIEGE_POINTS.lee;
   const f = h.ctx.player.feet;
   if (Math.hypot(f.x - x, f.z - z) > 30) await h.approach({ x, y: heightAt(x, z), z }, 1);
-  if (SIEGE_DEBUG) {
-    const siege = h.ctx.services.get('siege') as { current: unknown } | undefined;
-    const hostiles = [...h.ctx.actors.all()].filter((a) => (a as { team?: string }).team === 'hostile' && !a.dead)
-      .map((a) => { const p = (a as { root?: { position: { x: number; z: number } } }).root?.position; return `${a.kind}@${p ? `${p.x.toFixed(0)},${p.z.toFixed(0)}` : '?'}`; });
-    console.log(`[phaseI] ${q}.${o.id}: siege ${JSON.stringify(siege?.current)} hostiles ${hostiles.length}: ${hostiles.slice(0, 12).join(' ')}`);
-  }
   // the foes march on the gate line (N4 94da66a, src/siege/march.ts): Cael fights what comes within reach of the lee. A foe that
   // stops short and stands (as a player would see it) is gone out to: Cael walks to the nearest one and fights there.
   let walks = 0;
   for (let round = 0; round < 30 && !done(r, q, o.id)(); round++) {
-    try { await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 30); } catch { /* the round ran out: look further */ }
+    try { await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 30); } catch (e) {
+      // only the round running out (holdGround's own timeout) sends Cael further; any other failure is the run's
+      if (!String((e as Error).message).includes(`${q}.${o.id} (30 s;`)) throw e;
+    }
     if (done(r, q, o.id)()) break;
     const f = h.ctx.player.feet;
     let best: { x: number; y: number; z: number } | null = null;
@@ -214,6 +181,21 @@ const siegeStep: Handler = async (r, q, o) => {
   }
 };
 
+/**
+ * The wounded companion at the aid tent: a joined companion is spoken to through their companion tree (talks.ts names it:
+ * Aelfreda's is `npc-aelfreda-companion`; her plain `npc-aelfreda` is the Act 1 priory tree, which would offer D01).
+ */
+const wounded = (c: 'hrolf' | 'aelfreda' | 'tobb'): Handler => async (r, q, o) => {
+  const { h } = r;
+  const tree = c === 'aelfreda' ? AELFREDA_COMPANION_DIALOGUE : `npc-${c}`;
+  await ensureSpace(h, whereIs(h, c));
+  await h.approach(whereIs(h, c), 1.6);
+  ensure(h.ctx.services.require('dialogue').start(tree, c), `${q}.${o.id}: ${tree} opened`);
+  readOpen(r, c);
+  await h.runAsync(2);
+  await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 10);
+};
+
 // ---- M51 ---------------------------------------------------------------------------------------------------------------
 const dragon = (d: M51Dragon): Handler => prop(M51_TALK(d), 60);
 
@@ -226,7 +208,6 @@ const HANDLERS: Record<string, Handler> = {
   ...Object.fromEntries([1, 2, 3, 4, 5, 6].map((n) => [`m48.chan${n}`, crossing(n)])),
   'm48.roar': scene,
   'm49.arrive': scene,
-  'm49.post-wall': press('use:m49-post-wall'),
   'm49.banners': banners,
   'm49.rise': scene,
   'm49.table': warTable,
@@ -263,6 +244,9 @@ const HANDLERS: Record<string, Handler> = {
   'm52.guard': siegeStep,
   'm52.wave4': siegeStep,
   'm52.holds': scene,
+  'm52.wounded-hrolf': wounded('hrolf'),
+  'm52.wounded-aelfreda': wounded('aelfreda'),
+  'm52.wounded-tobb': wounded('tobb'),
 };
 
 export const PHASE_I_TABLE: DriverTable = { handlers: HANDLERS, groups: RIM_A5_GROUPS };

@@ -1,5 +1,5 @@
 /**
- * Phase I's headless chain (N12 PR 1): the Rim quests, M47 to M51 with R26 and R29 (and M52 once N10 PR 2's siege lands),
+ * Phase I's headless chain (N12 PR 1): the Rim quests, M47 to M52 with R26 and R29 (M52 on N4's siege),
  * played in plan order by phaseIDriver.ts on Act 5's carried base (`act5-carried-chain-<run>.json`, the end of L13's Phase H
  * chain: the save test from Act 4 to Act 5). Run A is the design's "marshal" playthrough on base A (R26 the fast road, kills
  * as kills); run B is "keepers" on base B (R26 the long road, the Spare and the Release offered first). The preset's choice
@@ -26,7 +26,7 @@ import { seedFixtureRandom } from './fixtureDeterminism';
 import { act5PacingReport, act5TimingMarkdown, estimateAct5Row, phaseIGate, type Act5PaceRow, type Act5PacingReport } from './act5Timing';
 import { readAct5Base, readAct5BaseMeta } from '../save/__fixtures__/act5';
 import { RIM_A5_PACE, paceAt, type RimPaceRow } from '../quests/content/act5/rim/pacing';
-import { ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
+import { ACT5_PHASE_I, ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
 import { FAVOUR_TRACKS, snapshotFlag } from '../state/favour';
 import { M52_SPARED_ANY, M52_STOOD, M52_STOOD_ROWS, M52_WAVE4_HELD, M52_WOUNDED } from '../quests/content/act5/rim/m52.quest';
 import { RIM_CARD_SEEN_FLAG } from './phaseICard';
@@ -68,6 +68,8 @@ export interface PhaseIResult {
   /** M52: the siege's own outcome flags, the snapshot it took, the card and the hold at the phase's end */
   siege: { wounded: unknown; wave4Held: boolean; sparedAny: boolean; stood: Record<string, boolean>; snapshot: Record<string, unknown> };
   end: { cardShown: boolean; cardSeen: boolean; floorShut: boolean; foundryHoldMet: boolean };
+  /** quests started during the run that are not Phase I's */
+  startedOutside: string[];
 }
 
 /** N10's Rim row as Act 5's estimator row: its two local beats are Act 5's `crossing` and `order`. */
@@ -156,6 +158,8 @@ export async function runPhaseI(
       await h.approach(anvil as never, ALRIC_ANVIL_M - 1);
       atAnvil = gold(h);
       anvilQuest = 'after the phase (walked there)';
+      // no Phase I step takes Cael to the anvil: reported, so the "first reach" reading is plainly the phase-end gold
+      watch.notes.push(`no Phase I step passes within ${ALRIC_ANVIL_M} m of ${ALRIC_ANVIL_ANCHOR}: the gold there was read after the phase`);
     }
     // the card ("The Rim holds") on M52's completion: the HUD updates on render
     for (let i = 0; i < 60 && played.includes('m52') && !cardShown; i++) {
@@ -179,7 +183,7 @@ export async function runPhaseI(
     };
     const rows = RIM_A5_PACE.filter((row) => trails[row.quest]).map((row) => estimateAct5Row(rimToAct5Row(row), paceAt, trailNodes(trails[row.quest]!)));
     const report = act5PacingReport(rows);
-    const g = phaseIGate(report, played);
+    const g = phaseIGate(report, ACT5_PHASE_I);
     const ledger = xpLedger(h.of('xp.gained'));
     const questXp = h.of('xp.gained').filter((e) => e.source.startsWith('quest:')).reduce((n, e) => n + e.amount, 0);
     const result: PhaseIResult = {
@@ -200,6 +204,7 @@ export async function runPhaseI(
       gate: { share: report.phases.I?.share ?? 0, ok: g.ok, reasons: g.reasons },
       outcomes: { r26: h.ctx.state.getString(R26_CHOICE) },
       siege, end,
+      startedOutside: h.of('quest.started').map((e) => e.questId).filter((id) => !ACT5_PHASE_I.includes(id)),
     };
     if (atEnd) await atEnd(h, result, trails);
     return result;
@@ -229,6 +234,8 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
       // the phase's end: the card once, the Foundry still shut (the hold PR 2 retires)
       expect(r.end).toEqual({ cardShown: true, cardSeen: true, floorShut: true, foundryHoldMet: false });
       expect(r.siege.snapshot.taken).toBe(true);
+      // no quest outside Phase I started by the run (e.g. D01 offered by Aelfreda's priory tree at the aid tent)
+      expect(r.startedOutside, 'only Phase I quests started').toEqual([]);
       expect(r.report.failures, 'no quest under the 40% floor').toEqual([]);
       if (run === 'a') expect(r.gate.ok, `Phase I at ${(r.gate.share * 100).toFixed(1)}%`).toBe(true);
     }, 3_600_000);
