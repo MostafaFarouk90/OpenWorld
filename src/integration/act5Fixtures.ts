@@ -3,7 +3,7 @@
  * (the whole of Act 4 played headless: the ending, the card, the Rimfoot camp; its own XP, gear, companions, Scars and
  * favour), so no fixture starts from a jump's XP floor. Each per-id fixture boots that base, runs only the `?act5=` jump's
  * Act 5 step (`Act5Jump.fromCarriedSave()`: the Rim Gate flag after M47, the Phase J hold flag for Phase J targets,
- * `ACT5_PREREQS[id]` injected, XP topped to ACT5_START_XP, the landing) and saves with the seeded random and fixed clock of
+ * `ACT5_PREREQS[id]` injected, XP topped to act5StartXpFor(id): 98,800 in Phase I, 109,000 in Phase J, the landing) and saves with the seeded random and fixed clock of
  * `fixtureDeterminism.ts`, so two runs write identical bytes. No favour preset is stored: the jump applies one on load.
  */
 import { bootFromSave, type ChapterHarness } from './chapterHarness';

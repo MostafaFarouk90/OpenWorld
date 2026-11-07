@@ -105,6 +105,7 @@
           "lore.person.rook",
           "lore.place.cooling-hall",
           "lore.place.wyrm-terraces",
+          "howto.siege-orders",
           "lore.place.foundry"
         ]
       },
@@ -1674,6 +1675,7 @@
           "key.music-box": 1,
           "key.oswin-silver-key": 1,
           "key.rooks-whistle": 1,
+          "key.siege-medal": 1,
           "key.silver-convoy-writ": 1,
           "key.walker-tattoo": 1,
           "key.watch-seal": 1,
@@ -1741,7 +1743,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 430,
+        "health": 440,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -1780,7 +1782,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 3,
-        "xp": 98800
+        "xp": 109000
       },
       "version": 2
     },
@@ -2388,6 +2390,10 @@
             "objectives": {},
             "state": "completed"
           },
+          "m52": {
+            "objectives": {},
+            "state": "completed"
+          },
           "m53": {
             "objectives": {},
             "state": "completed"
@@ -2991,6 +2997,12 @@
           "companions.a4.bond2Said.hrolf": true,
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
+          "favour.snapshot.m52.ashwalkers": 33,
+          "favour.snapshot.m52.dragons": 24,
+          "favour.snapshot.m52.grisel": 31,
+          "favour.snapshot.m52.halvard": 33,
+          "favour.snapshot.m52.oswin": 32,
+          "favour.snapshot.m52.taken": true,
           "gear.shardgem.granted.bellows-engine": true,
           "gear.shardgem.granted.corvin-skarl": true,
           "gear.shardgem.granted.eormen": true,
@@ -3410,10 +3422,10 @@
           "story.m51.complete": true,
           "story.m51.started": true,
           "story.m52.complete": true,
+          "story.m52.started": true,
           "story.m53.complete": true,
           "story.m53.started": true,
           "story.m54.complete": true,
-          "story.phase.foundryOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,

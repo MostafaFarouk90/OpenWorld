@@ -45,9 +45,9 @@ describe('"The Rim holds" card', () => {
     const text = textOf(card.element);
     expect(text).toContain(PHASE_I_STRINGS_EN[RIM_TITLE_KEY]);
     expect(text).toContain(PHASE_I_STRINGS_EN[RIM_LINE_KEY]);
-    // Phase I: the hold stands, so the line says the Foundry's door stays shut, and names the Foundry as next
+    // names the Foundry as next; PR 2 retired the hold, so the line no longer says its door stays shut
     expect(text).toContain('Foundry');
-    expect(text).toContain('stays shut for now');
+    expect(text).not.toContain('stays shut');
     card.dismiss();
     expect(card.active).toBe(false);
     ctx.state.setFlag(RIM_CARD_TRIGGER_FLAG, false);
@@ -72,7 +72,7 @@ describe('"The Rim holds" card', () => {
     expect(card.visible).toBe(true);
   }, PLUGIN_TEST_TIMEOUT);
 
-  it('the hold flag alone never shows it', async () => {
+  it('the retired hold flag (an old save) alone never shows it', async () => {
     const { ctx, card } = await boot();
     ctx.state.setFlag(FOUNDRY_OPEN_FLAG, true);
     card.update(0.016);

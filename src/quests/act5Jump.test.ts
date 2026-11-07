@@ -7,6 +7,10 @@ import {
   ACT5_PREREQS,
   ACT5_PRESET_FAVOUR,
   ACT5_START_XP,
+  ACT5_PHASE_I,
+  ACT5_PHASE_J,
+  ACT5_PHASE_J_START_XP,
+  act5StartXpFor,
   Act5Jump,
   act5Landing,
   act5PhaseOf,
@@ -53,6 +57,7 @@ describe('Act 5 jump tables', () => {
     expect(act5PhaseOf('m46')).toBeUndefined();
   });
   it('ACT5_START_XP is the measured Act 4 end, 98,800 (N12 PR 1, ruling A)', () => expect(ACT5_START_XP).toBe(98_800));
+  it('ACT5_PHASE_J_START_XP is the measured Phase I end, 109,000 (N12 PR 2, ruling L1)', () => expect(ACT5_PHASE_J_START_XP).toBe(109_000));
 });
 
 describe('favour presets', () => {
@@ -144,7 +149,7 @@ describe('the Act 5 steps on a carried save', () => {
     expect(t.raw.topUpXp).toHaveBeenCalledWith(ACT5_START_XP);
     expect(t.placed[0].at).toEqual({ x: RIMFOOT_POINT.x, z: RIMFOOT_POINT.z });
   });
-  it('M54: prerequisites completed, both opening flags set', () => {
+  it('M54: prerequisites completed, the Rim Gate flag set, no retired hold flag, Phase J XP', () => {
     const t = ports();
     runToEnd(new Act5Jump('m54', t.p).fromCarriedSave());
     for (const q of ACT5_PREREQS.m54) {
@@ -153,7 +158,16 @@ describe('the Act 5 steps on a carried save', () => {
     }
     expect(t.states.get('m54')).toBeUndefined();
     expect(t.flags.get(RIM_GATE_OPEN_FLAG)).toBe(true);
-    expect(t.flags.get(FOUNDRY_OPEN_FLAG)).toBe(true);
+    // N12 PR 2 retired the Phase I hold: nothing writes it now
+    expect(t.flags.get(FOUNDRY_OPEN_FLAG)).toBeUndefined();
+    expect(t.raw.topUpXp).toHaveBeenCalledWith(ACT5_PHASE_J_START_XP);
+  });
+  it('act5StartXpFor: 98,800 for every Phase I target, 109,000 for every Phase J target', () => {
+    for (const id of ACT5_PHASE_I) expect(act5StartXpFor(id), id).toBe(ACT5_START_XP);
+    for (const id of ACT5_PHASE_J) expect(act5StartXpFor(id), id).toBe(ACT5_PHASE_J_START_XP);
+    expect(ACT5_PHASE_J_START_XP).toBeGreaterThan(ACT5_START_XP);
+    // an unknown id is not Phase J
+    expect(act5StartXpFor('m99')).toBe(ACT5_START_XP);
   });
   it('&favour=marshal at M52 writes the choice flags, the live tracks and the M52 snapshot', () => {
     const t = ports();

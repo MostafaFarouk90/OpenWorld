@@ -2,14 +2,14 @@
 // (N12 PR 1 owns the deterministic `act5-*.json` fixtures on this plumbing). Acts 1 to 4 are replayed through the shipped
 // `?act4=` runner (to M46 and D08 complete) with every ending card and camp marked seen, so no card plays over the player.
 // Then `story.gate.a5` is set, the Act 5 prerequisites are injected the Act 4 way, `story.m47.rimGateOpen` is set for any
-// target after M47, `story.phase.foundryOpen` for Phase J targets (until N12 PR 2 retires that hold), and the player's XP
-// is topped up to ACT5_START_XP. `&favour=marshal|keepers` loads the design's two worked playthroughs (design 3): the live
+// target after M47, and the player's XP is topped up to the target's start (ACT5_START_XP in Phase I,
+// ACT5_PHASE_J_START_XP in Phase J; N12 PR 2 retired the Phase I hold, so no Phase J flag is written). `&favour=marshal|keepers` loads the design's two worked playthroughs (design 3): the live
 // tracks, their choice flags and, from the quest that takes each, the favour snapshots. The player lands 1.8 m in front of
 // the giver when the giver has an Act 5 post, else at Rimfoot (M47) or the Rim Camp placeholder.
 import { Act4Jump, ACT4_GIVER_STAND_OFF, QUIET_TICKS, act4EndingSeenFlags, type Act4JumpPorts, type Act4Pose } from './act4Jump';
 import { registerActJump } from './actJump';
 import { ACT2_JUMP_CLASSES } from './act2Jump';
-import { ACT5_GATE_FLAG, FOUNDRY_OPEN_FLAG, RIM_CAMP_POINT, RIMFOOT_POINT, RIM_GATE_OPEN_FLAG } from '../region/act5Regions';
+import { ACT5_GATE_FLAG, RIM_CAMP_POINT, RIMFOOT_POINT, RIM_GATE_OPEN_FLAG } from '../region/act5Regions';
 import { ACT5_PHASE_I, ACT5_PHASE_J } from './lint/act5Ids';
 import { WASTE_CARD_SEEN_FLAG } from '../integration/phaseGCard';
 import { FAVOUR_TRACKS, snapshotFlag, type FavourTrack } from '../state/favour';
@@ -63,6 +63,17 @@ export const ACT5_GIVERS: Readonly<Record<string, string>> = {
  * kill factor, never by a higher start.
  */
 export const ACT5_START_XP = 98_800;
+/**
+ * N12 PR 2 (coordinator ruling L1, 2026-11-07): Phase J targets start at 109,000 XP, the measured Phase I end. The Phase I
+ * chains end at 113,206 (run A) and 105,394 (run B), plans/act5-phase-i-playthrough.md; 109,000 sits between them, so a
+ * Phase J fixture no longer starts Cael two levels under the player who reached it.
+ */
+export const ACT5_PHASE_J_START_XP = 109_000;
+
+/** The XP a `?act5=<id>` target is topped up to: Phase I's start, or Phase J's own. */
+export function act5StartXpFor(id: string): number {
+  return act5PhaseOf(id) === 'J' ? ACT5_PHASE_J_START_XP : ACT5_START_XP;
+}
 export const ACT5_GIVER_STAND_OFF = ACT4_GIVER_STAND_OFF;
 /** Anchor prefixes that count as an Act 5 post (a giver still at an Act 4 post lands at the placeholder instead). */
 export const ACT5_POST_PREFIXES: readonly string[] = ['caldera.'];
@@ -221,10 +232,9 @@ export class Act5Jump {
     }
     if (this.phase === 'act5') {
       if (ACT5_JUMP_IDS.indexOf(this.id) > 0) p.setFlag(RIM_GATE_OPEN_FLAG, true);
-      if (act5PhaseOf(this.id) === 'J') p.setFlag(FOUNDRY_OPEN_FLAG, true);
       for (const q of ACT5_PREREQS[this.id] ?? []) this.inject(q, 'act5');
       if (this.favour) this.applyPreset(this.favour);
-      p.topUpXp?.(ACT5_START_XP);
+      p.topUpXp?.(act5StartXpFor(this.id));
       this.phase = 'quiet';
     }
     if (this.phase === 'quiet') {

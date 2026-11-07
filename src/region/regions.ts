@@ -64,9 +64,9 @@ export interface RegionDef {
 export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
   // v0.8 (Act 4, Q11): Phase G held the Waste shut with `story.phase.wasteOpen`; L13 PR 2 retired it, so the Waste opens on
   // M42 accepted alone. An old save that still carries the flag loads cleanly: nothing reads it.
-  // v0.9 (Act 5): Phase I holds the bowl floor (`hole.caldera.floor`) with `story.phase.foundryOpen`; N12 PR 2 empties it.
-  // The exception to the rule above: the Caldera's hold is spread into its floor hole, not the region's `openWhen`.
-  caldera: ['story.phase.foundryOpen'],
+  // v0.9 (Act 5): Phase I held the bowl floor (`hole.caldera.floor`, spread into the hole, not the region's `openWhen`)
+  // with `story.phase.foundryOpen`; N12 PR 2 retired it, so the floor opens on `story.m53.complete` alone and the Foundry
+  // quests on M52 complete alone. An old save that still carries the flag loads cleanly: nothing reads it.
 };
 
 /** The hold flags of one region (empty when it has none). */
@@ -171,7 +171,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     track: 'heart-of-the-anvil',
     bed: 'caldera',
     ground: 'caldera',
-    // The Phase I hold (`PHASE_HOLDS.caldera`) holds the bowl floor's hole, not the region (act5Containment.ts).
+    // Phase I's hold (retired by N12 PR 2) held the bowl floor's hole, not the region (act5Containment.ts).
     openWhen: { all: [ACT5_GATE_FLAG] },
     reserved: false,
     mount: 'refused',

@@ -7,7 +7,7 @@ export type Act5FlagOwner = Act3FlagOwner;
 
 export const ACT5_FLAG_OWNERS: readonly Act5FlagOwner[] = [
   { pattern: 'story.m47.rimGateOpen', owner: 'N10', note: "M47's winch: the Rim Gate's face opens (N1's gate structure reads it on load)" },
-  { pattern: 'story.phase.foundryOpen', owner: 'N12', note: 'the Phase I hold on the bowl floor (PHASE_HOLDS.caldera); retired by N12 PR 2' },
+  { pattern: 'story.phase.foundryOpen', owner: 'N12', note: 'the Phase I hold on the bowl floor, retired by N12 PR 2: nothing writes or reads it; old saves may carry it' },
   { pattern: 'story.a5.rimCardSeen', owner: 'N12', note: '"The Rim holds", the Phase I card after M52, has shown (once-flag)' },
   { pattern: 'story.gate.end', owner: 'N12', note: 'the final ending gate (M56 complete)' },
   { pattern: 'world.afterEnding', owner: 'N12', note: 'the world after the ending (Q1 (a)); set once the final choice has played out; N13 reads it' },

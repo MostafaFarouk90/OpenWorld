@@ -166,8 +166,8 @@ describe('Act 3 containment: holds and regions', () => {
       expect(c.isOpen(19000, 2500)).toBe(true); // Cinderreach
     }
     expect(REGION_INFO.oldsmoke.openWhen).toEqual({ all: ['story.d03.complete'] });
-    // v0.8's Waste hold retired by L13 PR 2; v0.9: only the Caldera's bowl floor carries its Phase I hold.
-    expect(PHASE_HOLDS).toEqual({ caldera: ['story.phase.foundryOpen'] });
+    // v0.8's Waste hold retired by L13 PR 2; v0.9's Caldera floor hold retired by N12 PR 2: no region holds anything.
+    expect(PHASE_HOLDS).toEqual({});
     for (const id of REGION_IDS) if (id !== 'dragonspine') expect(JSON.stringify(REGION_INFO[id].openWhen)).not.toContain('dragonspineOpen');
   });
 
