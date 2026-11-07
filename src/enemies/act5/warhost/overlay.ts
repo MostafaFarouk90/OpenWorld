@@ -5,7 +5,7 @@ import type { MoveDef, WarhostRole } from '../../types';
 import { WARHOST_ROLES } from '../../types';
 import { spawnDataOf } from '../../spawnData';
 import { WARHOST_ROLE_MOVES } from './def';
-import { joinLine, leaveLine, lineStaggered } from './lines';
+import { joinLine, leaveLine, lineNow, lineStaggered } from './lines';
 
 const VIEWS = new Map<ActorId, { role: WarhostRole; lineId: string }>();
 /** What tests read of one warhost. */
@@ -42,7 +42,8 @@ export function makeWarhostOverlay(ctx: BehaviourContext): BehaviourOverlay {
   const sd = spawnDataOf(actor?.data);
   const lineId = sd?.line ?? actor?.spawnTag ?? ctx.spawnerId ?? ctx.actorId;
   const moves = WARHOST_ROLE_MOVES[role];
-  let clock = 0;
+  // A status stun enters `stagger` but opens no mercy window: `stunned` runs just before the brain's stagger, so it flags the entry.
+  let stunEntering = false;
 
   const prop = buildProp(role);
   if (prop) {
@@ -58,12 +59,16 @@ export function makeWarhostOverlay(ctx: BehaviourContext): BehaviourOverlay {
     allowMove(move: MoveDef) {
       return moves.has(move.id);
     },
-    animate(dt) {
-      clock += dt;
+    stunned() {
+      stunEntering = true;
+      return false;
+    },
+    animate() {
+      stunEntering = false;
     },
     stateChanged(_from, to) {
-      if (to !== 'stagger') return;
-      const r = lineStaggered(lineId, ctx.actorId, clock);
+      if (to !== 'stagger' || stunEntering) return;
+      const r = lineStaggered(lineId, ctx.actorId, lineNow());
       if (r.brokeNow) ctx.host.events.emit('enemies.shieldLine.broken' as never, { lineId, members: r.kneel } as never);
     },
     leave() {

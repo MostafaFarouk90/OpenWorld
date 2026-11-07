@@ -27,7 +27,7 @@ function run(enemy: 'warhost-soldier' | 'blighted-soldier'): number {
   return (performance.now() - t0) / 600;
 }
 
-describe.skipIf(!process.env['MEASURE'])('Warhost think cost', () => {
+describe.skipIf(!(globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env['MEASURE'])('Warhost think cost', () => {
   it('reports ms per tick for 12 warhosts and 12 Footmen', () => {
     run('blighted-soldier');
     const foot = run('blighted-soldier');

@@ -4,7 +4,7 @@ import './events';
 import { resolveLayout } from '../../region/resolveLayout';
 import { heightAt } from '../../terrain/heightfield';
 import { CALDERA_FAUNA_LAYOUT } from './calderaFauna.layout';
-import { resetLines } from './warhost/lines';
+import { resetLines, tickLines } from './warhost/lines';
 
 /**
  * Act 5 N5, the Caldera creatures (plans/act5-N5.md): resets every Warhost shield line on a rest and a load. The kill XP
@@ -22,6 +22,9 @@ const plugin: GamePlugin = {
     offs.push(
       ctx.events.on('rest', () => resetLines()),
       ctx.events.on('save.loaded', () => resetLines()),
+    );
+    offs.push(
+      ctx.systems.add({ id: 'act5-creatures.tick', fixedPhase: 'afterCombat', order: 44, fixedUpdate: (dt: number) => tickLines(dt) }) as unknown as () => void,
     );
     (plugin as { _offs?: Array<() => void> })._offs = offs;
   },

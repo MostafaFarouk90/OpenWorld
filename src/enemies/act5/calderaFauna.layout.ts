@@ -30,6 +30,8 @@ export interface CalderaFaunaGroup {
   /** The shield line shared by several groups (`SpawnerDef.line`). */
   line?: string;
   firstArrival?: boolean;
+  /** Ring radius for the members (default 2.5 m); a steep perch takes a tighter ring. */
+  ring?: number;
 }
 
 /**
@@ -40,7 +42,7 @@ export interface CalderaFaunaGroup {
  */
 export const CALDERA_FAUNA_GROUPS: readonly CalderaFaunaGroup[] = [
   { id: 'rim.stokers.1', site: 'rim-stairs.hairpin', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5' },
-  { id: 'rim.stokers.2', site: 'rim-perch.2', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5' },
+  { id: 'rim.stokers.2', site: 'rim-perch.1', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5', ring: 2.5 },
   { id: 'rim.gnats', site: 'rim-perch.3', enemy: 'cinder-gnat-swarm', count: 1, gate: 'gate.a5' },
   { id: 'stair.outriders', site: 'lava-stair.1', enemy: 'warhost-soldier', role: 'shield', count: 2, gate: 'rimGateOpen', firstArrival: true },
   { id: 'stair.gnats', site: 'lava-stair.2', enemy: 'cinder-gnat-swarm', count: 1, gate: 'rimGateOpen' },
@@ -52,7 +54,7 @@ export const CALDERA_FAUNA_GROUPS: readonly CalderaFaunaGroup[] = [
   { id: 'foundry.guards', site: 'inner-gate.head', enemy: 'warhost-guard', role: 'shield', count: 2, gate: 'foundryOpen', line: 'caldera.fauna.foundry' },
 ];
 
-const RING = 4;
+const RING = 2.5;
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 
 export function calderaSiteOf(siteId: string): { at: readonly [number, number]; area: AreaId } {
@@ -71,7 +73,7 @@ function memberAnchors(g: CalderaFaunaGroup, offset: number): AnchorSpec[] {
   const out: AnchorSpec[] = [];
   for (let i = 0; i < g.count; i++) {
     const a = ((i + offset) / (g.count + offset)) * Math.PI * 2 + (offset ? Math.PI / 2 : 0);
-    const r = g.count === 1 && !offset ? 0 : RING;
+    const r = g.count === 1 && !offset ? 0 : (g.ring ?? RING);
     out.push({ id: calderaFaunaAnchorId(g.id, i + 1), x: r2(cx + Math.cos(a) * r), z: r2(cz + Math.sin(a) * r), yawDeg: 0, tags: ['fauna', g.enemy] });
   }
   return out;
