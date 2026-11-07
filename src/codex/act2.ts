@@ -53,7 +53,7 @@ export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
   { flag: 'story.m14.aelfredaJoined', entry: ACT2_CODEX_IDS.party },
   // Phase D: the waystone discovery (the place entry) and the pass's discovery flag are both flags a save already holds.
   { flag: 'waystone.cinderford.lit', entry: ACT2_CODEX_IDS.cinderford },
-  ...[1, 2, 3, 4].map((a) => ({ flag: `aelfreda.rite.a${a}`, entry: ACT2_CODEX_IDS.hearthRite })),
+  ...[1, 2, 3, 4, 5].map((a) => ({ flag: `aelfreda.rite.a${a}`, entry: ACT2_CODEX_IDS.hearthRite })),
 ];
 
 /**

@@ -41,6 +41,6 @@ describe('trainerPlacement', () => {
       const kit = DEFAULT_KITS[id];
       expect(trainerPlacement(kit, after)).toMatchObject({ npcId: kit.trainer.npcId, interactableId: trainerId(kit), deskAnchor: `ashgate.refuge.trainer.${kit.trainer.npcId}`, moved: true });
     }
-    expect(TRAINER_POSTS.length).toBe(5);
+    expect(TRAINER_POSTS.length).toBe(10); // five refuge desks (L7) and five Rim Camp desks (N7)
   });
 });
