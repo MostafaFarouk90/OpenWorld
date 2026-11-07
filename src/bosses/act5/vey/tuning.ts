@@ -52,9 +52,10 @@ export const VEY = {
   maxHealth: 3400,
   /** Health and damage scale this much per level away from 38, never below 0.5. */
   perLevel: 0.05,
-  maxPoise: 120,
+  /** Low, because a real swing's raw poise is about 10 (x 2 heavy, x 0.5 light): three or four heavies or a parry break a bar. */
+  maxPoise: 60,
   /** Poise refills after this long without a landed hit (design 9.6), outside a break and the window. */
-  poiseRegenDelay: 4,
+  poiseRegenDelay: 5,
   phases: ACT5_BOSS_RULES[VEY_BOSS_ID].phases ?? [],
   breaksPerPhase: ACT5_BOSS_RULES[VEY_BOSS_ID].breaksPerPhase ?? 4,
   mercyVerb: 'spare' as const,

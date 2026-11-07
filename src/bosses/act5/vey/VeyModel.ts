@@ -14,7 +14,7 @@ export const VEY_CLIPS = {
   combo2: '1H_Melee_Attack_Slice_Diagonal',
   combo3: '1H_Melee_Attack_Chop',
   shock: 'Spellcast_Raise',
-  roar: 'Spellcast_Summon',
+  roar: 'Spellcast_Long',
   hit: 'Hit_A',
   stagger: 'Hit_B',
   kneel: 'Sit_Floor_Down',
