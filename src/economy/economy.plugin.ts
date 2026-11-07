@@ -97,6 +97,9 @@ const economyPlugin: GamePlugin = {
         // Act 4: the table alone decides.
         case 'wulfhild':
         case 'hild':
+        // Act 5 (N7): Alric and Maud's rim kitchen, the table alone decides (M47; M49 and F4 Cleanse).
+        case 'alric':
+        case 'maud-rim':
           return true;
         default:
           return ctx.state.getBool('tutorial.complete');
