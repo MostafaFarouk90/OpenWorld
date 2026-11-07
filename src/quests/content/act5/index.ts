@@ -6,13 +6,15 @@ import type { Act2Note } from '../act2/notes';
 import type { CarryItemSpec } from '../carry';
 import { RIM_A5 } from './rim/rim.content';
 import { FOUNDRY_A5 } from './foundry/foundry.content';
+import { withRimWithdrawal } from './foundry/phase';
 
 export { RIM_A5, RIM_A5_QUEST_IDS } from './rim/rim.content';
 export { FOUNDRY_A5, FOUNDRY_A5_QUEST_IDS } from './foundry/foundry.content';
 
 const BLOCKS = [RIM_A5, FOUNDRY_A5] as const;
 
-export const ACT5_QUEST_DEFS: QuestDef[] = BLOCKS.flatMap((b) => b.quests);
+// N11 (additive): R29 is withdrawn once M54 starts, as R28 and R30 are in their own defs
+export const ACT5_QUEST_DEFS: QuestDef[] = withRimWithdrawal(BLOCKS.flatMap((b) => b.quests));
 export const ACT5_PROPS = BLOCKS.flatMap((b) => b.props);
 export const ACT5_CARRY: CarryItemSpec[] = BLOCKS.flatMap((b) => b.carry);
 export const ACT5_OBJECTIVE_FLAGS = BLOCKS.flatMap((b) => b.flags);

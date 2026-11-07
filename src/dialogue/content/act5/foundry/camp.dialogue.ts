@@ -7,6 +7,7 @@ import { R27_CHOICE, R30_LINE, R30_VERSE, R30_VERSES, type R30Verse } from '../.
 import { R30_ALLIES, R30_CHOSEN_EVENT, R30_LINE_EVENT, type R30Ally } from '../../../../quests/content/act5/foundry/r30.quest';
 import { C, all, any, at, flagIs, not, offer, open, qActive, voice } from './common';
 import { WENNA_D09_RULE, WENNA_D09_SEGMENT } from './foundry.dialogue';
+import { YSMERYTH_M56_RULES, YSMERYTH_M56_SEGMENTS } from './descent.dialogue';
 
 const WE = voice('wenna');
 const WU = voice('wulfhild');
@@ -271,8 +272,9 @@ export const ROOK_A5F: BuiltTree = buildTree({
 /** The line-only extensions (Wystan, Merrin, Hrolf, Aelfreda, Ansgar, Ysmeryth). Wenna's and Wulfhild's sit in their trees. */
 const lineOnly = (a: R30Ally): BuiltTree => buildTree({
   id: R30_TREE_OF[a],
-  start: [{ when: askLine(a), seg: `a5f-r30-line-${a}` }],
-  segments: lineSegment(a),
+  // Ysmeryth's tree also carries her M56 farewell on the Anvil (opened by the director from her prop there)
+  start: [{ when: askLine(a), seg: `a5f-r30-line-${a}` }, ...(a === 'ysmeryth' ? YSMERYTH_M56_RULES : [])],
+  segments: { ...lineSegment(a), ...(a === 'ysmeryth' ? YSMERYTH_M56_SEGMENTS : {}) },
 });
 export const R30_LINE_TREES: readonly BuiltTree[] = (['wystan', 'merrin', 'hrolf', 'aelfreda', 'ansgar', 'ysmeryth'] as const).map(lineOnly);
 

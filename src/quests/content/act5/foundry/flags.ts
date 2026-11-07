@@ -63,6 +63,25 @@ export const VEY_OUTCOME = 'boss.vey.outcome';
 export const M54_MURALS_FLAG = 'story.m54.murals';
 export const M54_THRALLS_ARM = 'story.m54.thrallsArmed';
 export const M54_THRALLS_DOWN = 'story.m54.thrallsDown';
+/** Cael is in the Hammer Hall's approach (the descent step). */
+export const M54_ENTERED = 'story.m54.entered';
+/** Ulthred's voice through the walls has played out (its talk's last line). */
+export const M54_VOICE_SEEN = 'story.m54.voiceSeen';
+/** M55: the parley's last line (Ulthred offers the trial). */
+export const M55_PARLEY_SEEN = 'story.m55.parleySeen';
+/** M55: N6's hammer trial won (N6 writes no flag; the director sets this on `ulthred.trial.won`). */
+export const M55_TRIAL_PASSED = 'story.m55.trialPassed';
+/** M56: Alric's disclosure heard (the Scar cost said aloud). */
+export const M56_TOLD = 'story.m56.told';
+/** M56: the Scar band at the moment (`light` under 8, `heavy` 8 to 11, `grave` 12 or more), written while the choice is ahead. */
+export const M56_SCAR_BAND = 'story.m56.scarBand';
+/** M56: the farewells at the Anvil (Ysmeryth and Ulthred's last; the company). */
+export const M56_YSMERYTH_SEEN = 'story.m56.ysmerythSeen';
+export const M56_COMPANY_SEEN = 'story.m56.companySeen';
+/** M56: the aftermath's last line (the quest completes on it; N12's ending director runs after). */
+export const M56_AFTER_SEEN = 'story.m56.afterSeen';
+/** The choice confirm (a dialogue event; the director computes and writes every M56 flag at once). */
+export const M56_CONFIRM_EVENT = 'story.m56.confirm';
 /** A rim quest withdrawn when M54 started (`story.<id>.leftOnRim`, plan 2.3). */
 export const LEFT_ON_RIM = (id: string): string => `story.${id}.leftOnRim`;
 

@@ -3,10 +3,12 @@
 // `a5r-` (extendTree refuses a clash).
 import type { Condition, QuestDef } from '../../../../quests/types';
 import { RIM_A5_QUEST_DEFS } from '../../../../quests/content/act5/rim/rim.content';
+import { withRimWithdrawal } from '../../../../quests/content/act5/foundry/phase';
 import { buildTree, type BuiltTree, type Line } from '../../act2/build';
 import { all, any, flagIs, not, objDone, objOpen, qActive, qDone, qIdle, step } from '../../act2/cond';
 
-const DEFS: Record<string, QuestDef> = Object.fromEntries(RIM_A5_QUEST_DEFS.map((q) => [q.id, q]));
+// N11 (additive): the defs as the Act 5 index registers them, so R29 is not offered after the descent (story.m54.started)
+const DEFS: Record<string, QuestDef> = Object.fromEntries(withRimWithdrawal([...RIM_A5_QUEST_DEFS]).map((q) => [q.id, q]));
 const def = (q: string, o: string) => {
   const d = DEFS[q]?.objectives.find((x) => x.id === o);
   if (!d) throw new Error(`rim a5 dialogue: ${q} has no objective ${o}`);

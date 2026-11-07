@@ -3,7 +3,9 @@
 // Warhost groups follow N5's README: one role a def, a line shared by its defs, at least two shield members a line.
 import type { EnemyKind, SpawnerDef } from '../../../../enemies/types';
 import type { AreaId } from '../../../../region/areas';
-import { D09_GUARDS_ARM, D09_PATROL_ARM, M53_BROKEN_ARM, R28_RISEN_ARM } from './flags';
+import { D09_GUARDS_ARM, D09_PATROL_ARM, D10_ADDS_ARM, M53_BROKEN_ARM, M54_THRALLS_ARM, R28_RISEN_ARM } from './flags';
+import { M54_THRALLS } from './m54.quest';
+import { D10_ADDS } from './d10.quest';
 import { FA } from './anchors';
 import { R28_GROUP, R28_RISERS } from './r28.quest';
 import { M53_GROUPS } from './m53.quest';
@@ -12,6 +14,9 @@ import { D09_GROUPS } from './d09.quest';
 const WARHOST: EnemyKind = 'warhost-soldier' as EnemyKind;
 const SOLDIER: EnemyKind = 'blighted-soldier';
 const WRAITH: EnemyKind = 'ash-wraith';
+const GOLEM: EnemyKind = 'cinder-golem';
+const HOUND: EnemyKind = 'ember-hound';
+const H = (s: string): string => `caldera.int.hammer.${s}`;
 
 type Extra = Partial<SpawnerDef>;
 const group = (id: string, enemy: EnemyKind, anchors: readonly string[], flag: string, quest: string, area: AreaId, extra: Extra = {}): SpawnerDef => ({
@@ -50,4 +55,9 @@ export const FOUNDRY_A5_Q_SPAWNERS: readonly SpawnerDef[] = [
   group(D09_VAT_IDS[2], WARHOST, [FD('vat.patrol.5'), FD('vat.patrol.6')], D09_GUARDS_ARM, 'd09', 'caldera-foundry', { role: 'torch', line: D09_GROUPS.vatPatrol }),
   group(D09_GUARD_PAIRS[0], SOLDIER, [FD('guard.1'), FD('guard.2')], D09_GUARD_PAIR_ARM(0), 'd09', 'caldera-foundry', { skin: 'footman-grisel' }),
   group(D09_GUARD_PAIRS[1], SOLDIER, [FD('guard.3'), FD('guard.4')], D09_GUARD_PAIR_ARM(1), 'd09', 'caldera-foundry', { skin: 'footman-grisel' }),
+  // M54: six forge-thralls wake along the approach (N2's four thrall spots and two of mine by the hall gate)
+  group(M54_THRALLS, GOLEM, [...[1, 2, 3, 4].map((n) => H(`thrall.${n}`)), FA.m54Thrall(5), FA.m54Thrall(6)], M54_THRALLS_ARM, 'm54', 'caldera-foundry', { skin: 'golem-lava' }),
+  // D10: before the hall's last door, eight thralls and six forge-fire hounds
+  group(D10_ADDS.thralls, GOLEM, [1, 2, 3, 4, 5, 6, 7, 8].map(FA.d10Add), D10_ADDS_ARM, 'd10', 'caldera-foundry', { skin: 'golem-lava' }),
+  group(D10_ADDS.fire, HOUND, [9, 10, 11, 12, 13, 14].map(FA.d10Add), D10_ADDS_ARM, 'd10', 'caldera-foundry'),
 ];

@@ -4,6 +4,7 @@ import { installArms, installGroupObjectives } from '../../../act4/harrowmark/di
 import { installComplete, installDoneWhenRecheck, installExtraAnchors, installTriggersAndCast } from './generic';
 import { FOUNDRY_A5_ARMS, FOUNDRY_A5_GROUPS } from './tables';
 import { installD09, installM53, installR27, installR28, installR30 } from './quests';
+import { installEnding, installM54, installM55, installM56 } from './descent';
 
 let offs: Off[] = [];
 
@@ -13,7 +14,7 @@ let offs: Off[] = [];
  */
 const plugin: GamePlugin = {
   id: 'foundry-a5-quests',
-  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'npcs', 'interiors', 'siege', 'spells', 'caldera-lava'],
+  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'npcs', 'interiors', 'siege', 'spells', 'caldera-lava', 'scenes'],
   setup(ctx) {
     offs = [];
     const warn = (m: string): void => void console.warn(m);
@@ -30,6 +31,10 @@ const plugin: GamePlugin = {
     installR30(kit, offs);
     installM53(kit);
     installD09(kit);
+    installM54(kit);
+    installM55(kit);
+    installM56(kit);
+    installEnding(kit, offs);
 
     offs.push(ctx.systems.add({ id: 'foundry-a5-quests.tick', fixedPhase: 'rules', order: 11, fixedUpdate: () => tick() }));
   },
