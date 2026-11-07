@@ -256,6 +256,7 @@ export class EormenDirector {
       gong: new THREE.Vector3(o.x + g.x, o.y, o.z + g.front - 0.12),
       gongYaw: 0,
       rect,
+      floor: { x0: o.x + ARENA.rect.x0 + 1, x1: o.x + ARENA.rect.x1 - 1, z0: o.z + ARENA.rect.z0 + 1, z1: o.z + ARENA.rect.z1 - 1 },
     };
   }
 

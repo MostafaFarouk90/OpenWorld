@@ -232,6 +232,29 @@ describe('ProjectileSystem pierce, hostileOnly and the shared host', () => {
     run(s.ps, 0.5);
     expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'gong' });
   });
+  it('point-blank: a foe whose body collider the ray reports a hand from the muzzle is struck, not the wall behind it', () => {
+    // The foe stands 0.2 m ahead; its capsule surface (what the physics ray hits) is 0.05 m from the muzzle, inside the
+    // first sweep sample (L13's Phase H report M3: a crossbow bolt at 1 m ended as a wall hit on the husk's own collider).
+    const s = setup({ rayCast: (o, d, m) => (m > 0.05 ? { point: { x: o.x + d.x * 0.05, y: o.y + d.y * 0.05, z: o.z + d.z * 0.05 } } : null) });
+    s.actors.add(new FakeActor('husk', 'hostile', 0, 0.2));
+    s.ps.launch(s.base({ hostileOnly: true, radius: 0.12 }));
+    run(s.ps, 0.1);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'husk' });
+  });
+  it('point-blank: a muzzle already inside a foe\'s cylinder (the ray starting inside its body) strikes it', () => {
+    const s = setup({ rayCast: (o) => ({ point: { x: o.x, y: o.y, z: o.z } }) });
+    s.actors.add(new FakeActor('husk', 'hostile', 0, -0.1));
+    s.ps.launch(s.base({ hostileOnly: true, radius: 0.12 }));
+    run(s.ps, 0.1);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'husk' });
+  });
+  it('a real wall with no foe at it still ends the bolt as a wall hit', () => {
+    const s = setup({ rayCast: (o, d, m) => (o.z + d.z * m > 2 ? { point: { x: o.x, y: o.y, z: 2 } } : null) });
+    s.actors.add(new FakeActor('behind', 'hostile', 0, 4));
+    s.ps.launch(s.base({ radius: 0.12 }));
+    run(s.ps, 1);
+    expect(s.hits.map((h) => h.kind)).toEqual(['terrain']);
+  });
   it('an ordinary actor keeps the person-sized cylinder: a bolt 1 m to its side flies past', () => {
     const s = setup();
     s.actors.add(new FakeActor('e', 'hostile', 1.0, 6));
