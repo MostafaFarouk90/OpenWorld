@@ -15,6 +15,7 @@ import { SUMMIT_DIALOGUE_STRINGS } from './content/act3/summit';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
 import { GREYFEN_DIALOGUE_STRINGS } from './content/act3/greyfen';
 import { SCENE_ACT3_CAMP } from './content/act3/campScene.dialogue';
+import { SCENE_ACT4_CAMP } from './content/act4/campScene.dialogue';
 import { HARROWMARK_A4_DIALOGUE_STRINGS } from './content/act4/harrowmark';
 import { WASTE_A4_DIALOGUE_STRINGS } from './content/act4/waste';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
@@ -36,6 +37,7 @@ export const dialogueStrings: Record<string, string> = {
   ...ACT3_COMPANION_STRINGS,
   ...GREYFEN_DIALOGUE_STRINGS,
   ...SCENE_ACT3_CAMP.strings,
+  ...SCENE_ACT4_CAMP.strings,
   // Act 4 (L10): the Harrowmark quests
   ...HARROWMARK_A4_DIALOGUE_STRINGS,
   // Act 4 (L11): the Waste quests

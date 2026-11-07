@@ -60,8 +60,8 @@ export interface RegionDef {
  * hold never touches another region.
  */
 export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
-  // v0.8 (Act 4, Q11): Phase G holds the Waste shut behind `fog.waste-edge`; L13 PR 2 empties this entry.
-  'ashen-waste': ['story.phase.wasteOpen'],
+  // v0.8 (Act 4, Q11): Phase G held the Waste shut with `story.phase.wasteOpen`; L13 PR 2 retired it, so the Waste opens on
+  // M42 accepted alone. An old save that still carries the flag loads cleanly: nothing reads it.
 };
 
 /** The hold flags of one region (empty when it has none). */
@@ -144,7 +144,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   },
   // v0.8 (Act 4): engine x 7000..15000, z 4500..11000. A ring around the Caldera: the box includes the Caldera, which
   // stays reserved (and a closed containment hole); `regionAt` answers null inside any reserved box. Opens when Gate of
-  // Ash (M42) is accepted, held shut in Phase G by `story.phase.wasteOpen`. Bands capped at spawn (Q1).
+  // Ash (M42) is accepted (the Phase G hold is retired). Bands capped at spawn (Q1).
   'ashen-waste': {
     box: { x0: 8000, z0: 5500, x1: 16000, z1: 12000 },
     levelBand: { min: 31, max: 35 },

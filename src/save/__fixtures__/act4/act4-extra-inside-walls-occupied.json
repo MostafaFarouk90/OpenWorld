@@ -63,7 +63,11 @@
           "lore.rubbing.anvil-6",
           "howto.gliding",
           "lore.place.frostfang-aerie",
-          "corvin-skarl"
+          "corvin-skarl",
+          "howto.escorts",
+          "lore.place.crucible",
+          "lore.place.council-chamber",
+          "lore.person.vey"
         ]
       },
       "version": 1
