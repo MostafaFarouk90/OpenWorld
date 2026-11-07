@@ -10,6 +10,9 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 
+// Boots the whole plugin manifest: the 5 s default is not a safe limit (census B13, Act 4 L14).
+vi.setConfig({ testTimeout: 30_000 });
+
 let physics: PhysicsWorld;
 const cleanups: Array<() => void> = [];
 beforeEach(async () => {
