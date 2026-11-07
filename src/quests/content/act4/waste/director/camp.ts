@@ -129,7 +129,10 @@ export function installDance(k: Kit, offs: Off[]): void {
     k.later(() => k.ctx.services.get('enemies')?.despawnGroup(M43_DANCE_SPAWNER));
   };
   const open = (): boolean => k.active('m43') && k.objDone('m43', 'danceTalk') && !k.flag(M43_DONE.dance);
-  offs.push(k.onNamed(M43_DANCE_ASKED, () => { if (open() && !bout) pending = true; }));
+  // Hrodna's "Now." fires while her talk (danceTalk) is still open: take the ask then, and start the bout once the
+  // conversation has closed and danceTalk is done (L13 Phase H M2: the first ask was dropped)
+  const askable = (): boolean => k.active('m43') && !k.flag(M43_DONE.dance) && (k.objDone('m43', 'danceTalk') || k.objCurrent('m43', 'danceTalk'));
+  offs.push(k.onNamed(M43_DANCE_ASKED, () => { if (askable() && !bout) pending = true; }));
   k.on('trial.won', (e) => { if (e.trialId === M43_DANCE_TRIAL && bout) win(); });
   k.on('trial.lost', (e) => {
     if (e.trialId !== M43_DANCE_TRIAL || !bout) return;
@@ -146,8 +149,9 @@ export function installDance(k: Kit, offs: Off[]): void {
   k.on('save.loaded', () => { pending = false; if (bout) { k.ctx.services.get('trials')?.stop(M43_DANCE_TRIAL); clear(); } });
   k.every(6, () => {
     if (!pending || k.ctx.services.get('dialogue')?.active) return;
+    if (!open()) { if (!askable()) pending = false; return; } // danceTalk completes as the talk ends: wait for it
     pending = false;
-    if (open()) begin();
+    begin();
   });
 }
 
