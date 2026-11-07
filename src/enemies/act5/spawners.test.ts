@@ -60,12 +60,14 @@ describe('the Caldera ambient groups', () => {
     const flag = (id: string) => (CALDERA_AMBIENT_SPAWNERS.find((d) => d.id === id)!.activation as { flag: string }).flag;
     expect(flag('caldera.rim.stokers.1')).toBe(CALDERA_GATE_FLAGS['gate.a5']);
     expect(flag('caldera.stair.outriders')).toBe('story.m47.rimGateOpen');
-    expect(flag('caldera.foundry.guards')).toBe('story.phase.foundryOpen');
+    expect(flag('caldera.foundry.guards')).toBe('story.m52.complete');
+    expect(flag('caldera.terraces.pikes')).toBe('story.m51.complete');
+    expect((CALDERA_AMBIENT_SPAWNERS.find((d) => d.id === 'caldera.rim.stokers.1')!.activation as { until?: string }).until).toBe('story.r29.struck');
   });
 
   it('caps every group at P + 3 (the first arrival P + 2), at the Caldera bands, for several player levels', () => {
     for (const p of [28, 31, 34, 37, 40]) {
-      const flags = { 'story.gate.a5': true, 'story.m47.rimGateOpen': true, 'story.phase.foundryOpen': true };
+      const flags = { 'story.gate.a5': true, 'story.m47.rimGateOpen': true, 'story.m51.complete': true, 'story.m52.complete': true };
       const { reg, reqs } = registry(flags, p, () => 1);
       for (const d of CALDERA_AMBIENT_SPAWNERS) reg.spawnGroup(d.id);
       expect(reqs.length).toBe(22);
@@ -77,7 +79,7 @@ describe('the Caldera ambient groups', () => {
   });
 
   it('carries role, skin and line to the member', () => {
-    const { reg, reqs } = registry({ 'story.m47.rimGateOpen': true }, 33);
+    const { reg, reqs } = registry({ 'story.m51.complete': true }, 33);
     reg.spawnGroup('caldera.terraces.pikes');
     expect(reqs.map((r) => [r.role, (r as { line?: string }).line])).toEqual([['pike', 'caldera.fauna.terraces'], ['pike', 'caldera.fauna.terraces']]);
   });
