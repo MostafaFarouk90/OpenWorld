@@ -141,6 +141,10 @@ export class TutorialDirector {
   get currentStep(): number {
     return this.step;
   }
+  /** The running replay board drill's step (0 when none runs). */
+  get drillStep(): number {
+    return this.drill?.step ?? 0;
+  }
   /** The current goal detail (the gaze target banner, for highlighting). */
   detail(): string | null {
     for (const g of this.steps[this.step] ?? []) {

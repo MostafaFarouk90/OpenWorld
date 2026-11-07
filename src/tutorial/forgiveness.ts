@@ -48,9 +48,23 @@ export class CombatForgiveness {
   }
 }
 
-/** The verb a beat's count step is waiting for, or null. */
-export function lessonVerb(beat: string | null, step: number): LessonVerb | null {
+/** The verb a beat's count step (or a replay board drill's) is waiting for, or null. */
+export function lessonVerb(beat: string | null, step: number, drill: string | null = null, drillStep = 0): LessonVerb | null {
+  // The replay board's block and dodge drills (tutorial.plugin.ts) count the same verbs, so they forgive the same way.
+  if (drill === 'block' && drillStep === 0) return 'blocked';
+  if (drill === 'dodge' && drillStep === 0) return 'dodged';
+  if (drill) return null;
   if (beat === 't09' && step === 0) return 'blocked';
   if ((beat === 't10' || beat === 'skirmish') && step === 0) return 'dodged';
   return null;
+}
+
+/** The prompt mechanic a credited verb flashes, as a clean block or dodge does in CombatVerbs. */
+export function verbMechanic(verb: LessonVerb): 'block' | 'dodge' {
+  return verb === 'blocked' ? 'block' : 'dodge';
+}
+
+/** A key that changes whenever the lesson moves on, so the pity count resets between beats, steps and drills. */
+export function lessonKey(beat: string | null, step: number, drill: string | null, drillStep: number): string {
+  return `${beat ?? '-'}:${step}:${drill ?? '-'}:${drillStep}`;
 }
