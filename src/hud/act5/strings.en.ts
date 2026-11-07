@@ -6,6 +6,8 @@ export const ACT5_HUD_STRINGS_EN: Record<string, string> = {
   'hud.siege.waveCleared': 'Wave {n} cleared. Orders.',
   'hud.siege.gate': 'The Rim Gate: {pct}%',
   'hud.siege.breached': 'Breached: clear the court',
+  'hud.siege.gate.r27': 'The tunnel line: {pct}%',
+  'hud.siege.breached.r27': 'Breached: clear the mouth',
   'hud.siege.ram': 'Siege Ram',
   'hud.siege.ramStalled': 'Siege Ram: stalled {s} s',
   'hud.siege.more': '+{n}',
