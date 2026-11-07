@@ -42,7 +42,7 @@ describe('WAVE_SPAWNERS', () => {
 
   it('uses the Act 1 kinds plus the Ember Wyrm closer', () => {
     const kinds = new Set(WAVE_SPAWNERS.map((s) => s.enemy));
-    expect([...kinds].sort()).toEqual(['ash-wraith', 'blighted-soldier', 'ember-hound', 'ember-wyrm']);
+    expect([...kinds].sort()).toEqual(['ash-wraith', 'blighted-soldier', 'ember-hound', 'ember-wyrm', 'warhost-guard', 'warhost-soldier']);
   });
 });
 

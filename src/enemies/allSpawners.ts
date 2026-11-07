@@ -18,6 +18,7 @@ import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT4_HARROWMARK_SPAWNERS } from '../harrowmark/act4/spawners';
 import { ACT4_QUEST_SPAWNERS } from '../quests/content/act4';
 import { WASTE_SPAWNERS } from './waste/spawners';
+import { CALDERA_AMBIENT_SPAWNERS } from './act5/spawners';
 import type { SpawnerDef } from './types';
 
 export const ALL_SPAWNERS: readonly SpawnerDef[] = [
@@ -38,5 +39,6 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...ACT4_HARROWMARK_SPAWNERS,
   ...ACT4_QUEST_SPAWNERS,
   ...WASTE_SPAWNERS,
+  ...CALDERA_AMBIENT_SPAWNERS,
   ...EORMEN_SPAWNERS,
 ];

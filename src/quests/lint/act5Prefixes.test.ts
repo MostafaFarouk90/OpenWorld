@@ -9,12 +9,13 @@ import { questDefs } from '../content';
 import { ALL_LAYOUTS } from './noteLint';
 import { ACT4_WORLD_LAYOUT } from '../../region/act4/act4World.layout';
 import { WASTE_LAYOUT } from '../../waste/waste.layout';
+import { CALDERA_LAYOUT } from '../../caldera/caldera.layout';
 import { ACT5_ANCHOR_PREFIXES, ACT5_FLAG_OWNERS, ACT5_QUEST_FLAG_OWNERS, ACT5_TRIGGER_PREFIXES } from './act5Flags';
 import { ACT5_PHASE_I, ACT5_PHASE_J, ACT5_QUEST_IDS, isAct5Id } from './act5Ids';
 import { ACT4_QUEST_IDS } from './act4Ids';
 import { ACT3_QUEST_IDS } from './act3Ids';
 
-const layouts = [...ALL_LAYOUTS, ACT4_WORLD_LAYOUT, WASTE_LAYOUT];
+const layouts = [...ALL_LAYOUTS, ACT4_WORLD_LAYOUT, WASTE_LAYOUT, CALDERA_LAYOUT];
 const anchorIds = [...layouts.flatMap((l) => l.anchors.map((a) => a.id)), ...TUTORIAL_ANCHORS.map((a) => a.id), ...ALL_INTERIORS.flatMap((d) => d.anchors.map((a) => a.id))];
 const triggerIds = [
   ...layouts.flatMap((l) => l.triggers.map((t) => t.id)),
@@ -29,10 +30,29 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'caldera.fog.',
   // N2: the Act 5 interiors
   'caldera.int.',
+  // N1: the Caldera's exteriors (caldera/caldera.layout.ts)
+  'caldera.rim-gate',
+  'caldera.camp.',
+  'caldera.stokers.',
+  'caldera.door.',
+  'caldera.tunnel.mouth',
+  'caldera.lava-stair.',
+  'caldera.terraces.',
+  'caldera.inner-gate.',
+  'caldera.anvil.causeway',
+  'caldera.siege.',
 ];
 const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   // N2: the Act 5 interiors
   'trg.caldera.int.',
+  // N1: the Caldera's exteriors
+  'trg.caldera.rim-gate',
+  'trg.caldera.camp',
+  'trg.caldera.lava-stair.',
+  'trg.caldera.inner-gate',
+  'trg.caldera.terraces',
+  'trg.caldera.cooling-hall',
+  'trg.caldera.tunnel',
 ];
 
 describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {

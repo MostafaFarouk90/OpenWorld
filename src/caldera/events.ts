@@ -11,7 +11,8 @@ declare module '../core/events' {
     'vent.opened': { ventId: string };
     'vent.closed': { ventId: string };
     'siege.wave.started': { siegeId: string; n: number };
-    'siege.wave.cleared': { siegeId: string; n: number };
+    /** N4: `breached` is true when the gate fell during this wave (the court was cleared). */
+    'siege.wave.cleared': { siegeId: string; n: number; breached?: boolean };
     /** The gate's health fell; `pct` is what remains, 0..100. */
     'siege.gate.damaged': { siegeId: string; pct: number };
     'siege.gate.breached': { siegeId: string };

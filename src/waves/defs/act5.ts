@@ -6,11 +6,10 @@ import type { WaveSetDef, WaveSpawnDef } from '../types';
 import { GATE, RAM, BRAZIER, SIEGE_MAX_ALIVE } from '../../siege/tuning';
 
 /**
- * The Warhost kinds (N5). N5's `warhost-soldier` and `warhost-guard` are not EnemyKinds on this base yet: the siege
- * stands in the shipped `blighted-soldier` (the spike's stand-in, the Warhost's base) until N5's branch merges, then
- * this one map changes. The role and line ride on every row either way.
+ * The Warhost kinds (N5). N5's `warhost-soldier` and `warhost-guard` (merged into this branch from N5; the siege used the shipped
+ * `blighted-soldier` as a stand-in before that). The role and line ride on every row either way.
  */
-export const SIEGE_KINDS: Readonly<{ soldier: EnemyKind; guard: EnemyKind }> = { soldier: 'blighted-soldier', guard: 'blighted-soldier' };
+export const SIEGE_KINDS: Readonly<{ soldier: EnemyKind; guard: EnemyKind }> = { soldier: 'warhost-soldier', guard: 'warhost-guard' };
 
 export const RIM_SIEGE_ANCHORS = {
   gate: [1, 2, 3, 4].map((n) => `caldera.siege.gate.${n}`),
@@ -27,6 +26,9 @@ export const TUNNEL_ANCHORS = {
 } as const;
 
 export const TUNNEL_INTERIOR = 'stokers-tunnel';
+
+/** Vey's household guard in M52's wave 4 (their own shield line, so their spawner is their own; N10's objective). */
+export const M52_GUARD_LINE = 'm52.w4.guard';
 
 const S = SIEGE_KINDS.soldier;
 const row = (lane: string, count: number, delay: number, role: WaveSpawnDef['role'], line?: string, kind: EnemyKind = S, stagger = 1.2): WaveSpawnDef => ({
@@ -72,7 +74,7 @@ export const RIM_SIEGE: WaveSetDef = {
     // Wave 4: Vey's household guard with torch-bearers and the second ram; the storm again.
     {
       spawns: [
-        row('ram', 2, 2, 'shield', 'm52.w4', SIEGE_KINDS.guard, 1), row('ram', 2, 4, 'shield', 'm52.w4'),
+        row('ram', 2, 2, 'shield', M52_GUARD_LINE, SIEGE_KINDS.guard, 1), row('ram', 2, 4, 'shield', 'm52.w4'),
         row('1', 2, 6, 'torch'), row('2', 2, 12, 'torch'), row('3', 1, 12, 'torch'), row('4', 1, 12, 'torch'),
       ],
       carts: [{ lane: 'ram', delay: 6, role: 'ram' }],

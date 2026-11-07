@@ -26,9 +26,12 @@ export const RIM_GATE_OPEN_WHEN: FlagCondition = { all: [ACT5_GATE_FLAG, RIM_GAT
 
 const FROM_GATE = { all: [ACT5_GATE_FLAG] } as const;
 
-/** The rules the four Act 4 rim faces take from Act 5 (act4Fog.ts spreads them in; Act 4's own toast stays the default). */
+/** The rules the six Act 4 rim faces take from Act 5 (act4Fog.ts spreads them in; Act 4's own toast stays the default). */
 export const ACT5_RIM_FACE_RULES = {
   'fog.caldera-rim.s': { openWhen: RIM_GATE_OPEN_WHEN, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_RIM_GATE_BARRED }] },
+  // N1: the south rim either side of the Rim Gate's 28 m span (act4/act4World.ts places all three on one line).
+  'fog.caldera-rim.sw': { openWhen: NEVER, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_CALDERA_RIM_SHEER }] },
+  'fog.caldera-rim.se': { openWhen: NEVER, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_CALDERA_RIM_SHEER }] },
   'fog.caldera-rim.n': { openWhen: NEVER, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_CALDERA_RIM_SHEER }] },
   'fog.caldera-rim.e': { openWhen: NEVER, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_CALDERA_RIM_SHEER }] },
   'fog.caldera-rim.w': { openWhen: NEVER, toastWhen: [{ when: FROM_GATE, key: FOG_TOAST_CALDERA_RIM_SHEER }] },

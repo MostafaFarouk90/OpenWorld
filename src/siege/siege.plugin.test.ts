@@ -6,7 +6,7 @@ import type { SaveEntry } from '../core/Persist';
 import { CART, RAM as RAM_CYCLE } from '../waves/tuning';
 import { ASSIST_WINDOW_S, BREAK, DRAGON, GATE, ORDERS, RAM, SAPPERS, SIEGE_MAX_ALIVE, STORM } from './tuning';
 import { clearWave, makeSiegeKit, runUntil, secs, setSnapshot, TICK, type SiegeKit, type SiegeKitOptions } from './testKit';
-import { SIEGE_FLAGS } from './runner';
+import { M52_GUARD_SPAWNER, SIEGE_FLAGS } from './runner';
 import { offerFlag } from './orders.dialogue';
 
 let physics: PhysicsWorld;
@@ -129,6 +129,7 @@ describe('no ally dies; a breach is a court to clear', () => {
     expect(kit.siege().current).toMatchObject({ breached: true, wave: 1 });
     runUntil(kit, () => kit.siege().current?.phase === 'orders', 200);
     expect(kit.director().barricade!.health).toBe(GATE.m52Health * GATE.patchToPct);
+    expect(kit.of('siege.wave.cleared')).toEqual([{ siegeId: 'm52', n: 1, breached: true }]);
     endBreak('hold');
     expect(kit.siege().current).toMatchObject({ wave: 2, breached: false });
   }, 60_000);
@@ -483,4 +484,21 @@ describe('review folds', () => {
     expect(kit.siege().run).not.toBe(old);
     expect(kit.siege().run).not.toBeNull();
   }, 60_000);
+});
+
+describe('N10 hooks', () => {
+  it("wave 4's household guard: siege.guard.fallen once each, whoever kills them; a clean wave clears with breached false", async () => {
+    await boot();
+    kit.siege().start('m52');
+    toWave(4);
+    runUntil(kit, () => kit.enemies.service.alive(M52_GUARD_SPAWNER).length === 2, 30, false);
+    const [a, b] = kit.enemies.service.alive(M52_GUARD_SPAWNER);
+    const ally = allies()[0].actor;
+    kit.ctx.damage.apply({ attackerId: ally.id, targetId: a, amount: 99999, kind: 'melee' });
+    kit.ctx.damage.kill(b, 'player');
+    kit.run(2);
+    expect(kit.of('siege.guard.fallen')).toEqual([{ siegeId: 'm52', actorId: a }, { siegeId: 'm52', actorId: b }]);
+    runUntil(kit, () => kit.siege().completed('m52'), 300);
+    expect(kit.of('siege.wave.cleared').map((c) => c.breached)).toEqual([false, false, false, false]);
+  }, 90_000);
 });

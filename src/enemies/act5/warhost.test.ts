@@ -17,7 +17,7 @@ import { calderaAmbientCensus } from './census';
 import { warhostLineLint } from './lint';
 import './overlays';
 import { WARHOST_GUARD_DEF, WARHOST_ROLE_MOVES, WARHOST_SOLDIER } from './warhost/def';
-import { clearLines, lineBroken, lineSize, lineStaggered, joinLine, resetLines } from './warhost/lines';
+import { clearLines, lineNow, tickLines, lineBroken, lineSize, lineStaggered, joinLine, resetLines } from './warhost/lines';
 import { warhostView } from './warhost/overlay';
 
 const DT = FIXED_TIMESTEP;
@@ -39,6 +39,7 @@ function rig(groups: Array<{ id: string; role: Role; count: number; enemy?: 'war
   const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: defs, seed: 5 });
   const tick = (seconds = DT): void => {
     for (let i = 0; i < Math.max(1, Math.round(seconds / DT)); i++) {
+      tickLines(DT);
       m.think(DT);
       m.animate(DT);
       fake.combatStep(DT);
@@ -131,6 +132,15 @@ describe('the shield line (pure bookkeeping)', () => {
     expect(lineBroken('L')).toBe(false);
     expect(lineStaggered('L', 'a', 20).kneel).toEqual([]);
   });
+  it('the window uses one shared clock: members that joined seconds apart still break on staggers in the same second', () => {
+    const log: string[] = [];
+    joinLine('L', 'a', member('shield', log, 'a'));
+    for (let i = 0; i < 180; i++) tickLines(DT);
+    joinLine('L', 'b', member('shield', log, 'b'));
+    lineStaggered('L', 'a', lineNow());
+    tickLines(0.5);
+    expect(lineStaggered('L', 'b', lineNow()).brokeNow).toBe(true);
+  });
   it('an unknown line or member is ignored, and the lint flags a line with fewer than two shields', () => {
     expect(lineStaggered('nope', 'a', 1).kneel).toEqual([]);
     expect(lineSize('nope')).toBe(0);
@@ -162,8 +172,9 @@ describe('the shield line in the enemy stack', () => {
     expect(hold.enabled?.()).toBe(true);
     hold.onInteract(t.fake.player);
     t.tick(0.1);
-    expect(t.m.service.alive('sh').length).toBeLessThanOrEqual(2);
-    expect(lineSize('ln')).toBeLessThanOrEqual(3);
+    expect(t.fake.bus.log.some((e) => e.type === 'mercy' && (e.payload as { actorId?: string }).actorId === sh[0]!.id)).toBe(true);
+    expect(sh[0]!.enemy.mercyState()).toBe('leaving');
+    expect(sh[1]!.enemy.mercyState()).toBe('yielding');
   });
   it('a single stagger does not kneel anyone, and a rest resets the line', () => {
     const t = rig([{ id: 'sh', role: 'shield', count: 3, tag: 'ln2' }]);
