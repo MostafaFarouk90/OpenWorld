@@ -40,7 +40,8 @@ export const ACT2_SPAWNERS: readonly SpawnerDef[] = [
   {
     id: 'cinderreach.hunters.camp', tag: 'cinderreach.hunters.camp', enemy: 'hunter-spearman', memberKinds: HUNTER_PACK_KINDS, count: 4,
     anchor: 'cinderreach.spawn.huntercamp.1', memberAnchors: members('cinderreach.spawn.huntercamp.', 1, 4),
-    band: 'cinderreach', activation: 'auto', leaderSlot: HUNTER_PACK_LEADER_SLOT, respawn: 'never', leash: true,
+    // held off while M15's scout is open (Act 4 L14, src/quests/content/act2/director/m15ScoutHold.ts)
+    band: 'cinderreach', activation: { until: 'story.m15.scoutHold' }, leaderSlot: HUNTER_PACK_LEADER_SLOT, respawn: 'never', leash: true,
   },
   // Slag Crawlers hang from the Oldsmoke mine galleries.
   {
