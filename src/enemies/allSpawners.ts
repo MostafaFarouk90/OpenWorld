@@ -39,6 +39,7 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...SKARL_SPAWNERS,
   ...ACT4_HARROWMARK_SPAWNERS,
   ...ACT4_QUEST_SPAWNERS,
+  // Act 5 (N10, additive): the Rim quests' groups
   ...ACT5_QUEST_SPAWNERS,
   ...WASTE_SPAWNERS,
   ...CALDERA_AMBIENT_SPAWNERS,

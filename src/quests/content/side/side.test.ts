@@ -1005,9 +1005,18 @@ describe('side rules never shadow a main-chain talk step', () => {
     return rules.find((r) => evalCondition(r.when, envOf(st)))?.node;
   };
   /** Quest q active with objective index i the one the player is on (earlier ones done). */
+  // N10 (additive): a step of an unordered quest gated by a flag (M49's talks wait on the arrival) is current only with that
+  // flag set, so the state sets the flags its `when` asks for (the `all` chain's plain flag tests).
+  const whenFlags = (c: unknown, out: Record<string, FlagValue>): void => {
+    const x = c as { flag?: string; equals?: FlagValue; all?: unknown[] } | undefined;
+    if (!x) return;
+    if (typeof x.flag === 'string' && x.equals !== undefined) out[x.flag] = x.equals;
+    for (const y of x.all ?? []) whenFlags(y, out);
+  };
   const stepState = (base: St, q: QuestDef, i: number) => {
     base.quests[q.id] = 'active';
     q.objectives.forEach((o, k) => { if (k !== i && (q.sequential ? k < i : true)) base.done.add(`${q.id}/${o.id}`); });
+    whenFlags(q.objectives[i]?.when, base.flags);
   };
 
   const npcs = Object.keys(SIDE_ADDITIONS);

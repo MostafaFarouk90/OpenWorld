@@ -1,4 +1,3 @@
-import { ACT5_CARRY } from './content/act5';
 import { ACT2_CARRY } from './content/act2';
 import * as THREE from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +13,7 @@ import dialoguePlugin from '../dialogue/dialogue.plugin';
 import questsPlugin from './quests.plugin';
 import { CARRY_ITEMS } from './content/carry';
 import { SIDE_CARRY } from './content/side';
+import { ACT5_CARRY } from './content/act5';
 import { M02_RUBBLE } from './content/m02.quest';
 
 let physics: PhysicsWorld;
@@ -104,7 +104,7 @@ describe('quests and dialogue plugins', () => {
     t.game.fixedUpdate();
     t.game.fixedUpdate();
     const warned = (console.warn as unknown as ReturnType<typeof vi.fn>).mock.calls.filter((c) => String(c[0]).includes('no home anchor'));
-    expect(warned).toHaveLength(CARRY_ITEMS.length + ACT2_CARRY.length + SIDE_CARRY.length + ACT5_CARRY.length); // villagers and well buckets, then Act 2's wounded, bundles and logs (Cinderreach and Oldsmoke), then the side jobs' lambs
+    expect(warned).toHaveLength(CARRY_ITEMS.length + ACT2_CARRY.length + SIDE_CARRY.length + ACT5_CARRY.length); // villagers and well buckets, then Act 2's wounded, bundles and logs (Cinderreach and Oldsmoke), then the side jobs' lambs, then Act 5's gong parts (N10: their anchors are the Rim director's)
     t.game.dispose();
     t.world.dispose();
   });

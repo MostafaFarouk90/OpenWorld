@@ -1,10 +1,10 @@
-import { ACT5_QUEST_DEFS } from '../content/act5';
 import { ACT4_QUEST_DEFS } from '../content/act4';
 import { describe, expect, it } from 'vitest';
 import { questDefs } from '../content';
 import { ACT3_QUEST_DEFS } from '../content/act3';
 import type { ObjectiveDef, QuestDef } from '../types';
 import { isAct3Id } from './act3Ids';
+import { ACT5_QUEST_DEFS } from '../content/act5';
 import {
   OBJECTIVE_LINT_ALLOW, exemption, findObjectiveHits, shippedObjectiveInput, unlistedObjectiveHits, type ObjectiveLintInput,
 } from './objectiveLint';

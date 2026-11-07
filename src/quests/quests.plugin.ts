@@ -32,6 +32,7 @@ import { installSideCodex } from './content/side/codex';
 import { SIDE_PROPS, SIDE_CARRY, SIDE_QUEST_NOTES, SIDE_NOTE_LOOKS, SIDE_NOTE_CODEX, SIDE_OBJECTIVE_FLAGS, SIDE_QUEST_CODEX, SIDE_POST_RULES } from './content/side';
 import { ACT3_PROPS, ACT3_CARRY, ACT3_OBJECTIVE_FLAGS, ACT3_QUEST_NOTES, ACT3_NOTE_LOOKS, ACT3_NOTE_CODEX, ACT3_QUEST_ITEM_STRINGS } from './content/act3';
 import { ACT4_PROPS, ACT4_CARRY, ACT4_OBJECTIVE_FLAGS, ACT4_QUEST_NOTES, ACT4_NOTE_LOOKS, ACT4_NOTE_CODEX, ACT4_QUEST_ITEM_STRINGS } from './content/act4';
+// Act 5 (N10, additive): the Rim quests' props, carries, flags and notes.
 import { ACT5_PROPS, ACT5_CARRY, ACT5_OBJECTIVE_FLAGS, ACT5_QUEST_NOTES, ACT5_NOTE_LOOKS, ACT5_NOTE_CODEX, ACT5_QUEST_ITEM_STRINGS } from './content/act5';
 import { QuestLooks, lookSpecs } from './looks';
 import { buildPropLook, disposePropLook } from './propLooks';

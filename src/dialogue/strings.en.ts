@@ -43,6 +43,7 @@ export const dialogueStrings: Record<string, string> = {
   ...HARROWMARK_A4_DIALOGUE_STRINGS,
   // Act 4 (L11): the Waste quests
   ...WASTE_A4_DIALOGUE_STRINGS,
+  // Act 5 (N10, additive)
   ...ACT5_DIALOGUE_STRINGS,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',

@@ -97,5 +97,6 @@ export const questStrings: Record<string, string> = {
   ...ACT3_QUEST_STRINGS,
   // Act 4 quests (L10 Harrowmark)
   ...ACT4_QUEST_STRINGS,
+  // Act 5 (N10, additive)
   ...ACT5_QUEST_STRINGS,
 };

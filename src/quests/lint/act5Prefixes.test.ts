@@ -6,7 +6,6 @@ import { TUTORIAL_ANCHORS } from '../../tutorial/beats';
 import { ACT2_TRIGGERS } from '../content/act2';
 import { OLDSMOKE_TRIGGERS } from '../content/act2/oldsmoke';
 import { questDefs } from '../content';
-import { ACT5_QUEST_DEFS } from '../content/act5';
 import { ALL_LAYOUTS } from './noteLint';
 import { ACT4_WORLD_LAYOUT } from '../../region/act4/act4World.layout';
 import { WASTE_LAYOUT } from '../../waste/waste.layout';
@@ -103,11 +102,9 @@ describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {
     expect([...ACT5_TRIGGER_PREFIXES]).toEqual(['trg.caldera.']);
   });
 
-  it('no shipped quest uses an Act 5 id or an Act 5 quest flag', () => {
-    // Act 5's own blocks (N10, N11) are the writers; every other quest must not touch an Act 5 id or flag
-    const before = questDefs.filter((q) => !ACT5_QUEST_DEFS.includes(q));
-    const shipped = new Set(before.map((q) => q.id));
-    for (const id of ACT5_QUEST_IDS) expect(shipped.has(id), id).toBe(false);
+  // N10 (additive): Act 5's own quests now ship, so the guard reads every quest before Act 5
+  it('no quest before Act 5 uses an Act 5 id or an Act 5 quest flag', () => {
+    const before = questDefs.filter((q) => !(ACT5_QUEST_IDS as readonly string[]).includes(q.id));
     const json = JSON.stringify(before);
     for (const id of ACT5_QUEST_IDS) expect(json.includes(`story.${id}.`), id).toBe(false);
   });

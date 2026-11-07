@@ -1,15 +1,16 @@
-// Act 5 quest aggregates (the Act 4 index's shape). Each Act 5 block adds its content here; the shared registries spread these
-// lists next to Act 4's. N10 owns this file (RIM_A5 first in BLOCKS); N11 adds FOUNDRY_A5. Until N10's branch is merged, the
-// file stands with the Foundry block only (N10: plans/act5-N10.md section 1).
+// Act 5 quest aggregates (the Act 4 index's shape; N10 owns this file, coordinator ruling 4). Each Act 5 block adds its content
+// here (N10's Rim, N11's Foundry); the shared registries spread these lists next to Act 4's.
 import type { QuestDef } from '../../types';
 import type { QuestNoteSpec } from '../../notes';
 import type { Act2Note } from '../act2/notes';
 import type { CarryItemSpec } from '../carry';
+import { RIM_A5 } from './rim/rim.content';
 import { FOUNDRY_A5 } from './foundry/foundry.content';
 
+export { RIM_A5, RIM_A5_QUEST_IDS } from './rim/rim.content';
 export { FOUNDRY_A5, FOUNDRY_A5_QUEST_IDS } from './foundry/foundry.content';
 
-const BLOCKS = [FOUNDRY_A5] as const;
+const BLOCKS = [RIM_A5, FOUNDRY_A5] as const;
 
 export const ACT5_QUEST_DEFS: QuestDef[] = BLOCKS.flatMap((b) => b.quests);
 export const ACT5_PROPS = BLOCKS.flatMap((b) => b.props);

@@ -36,6 +36,7 @@ import { SCENE_ACT3_CAMP } from './act3/campScene.dialogue';
 import { withAct4Rook } from './act4/rook.trainer';
 import { withHarrowmarkA4 } from './act4/harrowmark';
 import { withWasteA4 } from './act4/waste';
+// Act 5 (N10, additive): the Act 5 blocks' trees (src/dialogue/content/act5/index.ts).
 import { withAct5 } from './act5';
 import { SIEGE_ORDER_TREES } from '../../siege/orders.dialogue';
 

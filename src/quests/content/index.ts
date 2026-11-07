@@ -26,4 +26,5 @@ export const questDefs: QuestDef[] = [t03, t12, m01, m02, m03, m04, m05, d01, r0
   m06, m07, m08, m09, m10, r03, r04, d02, ...SIDE_QUEST_DEFS, ...ACT2_QUEST_DEFS, ...ACT3_QUEST_DEFS, ...ACT4_QUEST_DEFS, ...ACT5_QUEST_DEFS];
 import { ACT3_QUEST_DEFS } from './act3';
 import { ACT4_QUEST_DEFS } from './act4';
+// Act 5 (N10, additive): the Rim quests.
 import { ACT5_QUEST_DEFS } from './act5';

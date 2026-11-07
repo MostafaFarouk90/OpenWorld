@@ -4,6 +4,7 @@ import { dialogueDefs } from '../../dialogue/content';
 import { POI_REWARDS } from './poi';
 import { ITEMS } from '../../inventory/items';
 import type { Effect } from '../types';
+import { FORGE_HEART_FRAGMENT } from '../../gear/tier5/fragments';
 
 const OWNED = /^(story\.(m|d|r|j)\d\d\.|story\.r01\.|story\.a2\.(campSeen|wennaAtCamp)$|story\.a3\.campSeen$|world\.brightwater\.barley$|world\.harrowmark\.inn\.|quest\.|tutorial\.|player\.)/;
 
@@ -45,7 +46,9 @@ describe('Act 1 content', () => {
     expect(writers('story.gate.a2')).toEqual([]);
   });
   it('every quest reward item is granted at most once across quests', () => {
-    const given = all.filter(({ where }) => where.endsWith('.rewards')).flatMap(({ e }) => ((e as any).give ?? []).map((s: any) => s.itemId));
+    // Act 5 (N10, additive): the forge-heart fragment is a counted material N7 pays from several quests (FRAGMENT_SOURCES)
+    const given = all.filter(({ where }) => where.endsWith('.rewards')).flatMap(({ e }) => ((e as any).give ?? []).map((s: any) => s.itemId))
+      .filter((id: string) => id !== FORGE_HEART_FRAGMENT);
     expect(new Set(given).size).toBe(given.length);
   });
   it('no dialogue starts D02 or other Phase B quests yet', () => {

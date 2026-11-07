@@ -17,7 +17,7 @@ import { QUEST_NOTES } from '../content/notes';
 import { ACT2_PROPS, ACT2_CARRY, ACT2_QUEST_NOTES } from '../content/act2';
 import { ACT3_PROPS, ACT3_CARRY, ACT3_QUEST_NOTES } from '../content/act3';
 import { ACT4_PROPS, ACT4_CARRY, ACT4_QUEST_NOTES } from '../content/act4';
-import { ACT5_PROPS, ACT5_CARRY, ACT5_QUEST_NOTES } from '../content/act5';
+import { ACT5_QUEST_NOTES, ACT5_PROPS, ACT5_CARRY } from '../content/act5';
 
 export interface ObjectiveLintAllow {
   quest: string;

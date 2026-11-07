@@ -1,4 +1,3 @@
-import { ACT5_QUEST_NOTES } from '../content/act5';
 import { describe, expect, it } from 'vitest';
 import { NOTES_UNDER_NPCS } from '../content/act2/notes';
 import { QUEST_NOTES } from '../content/notes';
@@ -7,6 +6,7 @@ import { ACT3_QUEST_NOTES } from '../content/act3';
 import { ACT4_QUEST_NOTES } from '../content/act4';
 import { NOTE_LINT_ALLOW, findNoteHits, shippedNoteInput, unlistedNoteHits, type NoteLintInput } from './noteLint';
 import { isAct3Id } from './act3Ids';
+import { ACT5_QUEST_NOTES } from '../content/act5';
 
 const input = shippedNoteInput();
 const hits = findNoteHits(input);
