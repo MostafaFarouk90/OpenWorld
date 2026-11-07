@@ -44,6 +44,8 @@ export const EBBA_TREE = tree(EBBA, [
       EB('You found it! Wind it, wind it.'),
       EB('That is it. That is the end. I knew it went down at the end, like going to sleep.'),
       C('It is yours. Keep it safe.'),
+      EB('Was the blue door still blue? Sister says the ash takes the colour out of everything.'),
+      C('Still blue. A little grey at the bottom, where the ash sits.'),
       EB('No. You keep it. You go to the places Mama went. She would like the song to go too.'),
       EB('Sister says I must sleep now. Will you hum it when you sleep? Then we will both be humming.'),
     ],
@@ -73,6 +75,8 @@ export const EBBA_TREE = tree(EBBA, [
       EB('Did they all light? Even the far one?'),
       C('All three. And I read their names in the register.'),
       EB('Then they can come home. I will keep the last one here, for Mama, if that is all right.'),
+      C('Sister Aedre wrote them in the book. Every name, and the day their fires were lit.'),
+      EB('She writes slowly. She says the ink has to know it is important.'),
       EB('You can have a crooked one to keep. For when you are somewhere dark.'),
     ],
   },
@@ -81,7 +85,11 @@ export const EBBA_TREE = tree(EBBA, [
 
 // ---- Sister Aedre ---------------------------------------------------------------------------------------------------------
 const AD = voice(CHAPEL_KEEPER);
-export const AEDRE = tree(CHAPEL_KEEPER, [{ when: at('m44', 'keeper'), seg: 'm44-keeper' }], {
+export const AEDRE = tree(CHAPEL_KEEPER, [
+  { when: at('m44', 'keeper'), seg: 'm44-keeper' },
+  { when: at('m44', 'aedre'), seg: 'm44-aedre' },
+  { when: at('r25', 'aedre'), seg: 'r25-aedre' },
+], {
   'm44-keeper': {
     lines: [
       AD('Ebba sent you. Of course she did. She has asked every walker who comes through that door.'),
@@ -89,6 +97,26 @@ export const AEDRE = tree(CHAPEL_KEEPER, [{ when: at('m44', 'keeper'), seg: 'm44
       AD('The first house was the Wrights\'. The second has a nest in it now; we hear them at night through the wall.'),
       C('Then I will clear it.'),
       AD('Burn what you must, but bring the child something better than smoke. And read what they left. Somebody ought to.'),
+    ],
+  },
+  'm44-aedre': {
+    lines: [
+      AD('You found Wiglaf\'s stone. I cut that one myself; the mason went into the storm the winter before.'),
+      C('There is no stone for Eafa.'),
+      AD('No. Nobody found her, so nobody can say she is dead. Ebba asks me every week whether that means she is alive.'),
+      AD('I tell her the truth. I do not know. The Waste gives some people back, years on, thin and quiet. Most it keeps.'),
+      C('What do you want me to tell her?'),
+      AD('Give her the box and nothing else. A song is a thing a child can hold. A grave with no one in it is not.'),
+      AD('Go on. She will have heard you come back over the dunes. She hears everything except bedtime.'),
+    ],
+  },
+  'r25-aedre': {
+    lines: [
+      AD('The register. Good. Sit, if you like; this takes as long as it takes.'),
+      AD('Three hearths lit: Oswy\'s by the north well, the Fletchers, and little Eadburh\'s house. I write the day beside them so the next keeper knows.'),
+      C('Will anyone read it?'),
+      AD('Somebody always does, in the end. A walker, a child, a knight with ash in the boots. That is what a register is for.'),
+      AD('There. The ink is drying. Tell Ebba, she has been at that door since you left, pretending she is not.'),
     ],
   },
 }, [AD('The chapel keeps the names. The Waste keeps everything else.')]);
