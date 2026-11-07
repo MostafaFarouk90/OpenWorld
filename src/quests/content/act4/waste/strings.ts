@@ -16,7 +16,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
       shelter2: 'Reach the second shelter and wait out the wall', pack: 'Search the lost walker\'s pack',
       shelter3: 'Reach the third shelter and wait out the wall', wraiths: 'Lay the husks on the line to rest',
       shelter4: 'Reach the fourth shelter and wait out the wall', knot: 'Read the knot-sign on the last post',
-      camp: 'Follow the rope down into the Walker Camp', report: 'Speak to Wulfhild at the camp',
+      camp: 'Follow the rope down into the Walker Camp', unclip: 'Let Osgar Knotwise take you off the rope', report: 'Speak to Wulfhild at the camp',
     },
   },
   m43: {
@@ -34,7 +34,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
     summary: 'Little Ebba of the Cinder Chapel hums a tune she cannot finish. Her family\'s music box is somewhere in the ruined village, past a nest of husks.',
     o: {
       brief: 'Speak to Little Ebba at the chapel', keeper: 'Ask Sister Aedre about Ebba\'s family', house1: 'Search the first ruined house',
-      nest: 'Clear the nest in the second house', house2: 'Search the second house', house3: 'Search the third house', box: 'Wind the music box', graves: 'Visit the graves behind the chapel',
+      nest: 'Clear the nest in the second house', house2: 'Search the second house', house3: 'Search the third house', box: 'Wind the music box', graves: 'Visit the graves behind the chapel', aedre: 'Speak to Sister Aedre at the graves',
       report: 'Bring the music box to Ebba',
     },
   },
@@ -44,7 +44,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
     o: {
       brief: 'Take Ebba\'s candles', name1: 'Find the first family\'s name at their hearth', light1: 'Light a candle on the first hearth',
       name2: 'Find the second family\'s name', light2: 'Light a candle on the second hearth', knot: 'Lay the husks at the third hearth to rest',
-      name3: 'Find the third family\'s name', light3: 'Light a candle on the third hearth', register: 'Read the chapel register',
+      name3: 'Find the third family\'s name', light3: 'Light a candle on the third hearth', register: 'Read the chapel register', aedre: 'Ask Sister Aedre to write the hearths into the register',
       report: 'Tell Ebba the candles are lit',
     },
   },
