@@ -108,4 +108,18 @@ describe('SiegeHud widget', () => {
     expect(() => hud.update(0.1)).not.toThrow();
     expect(textOf(hud.element)).not.toContain('Line broken');
   });
+  it('names the tunnel line for R27 and the Rim Gate for M52', () => {
+    const m = new SiegeModel({ siegeIds: () => ['m52', 'r27'] });
+    const hud = new SiegeHud(new StubDocument(), { model: m, t });
+    m.waveStarted({ siegeId: 'r27', n: 1 });
+    m.gateDamaged({ siegeId: 'r27', pct: 80 });
+    hud.update(0.1);
+    expect(textOf(hud.element)).toContain('The tunnel line: 80%');
+    m.gateBreached({ siegeId: 'r27' });
+    hud.update(0.1);
+    expect(textOf(hud.element)).toContain('Breached: clear the mouth');
+    m.waveStarted({ siegeId: 'm52', n: 1 });
+    hud.update(0.1);
+    expect(textOf(hud.element)).toContain('The Rim Gate: 100%');
+  });
 });
