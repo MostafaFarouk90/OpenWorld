@@ -19,6 +19,9 @@ import { m01 } from './content/m01.quest';
 import { m04 } from './content/m04.quest';
 import { m05 } from './content/m05.quest';
 import { WASTE_A4_POST_ROWS } from './content/act4/waste/npcs';
+import { RIM_A5_POST_ROWS } from './content/act5/rim/npcs';
+/** Act 5 (N10, additive): the Rim rows' movers that no earlier row names (the allies' rows extend rows checked here). */
+const RIM_A5_NEW_MOVERS = new Set(RIM_A5_POST_ROWS.map((r) => r.npcId).filter((id) => !['rook', 'edric', 'merrin', 'wystan', 'wenna', 'wulfhild'].includes(id)));
 
 describe('R01 torch bridge', () => {
   it('records the first torch clear while R01 is active, never otherwise', () => {
@@ -227,7 +230,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id) && !WASTE_A4_POST_ROWS.some((r) => r.npcId === id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id) && !WASTE_A4_POST_ROWS.some((r) => r.npcId === id) && !RIM_A5_NEW_MOVERS.has(id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
   });
 });
 

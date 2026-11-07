@@ -15,6 +15,7 @@ import { HARROWMARK_INTERIORS } from '../../../../interiors/harrowmark';
 import { UNDERWAYS_DEF } from '../../../../interiors/underways/generate';
 import { HARROWMARK_A4_QUEST_IDS } from './harrowmark.content';
 import { M38_SIDE_JOBS } from './m38.quest';
+import { RIM_A5_QUEST_IDS } from '../../act5/rim/rim.content';
 
 /** Who can still be found after the Council: at the camp, then at the refuge (Rook as a refuge trainer, Wenna and Dunstan by
  * L7's refuge vendor posts). Wystan and Merrin have no refuge post, so a step with them would count. */
@@ -29,7 +30,8 @@ function insideHits(): Map<string, string[]> {
   const props = new Map([...QUEST_PROPS, ...ACT2_PROPS, ...SIDE_PROPS, ...ACT3_PROPS].map((p) => [p.interactableId, p.anchorId]));
   const hits = new Map<string, string[]>();
   for (const q of questDefs) {
-    if (HARROWMARK_A4_QUEST_IDS.includes(q.id) || MAIN.test(q.id)) continue;
+    // Act 5 (N10, additive): the Rim quests run after the act, their talkers stand at their rim posts
+    if (HARROWMARK_A4_QUEST_IDS.includes(q.id) || MAIN.test(q.id) || RIM_A5_QUEST_IDS.includes(q.id)) continue;
     for (const o of q.objectives) {
       const inId = (o.match as { interiorId?: unknown } | undefined)?.interiorId;
       if (o.target === 'interior.entered' && typeof inId === 'string' && CITY_INTERIORS.has(inId)) hits.set(q.id, [...(hits.get(q.id) ?? []), `${o.id}:${inId}`]);
