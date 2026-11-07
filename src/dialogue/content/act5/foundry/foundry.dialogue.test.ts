@@ -52,7 +52,7 @@ function opens(tree: string, states: Record<string, string>, done: string[], fla
   return rule?.node ?? '';
 }
 const PHASE_J = { m52: 'completed' };
-const HOLDS = { 'story.phase.foundryOpen': true };
+const HOLDS = { 'story.phase.foundryOpen': true, 'story.m52.complete': true };
 
 describe('Foundry Act 5 start rules (review: no optional offer may hide a needed talk)', () => {
   it('Wenna in the vat gallery (Spy) turns the guards even while R27 is still on offer', () => {
