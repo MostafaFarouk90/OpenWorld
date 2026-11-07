@@ -339,7 +339,9 @@ describe('clearing', () => {
       expect(sp.respawn).toBe('never');
       // Act 4 (L2): M39's set has its own tag; Act 4 (L11): each M46 cairn's set is tagged with its own id
       const cairn = /^waves\.(m46\.cairn-\d)\./.exec(sp.id)?.[1];
-      expect(sp.tag).toBe(cairn ?? (sp.id.startsWith('waves.m39.') ? 'm39.waves' : 'm12'));
+      // Act 5 (N4): the siege's sets carry their own tags
+      const act5 = sp.id.startsWith('waves.rim-siege.') ? 'm52.siege' : sp.id.startsWith('waves.stokers-tunnel') ? 'r27.siege' : undefined;
+      expect(sp.tag).toBe(cairn ?? act5 ?? (sp.id.startsWith('waves.m39.') ? 'm39.waves' : 'm12'));
     }
     kit.waves().start(ID);
     kit.runSecs(6);
@@ -375,8 +377,9 @@ describe('edges at start', () => {
 
   it('knows its structures for the HUD: kinds and max health, undefined otherwise', () => {
     expect(kit.waves().structure(CINDERFORD_RAID.barricadeId)).toEqual({ kind: 'barricade', maxHealth: 400 });
-    expect(kit.waves().structure(cartId1)).toEqual({ kind: 'cart', maxHealth: 600 });
-    expect(kit.waves().structure(cartId2)).toEqual({ kind: 'cart', maxHealth: 600 });
+    // N4 (Act 5): a cart names its role
+    expect(kit.waves().structure(cartId1)).toEqual({ kind: 'cart', maxHealth: 600, role: 'brazier' });
+    expect(kit.waves().structure(cartId2)).toEqual({ kind: 'cart', maxHealth: 600, role: 'brazier' });
     expect(kit.waves().structure(`${ID}.cart.0.1`)).toBeUndefined();
     expect(kit.waves().structure('nope')).toBeUndefined();
   });
