@@ -145,4 +145,19 @@ describe('items-act5 plugin', () => {
     forge.onInteract(t.ctx.actors.player);
     expect(t.smith).toHaveBeenCalledTimes(1);
   }, 30_000);
+
+  it('registers chest:foundry-cache once its anchor exists and pays one fragment, once', async () => {
+    const t = await boot();
+    expect(t.interactables.get('chest:foundry-cache')).toBeUndefined();
+    t.ctx.anchors.define({ id: 'caldera.int.foundry.chest', position: { x: 70, y: 150, z: 80 }, yaw: 0 });
+    t.game.fixedUpdate();
+    const chest = t.interactables.get('chest:foundry-cache');
+    expect(chest).toBeDefined();
+    const granted: unknown[] = [];
+    t.ctx.events.on('loot.granted', (e) => granted.push(e));
+    chest!.onInteract(t.ctx.actors.player);
+    chest!.onInteract(t.ctx.actors.player);
+    expect(granted).toEqual([{ sourceId: 'chest:foundry-cache', items: [{ itemId: 'forge-heart-fragment', count: 1 }] }]);
+    expect(chest!.enabled!()).toBe(false);
+  }, 30_000);
 });
