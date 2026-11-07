@@ -24,6 +24,18 @@ export const GATE = {
   hurtRadius: 1.0,
 } as const;
 
+/**
+ * The march (coordinator ruling 2026-11-07: siege foes march on the gate line on their own). Foot spawns join the rim
+ * stairs `joinMetres` below the landing (in reach of the gate: N1's lane heads lie 190 to 313 m out, past the enemies'
+ * 120 m dormancy range), walk to the landing, then to the gate. A foe within `releaseMetres` of Cael is his (the shipped
+ * aggro, under the 18 m sight range); the gate's own 10 m draw still wins at the gate. `landingReach`: metres from the
+ * landing that count as having climbed it. `reachMargin`: the far draw's radius past the farthest lane anchor.
+ * `alertEveryS`: an idle member is pointed at Cael this often (after a breach, or once he let it go). `awakeMetres`: a
+ * member stays awake this far from Cael (the shipped 120 m would sleep the stairs while he stands in the court: the
+ * siege start is 131 m from the join), still only on resident ground.
+ */
+export const MARCH = { joinMetres: 30, releaseMetres: 14, landingReach: 4, reachMargin: 20, alertEveryS: 1, awakeMetres: 240 } as const;
+
 /** Structures (design row 33: 600 health, wind-back 1.0 s). */
 export const RAM = { strikePct: 0.15, maxHealth: 600 } as const;
 export const BRAZIER = { strikePct: 0.2 } as const;
