@@ -5,6 +5,9 @@ export const TIER3_EMISSIVE_INTENSITY = 0.7;
 /** K10 (design 9.6): Wyrm-tempered edges burn cold, teal-white against tier 3's ember orange. */
 export const TIER4_EMISSIVE = 0x7fe8ff;
 export const TIER4_EMISSIVE_INTENSITY = 0.85;
+/** N7: Sunforged edges burn gold-white. */
+export const TIER5_EMISSIVE = 0xffe9a0;
+export const TIER5_EMISSIVE_INTENSITY = 1.0;
 const KEY = 'gearTint';
 const TIER_KEY = 'gearTintTier';
 
@@ -18,8 +21,8 @@ const hasEmissive = (m: THREE.Material): m is Emissive => 'emissive' in m && (m 
  */
 export function setWeaponTint(weapon: THREE.Object3D | null | undefined, on: boolean, tier = 3): void {
   if (!weapon) return;
-  const hex = tier >= 4 ? TIER4_EMISSIVE : TIER3_EMISSIVE;
-  const intensity = tier >= 4 ? TIER4_EMISSIVE_INTENSITY : TIER3_EMISSIVE_INTENSITY;
+  const hex = tier >= 5 ? TIER5_EMISSIVE : tier >= 4 ? TIER4_EMISSIVE : TIER3_EMISSIVE;
+  const intensity = tier >= 5 ? TIER5_EMISSIVE_INTENSITY : tier >= 4 ? TIER4_EMISSIVE_INTENSITY : TIER3_EMISSIVE_INTENSITY;
   weapon.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;

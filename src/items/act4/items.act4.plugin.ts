@@ -5,6 +5,8 @@ import { PLAYER_ID } from '../../actors/teams';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import { REFUGE_ANVIL } from '../../economy/refugePosts.act4';
+import { RIM_CAMP_FROM, RIM_FORGE_DUNSTAN } from '../../economy/rimCamp.act5';
+import { flagConditionHolds } from '../../core/flagCondition';
 import { OATHBLADE } from './catalog';
 import { OATHBLADE_POISE_MODIFIER, oathbladePoise, oathbladeWorn, reconcileOathblade, type OathbladePorts } from './oathblade';
 import { ITEMS_ACT4_STRINGS_EN } from './strings.en';
@@ -77,6 +79,8 @@ const itemsAct4Plugin: GamePlugin = {
     );
 
     // Dunstan's forge at the refuge (his shop moves by VENDOR_POSTS; the forge is its own interactable). The anchor is L1's.
+    // N7: Dunstan's forge follows him to the Rim Camp from M49 (read live, so a load re-derives it).
+    const forgeAnchor = (): string => (flagConditionHolds(RIM_CAMP_FROM, ctx.state) ? RIM_FORGE_DUNSTAN : REFUGE_ANVIL);
     const questDone = (id: string): boolean => soft<SoftQuests>('quests')?.state?.(id) === 'completed';
     ctx.interaction.register({
       id: FORGE_ASHGATE_ID,
@@ -85,10 +89,10 @@ const itemsAct4Plugin: GamePlugin = {
       promptKey: 'gear.smith.prompt',
       priority: -0.01,
       position: (out) => {
-        const a = ctx.anchors.find(REFUGE_ANVIL);
+        const a = ctx.anchors.find(forgeAnchor());
         return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1e6, 0);
       },
-      enabled: () => ctx.state.getBool('story.m41.complete') && questDone('m14') && !!ctx.anchors.find(REFUGE_ANVIL),
+      enabled: () => ctx.state.getBool('story.m41.complete') && questDone('m14') && !!ctx.anchors.find(forgeAnchor()),
       onInteract: () => void soft<SoftGear>('gear')?.openSmith?.(),
     });
   },
