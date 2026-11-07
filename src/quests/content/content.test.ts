@@ -39,7 +39,11 @@ describe('quest content', () => {
       // Act 4 Harrowmark (L10 PR 2)
       'm38', 'm39', 'm40', 'm41',
       // Act 4 Ashen Waste (L11)
-      'm42', 'm43', 'm44', 'r25', 'r24', 'm45', 'd08', 'm46']);
+      'm42', 'm43', 'm44', 'r25', 'r24', 'm45', 'd08', 'm46',
+      // Act 5 the Rim (N10 PR 1)
+      'm47', 'm48', 'm49', 'r26', 'r29', 'm50', 'm51', 'm52',
+      // Act 5 the Foundry (N11 PR 1)
+      'r27', 'r28', 'r30', 'm53', 'd09', 'm54', 'm55', 'd10', 'm56']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

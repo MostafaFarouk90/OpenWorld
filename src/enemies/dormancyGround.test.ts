@@ -177,3 +177,42 @@ describe('a dormant enemy woken after a teleport (polish B1)', () => {
     expect(gated).toBe(wakeTick(false));
   });
 });
+
+describe('v0.9 dormancy.extend (Act 5 N4)', () => {
+  /** No ground check (no resident hook): only the range decides. Player at (0, 0), hounds 160 m off. */
+  function far() {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: GROUND, z: 0 }, physics, heightAt: () => GROUND });
+    const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { seed: 5, spawners: [] });
+    const a = m.spawnLoose('ember-hound', { x: 160, y: GROUND, z: 0 }, { leash: false })!;
+    const b = m.spawnLoose('ember-hound', { x: 0, y: GROUND, z: 160 }, { leash: false })!;
+    const tick = () => m.think(DT);
+    return { m, a, b, tick };
+  }
+
+  it('a provider keeps the enemies it names awake out to its range; the rest sleep at the shipped one', () => {
+    const t = far();
+    t.tick();
+    expect(t.m.get(t.a)!.sleeping).toBe(true);
+    const off = t.m.service.dormancy.extend((id) => (id === t.a ? 240 : undefined));
+    t.tick();
+    expect(t.m.get(t.a)!.sleeping).toBe(false);
+    expect(t.m.get(t.b)!.sleeping).toBe(true);
+    // Removed: the shipped range again.
+    off();
+    t.tick();
+    expect(t.m.get(t.a)!.sleeping).toBe(true);
+  });
+
+  it('a shorter or non-finite range never shortens the shipped one; past the extended range it sleeps', () => {
+    const t = far();
+    t.m.service.dormancy.extend(() => 10);
+    t.m.service.dormancy.extend(() => Number.NaN);
+    const near = t.m.spawnLoose('ember-hound', { x: 30, y: GROUND, z: 0 }, { leash: false })!;
+    t.tick();
+    expect(t.m.get(near)!.sleeping).toBe(false);
+    t.m.service.dormancy.extend((id) => (id === t.a ? 150 : undefined));
+    t.tick();
+    expect(t.m.get(t.a)!.sleeping).toBe(true);
+    expect(WORLD_AI.dormantDistance).toBeLessThan(150);
+  });
+});

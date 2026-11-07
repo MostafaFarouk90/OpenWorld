@@ -23,6 +23,7 @@ import { isVendorId, vendorBand, VENDOR_IDS, VENDOR_POSTS, vendorAnchor, vendorO
 import { ECONOMY_STRINGS_EN } from './strings.en';
 import { ECONOMY_ACT3_STRINGS_EN } from './strings.act3.en';
 import { VendorMenu } from './VendorMenu';
+import { HEARTY_FOODS } from '../items/act5/catalog';
 
 const LOCKPICKS = 'oswin-lockpicks';
 const LOCKED_CHESTS = ['chest:harrowmark-1', 'chest:harrowmark-2', 'chest:harrowmark-3', 'chest:harrowmark-4'];
@@ -96,6 +97,9 @@ const economyPlugin: GamePlugin = {
         // Act 4: the table alone decides.
         case 'wulfhild':
         case 'hild':
+        // Act 5 (N7): Alric and Maud's rim kitchen, the table alone decides (M47; M49 and F4 Cleanse).
+        case 'alric':
+        case 'maud-rim':
           return true;
         default:
           return ctx.state.getBool('tutorial.complete');
@@ -297,7 +301,7 @@ const economyPlugin: GamePlugin = {
     }
     // Maud's stew is Hearty food: the same duration as a night at the inn.
     ctx.events.on('item.used', (e) => {
-      if (e.itemId === 'maud-stew') inn.applyHearty(INN.heartySeconds);
+      if (HEARTY_FOODS.includes(e.itemId)) inn.applyHearty(INN.heartySeconds);
     });
     ctx.services.provide('inn', {
       rest: () => openInn(),

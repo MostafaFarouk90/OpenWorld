@@ -26,7 +26,7 @@ describe('validateInteriorLinks', () => {
     expect(() => validateInteriorLinks([link({ fromI: 'keep-deep', toI: 'keep', door: 'keep-front' })], [KEEP, DEEP])).toThrow(/outsideInteractable/);
   });
   it('ships the Keep links (L2), valid against the shipped interiors, both ways for each pair', () => {
-    expect(INTERIOR_LINKS.map((l) => l.id)).toEqual(['chamber-to-stairs', 'stairs-to-chamber', 'stairs-to-deeprun', 'deeprun-to-stairs']);
+    expect(INTERIOR_LINKS.map((l) => l.id)).toEqual(['chamber-to-stairs', 'stairs-to-chamber', 'stairs-to-deeprun', 'deeprun-to-stairs', 'foundry-to-hammer', 'hammer-to-foundry']);
     expect(() => validateInteriorLinks(INTERIOR_LINKS, ALL_INTERIORS)).not.toThrow();
     for (const l of INTERIOR_LINKS) expect(INTERIOR_LINKS.some((b) => b.from.interior === l.to.interior && b.to.interior === l.from.interior), l.id).toBe(true);
   });

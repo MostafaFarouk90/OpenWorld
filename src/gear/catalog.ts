@@ -10,7 +10,7 @@ export interface GearRow {
   /** Which class kit the piece is made for (a vendor shows it dimmed to the others; the sale is not class-locked). */
   classes: readonly ClassId[];
   slot: 'weapon' | 'offhand' | 'armour';
-  tier: 2 | 3 | 4;
+  tier: 2 | 3 | 4 | 5;
   /** v0.7 item 11: shard-gem sockets (K10 sets them on tier 4 rows). Absent means 0. */
   sockets?: 0 | 1 | 2;
   /** Attack for weapons, defense for armour and shields. */

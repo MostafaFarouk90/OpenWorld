@@ -1,4 +1,5 @@
 import { ACT4_INTERIOR_STRINGS_EN } from './harrowmark/act4/strings.en';
+import { CALDERA_INTERIOR_STRINGS_EN } from '../caldera/interiors/strings.en';
 import { WASTE_INTERIOR_STRINGS_EN } from '../waste/interiors/strings.en';
 
 export const INTERIOR_STRINGS_EN: Record<string, string> = {
@@ -24,4 +25,5 @@ export const INTERIOR_STRINGS_EN: Record<string, string> = {
   'interior.refused.locked': 'The way is barred',
   ...ACT4_INTERIOR_STRINGS_EN,
   ...WASTE_INTERIOR_STRINGS_EN,
+  ...CALDERA_INTERIOR_STRINGS_EN,
 };

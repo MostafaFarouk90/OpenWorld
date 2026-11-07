@@ -80,6 +80,12 @@ export interface WaveSetDef {
   breach?: { patchToPct: number };
   /** N4: health a cart takes off the barricade per strike, by role; absent: `CART.impactDamage`. */
   cartImpact?: { brazier?: number; ram?: number };
+  /**
+   * N4 (Act 5 siege): foot spawns join their lane `metres` short of the `toward` lane's anchor (the line from their lane
+   * anchor to it), so a wave whose lane heads lie past the enemies' dormancy range still comes up in reach of the gate.
+   * Lanes nearer than `metres` spawn at their anchor. Absent: every spawn stands at its lane anchor (the shipped rule).
+   */
+  join?: { metres: number; toward: LaneKey };
 }
 
 export type RunPhase = 'running' | 'intermission' | 'done';

@@ -1,5 +1,7 @@
 // The gate as a taunter (plans/act5-N4.md section 4): one hidden actor per gate anchor draws foes Cael has not hit in the
-// last 8 s; a foe's hit on it becomes a small cut of the gate's health (capped a second), never health on the actor.
+// last 8 s; a foe's swing at it becomes a small cut of the gate's health (capped a second), never health on the actor.
+// The swing counts when its attack window opens with the gate as the foe's target (a torch's throw and a pike's thrust
+// included), not when a blade happens to cross the post's capsule: the brain only swings once the gate is in reach.
 import * as THREE from 'three';
 import type { Actor, ActorId } from '../actors/Actor';
 import type { DamageModifier } from '../actors/DamageResolver';
@@ -8,7 +10,7 @@ import type { GameContext } from '../core/Game';
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { GATE } from './tuning';
 
-export type GateHost = Pick<GameContext, 'scene' | 'actors' | 'combat' | 'damage' | 'services'>;
+export type GateHost = Pick<GameContext, 'scene' | 'actors' | 'combat' | 'damage' | 'services' | 'events'>;
 
 export const GATE_KIND = 'siege-gate';
 export const GATE_MODIFIER = { id: 'siege.gate-hit', order: -49 } as const;
@@ -23,12 +25,18 @@ export interface GateOptions {
   damageGate(n: number): void;
   /** False once the gate is breached: the taunters stand down. */
   standing(): boolean;
+  /**
+   * The draw's radius (default `GATE.tauntRadius`). The march sets it past the farthest lane: `accepts` then decides who
+   * marches (siege foes away from Cael) and who is drawn only at the gate.
+   */
+  radius?: number;
 }
 
 /** The gate's taunters and the foot-hit rule. */
 export class GateTaunters {
   private readonly parts: Array<{ actor: Actor; root: THREE.Group; hurt: HurtboxSet; off: Array<() => void> }> = [];
   private unmodify: (() => void) | null = null;
+  private offWindow: (() => void) | null = null;
   /** Foot damage dealt in the current second (the cap). */
   private window = 0;
   private windowLeft = 1;
@@ -60,7 +68,7 @@ export class GateTaunters {
             id: actor.id,
             position: () => ({ x: p.x, y: p.y, z: p.z }),
             alive: () => opts.standing(),
-            radius: GATE.tauntRadius,
+            radius: opts.radius ?? GATE.tauntRadius,
             seconds: Number.POSITIVE_INFINITY,
             accepts: (enemyId) => opts.accepts(enemyId),
           }),
@@ -69,14 +77,20 @@ export class GateTaunters {
       this.parts.push({ actor, root, hurt, off });
     }
     const ids = new Set(this.parts.map((q) => q.actor.id));
+    // A blade or brand that does reach a post deals nothing: the swing was already counted when its window opened.
     const modifier: DamageModifier = (req, target) => {
       if (!ids.has(target.id)) return;
-      const foot = req.outcome === 'hit' && req.amount > 0 && opts.standing() ? this.footHit() : 0;
       req.amount = 0;
       req.poise = 0;
-      if (foot > 0) opts.damageGate(foot);
     };
     this.unmodify = host.damage.addModifier(GATE_MODIFIER.id, modifier, GATE_MODIFIER.order);
+    this.offWindow = host.events.on('attack.window', (w) => {
+      if (w.phase !== 'open' || !opts.standing()) return;
+      const target = host.services.get('enemies')?.ground?.get(w.actorId)?.tauntTarget;
+      if (!target || !ids.has(target)) return;
+      const foot = this.footHit();
+      if (foot > 0) opts.damageGate(foot);
+    });
   }
 
   get actorIds(): ActorId[] {
@@ -103,6 +117,8 @@ export class GateTaunters {
   dispose(): void {
     this.unmodify?.();
     this.unmodify = null;
+    this.offWindow?.();
+    this.offWindow = null;
     for (const p of this.parts) {
       for (const off of p.off) off();
       this.host.actors.despawn(p.actor.id);

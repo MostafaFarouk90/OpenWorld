@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withoutRimQuestRows } from '../quests/content/act5/rim/npcs';
 import { POST_RULES, resolvePosts } from '../quests/posts';
 import type { ConditionEnv } from '../quests/ports';
 import { buildDragonspine } from './layout';
@@ -47,7 +48,11 @@ describe('Dragonspine NPC posts', () => {
   it('are in POST_RULES, move only the six lodge hunters, and no Act 1 or 2 row names a Dragonspine NPC', () => {
     expect(DRAGONSPINE_POST_RULES.map((r) => r.npcId)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `lodge-hunter-${n}`));
     const ours = new Set(DRAGONSPINE_NPCS.map((n) => n.id));
-    for (const r of POST_RULES.filter((x) => !DRAGONSPINE_POST_RULES.includes(x) && !SUMMIT_POST_RULES.includes(x))) expect(ours.has(r.npcId), r.npcId).toBe(false);
+    // a shipped row the Rim's rows were put in front of still counts as that shipped row
+    const shipped = (x: (typeof POST_RULES)[number]) => [...DRAGONSPINE_POST_RULES, ...SUMMIT_POST_RULES].some((d) => d === x || (d.npcId === x.npcId && JSON.stringify(d) === JSON.stringify(withoutRimQuestRows(x))));
+    // a row made only of the Rim's rows (Ansgar at the Rim Camp in Act 5) is not an Act 1 or 2 row
+    const rimOnly = (x: (typeof POST_RULES)[number]) => x.posts.length > 0 && withoutRimQuestRows(x).posts.length === 0;
+    for (const r of POST_RULES.filter((x) => !shipped(x) && !rimOnly(x))) expect(ours.has(r.npcId), r.npcId).toBe(false);
     const at = resolvePosts(POST_RULES, env);
     expect(at['lodge-hunter-5']?.anchorId).toBe('dragonspine.hall.hunter.1');
     expect(at['lodge-hunter-6']?.anchorId).toBe('dragonspine.hall.hunter.2');

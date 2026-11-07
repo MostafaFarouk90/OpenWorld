@@ -55,7 +55,8 @@ export const WASTE_A4_NPC_STRINGS: Record<string, string> = {
 const OUT = 'story.m41.complete';
 const IN = 'story.m42.started';
 export const WASTE_A4_NPCS: NpcSpec[] = [
-  { id: 'wulfhild', post: L1.wulfhildCamp, presentWhen: OUT },
+  // Act 5 N10: under F8 All her Ashwalker squad stands at M52's gate, and her world body steps out while the siege runs
+  { id: 'wulfhild', post: L1.wulfhildCamp, presentWhen: OUT, absentWhen: 'story.m52.out.wulfhild' },
   { id: HILD, post: L1.hildPost, presentWhen: OUT },
   { id: 'hrodna', post: L1.hrodnaCamp, presentWhen: IN },
   { id: 'walker-knots', post: L1.walkerPost(1), presentWhen: IN },
