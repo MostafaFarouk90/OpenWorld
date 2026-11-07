@@ -70,7 +70,30 @@ export function createJournalPanel(
   root.setAttribute('role', 'dialog');
   let activeTab = TAB_QUESTS;
 
+  const renderNotes = (into: HTMLElement): void => {
+    for (const n of opts?.tabs.notes?.() ?? []) {
+      const box = doc.createElement('div');
+      box.className = 'journal-note owg-jnote';
+      box.dataset.note = n.id;
+      const h = doc.createElement('p');
+      h.className = 'journal-note-title owg-jnote-title';
+      h.textContent = n.title;
+      box.appendChild(h);
+      if (n.lines?.length) {
+        const ul = doc.createElement('ul');
+        for (const line of n.lines) {
+          const li = doc.createElement('li');
+          li.textContent = line;
+          ul.appendChild(li);
+        }
+        box.appendChild(ul);
+      }
+      into.appendChild(box);
+    }
+  };
+
   const renderQuests = (into: HTMLElement): void => {
+    renderNotes(into);
     const m = source();
     if (m.empty) {
       const p = doc.createElement('p');
@@ -170,5 +193,22 @@ export function toggleJournal(hud: JournalHud, make: () => JournalWidget, state:
   if (!close) { w.dispose(); return false; }
   state.close = close;
   state.widget = w;
+  return true;
+}
+
+/** The journal's modal id (the toggle opens it under this id). */
+export const JOURNAL_MODAL_ID = 'journal';
+
+/**
+ * Escape pressed (Act 4 L9, Act 3 playthrough M3). Closes the journal when it is the open modal and this toggle opened it,
+ * exactly once; returns true when it closed it. Never opens the journal and never closes another screen.
+ */
+export function closeJournalOnMenu(hud: Pick<JournalHud, 'modalOpen'>, state: JournalToggleState): boolean {
+  if (!state.close || hud.modalOpen !== JOURNAL_MODAL_ID) return false;
+  const c = state.close;
+  state.close = null;
+  state.widget?.dispose();
+  state.widget = null;
+  c();
   return true;
 }

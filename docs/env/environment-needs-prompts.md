@@ -381,3 +381,10 @@ Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre piv
 | footman-mask-a | a black cloth half-mask with a stitched grey seal, to sit over a Footman's face (attached to the head bone) | masked Footmen | none (tint only) | 0.25 x 0.2 x 0.2 |
 | footman-cloak-a | a short ash-grey cloak, ragged hem, for soot Footmen (attached to the chest bone) | soot Footmen | none (tint only) | 0.6 x 0.3 x 1.0 |
 
+
+## W. Act 4 Waste creatures (added 2026-11-06 by Act 4 L5, "Build Act 4 Waste creatures"; procedural and tinted stand-ins until these arrive)
+
+| id | prompt | where (count) | stand-in | size (m, W x D x H) |
+| --- | --- | --- | --- | --- |
+| waste-strider-a | a tall, thin four-legged ash-grazing beast, low-poly chibi style: a long grey-brown capsule body slung high, a small drooping head on a short neck with a long snout, four very long jointed legs (thigh and shin as separate pieces, each with its own pivot at the hip and knee so the game can pose them), dusty ash-grey hide with darker stripes; standing pose, front faces +Z, origin between the feet on the ground | the Ashen Waste dunes (24 at once, one file) | procedural capsules in `src/enemies/waste/strider/StriderBody.ts` | 4.5 x 3 x 4.6 |
+| husk-knight-skin-a | a texture or material set for a long-dead cathedral knight on the KayKit Knight body: bone-white ash caked over dented plate, cracks glowing faint orange, a scorched tabard; no new mesh | before the Husk Cathedral and at the Glasslands (2) | the Knight tinted ash-white | n/a |

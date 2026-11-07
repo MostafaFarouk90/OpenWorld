@@ -67,6 +67,11 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'crag-ogre': 133,
   // The trial is non-lethal: Ysmeryth is never a kill.
   ysmeryth: 0,
+  // Act 4 L5: stored divided by the Waste's kill XP region factor (2.4, set by the waste plugin), so a Waste kill pays plan
+  // 6.1's 160, 300 and 40 at an even level (67 x 2.4 = 160.8, 125 x 2.4 = 300, 17 x 2.4 = 40.8).
+  'waste-strider': 67,
+  'husk-knight': 125,
+  'cinder-gnat-swarm': 17,
   dummy: 0,
   scarecrow: 0,
 };
