@@ -8,6 +8,7 @@
 // These are the anchors `partyPost` names; this file defines them from whichever base anchors exist.
 import type { Anchor } from '../../layout/AnchorRegistry';
 import { ASH_ROAD_OPEN_FLAG, M41_CAMP_ANCHOR, REFUGE_REST_ANCHOR } from '../../harrowmark/noStrand';
+import { AFTER_ENDING_FLAG } from '../../region/act5Regions';
 
 /** The betrayal: the benched companions leave the occupied city (contracts v0.8 item 10). */
 export const BENCH_MOVES_FLAG = 'story.m38.complete';
@@ -32,7 +33,8 @@ export interface FlagLike {
 
 /** The post a benched companion waits at now. Without flags (tests, the shipped callers), the Anvil. */
 export function benchPostFor(id: string, flags?: FlagLike | null): string {
-  if (!flags?.getFlag(BENCH_MOVES_FLAG)) return anvilPost(id);
+  // Act 5 (N13, v0.9 item 10): in the world after the ending the benched companions are home at the Anvil again.
+  if (!flags?.getFlag(BENCH_MOVES_FLAG) || flags.getFlag(AFTER_ENDING_FLAG)) return anvilPost(id);
   return flags.getFlag(ASH_ROAD_OPEN_FLAG) ? refugePost(id) : campPost(id);
 }
 

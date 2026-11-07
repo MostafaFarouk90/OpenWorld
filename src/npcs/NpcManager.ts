@@ -169,7 +169,10 @@ export class NpcManager implements NpcsService {
           else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
         };
         for (const flag of absentOn) {
-          offs.push(this.core.gates.flag(flag, (on) => { if (on) absent.add(flag); else absent.delete(flag); apply(); }));
+          const unless = spec.absentUnless?.[flag];
+          const track = (on: boolean): void => { if (on) absent.add(flag); else absent.delete(flag); apply(); };
+          if (unless) offs.push(this.core.gates.watch((s) => Boolean(s.getFlag(flag)) && !s.getFlag(unless), track, { keys: [flag, unless] }));
+          else offs.push(this.core.gates.flag(flag, track));
         }
         if (spec.presentWhen) {
           offs.push(this.core.gates.flag(spec.presentWhen, (on) => { notYet = !on; apply(); }));

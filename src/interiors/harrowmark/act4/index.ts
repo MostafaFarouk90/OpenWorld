@@ -30,8 +30,9 @@ export const ACT4_HARROWMARK_DOOR_LOCKS: Readonly<Record<string, string>> = {
  * Exits that refuse while a flag holds (L2, additive to the interiors plugin): from the betrayal the chamber's front door
  * would put the player in the held city, cut off from the stairs, so it stays shut; the way out is down the stairs.
  */
-export const ACT4_HARROWMARK_EXIT_LOCKS: Readonly<Record<string, { flag: string; toastKey: string }>> = {
-  [CHAMBER_DOOR_ID]: { flag: 'story.m38.complete', toastKey: 'interior.refused.chamberHeld' },
+export const ACT4_HARROWMARK_EXIT_LOCKS: Readonly<Record<string, { flag: string; toastKey: string; unlessFlag?: string }>> = {
+  // N13 (v0.9 item 10): the city is open again in the world after the ending, so the front door lets the player out.
+  [CHAMBER_DOOR_ID]: { flag: 'story.m38.complete', toastKey: 'interior.refused.chamberHeld', unlessFlag: 'world.afterEnding' },
 };
 
 /** Flag-driven blockers (closed while the flag is false; re-derived on a load). */
