@@ -106,8 +106,9 @@ describe('the CLI on a real git diff', () => {
 describe('the chains group', () => {
   const chainName = /^phase[A-Z]\.run[AB]\.e2e\.test\.ts$/;
   const files = readdirSync(resolve(proc.cwd(), 'src/integration')).filter((f) => chainName.test(f));
-  it('is exactly the whole-phase chains, runs A and B of Phases C to H (twelve files)', () => {
-    expect(files.sort()).toEqual(['C', 'D', 'E', 'F', 'G', 'H'].flatMap((p) => [`phase${p}.runA.e2e.test.ts`, `phase${p}.runB.e2e.test.ts`]));
+  it('is exactly the whole-phase chains, runs A and B of Phases C to I (fourteen files)', () => {
+    // N12 (additive): Act 5's Phase I chain joins by its name
+    expect(files.sort()).toEqual(['C', 'D', 'E', 'F', 'G', 'H', 'I'].flatMap((p) => [`phase${p}.runA.e2e.test.ts`, `phase${p}.runB.e2e.test.ts`]));
     expect(CHAIN_FILES).toEqual(['src/integration/phase*.run[AB].e2e.test.ts']);
   });
   it('is left out of the default run and is all the chains config runs', async () => {
