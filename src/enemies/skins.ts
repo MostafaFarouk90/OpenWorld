@@ -33,9 +33,10 @@ export const ENEMY_SKINS: Readonly<Record<EnemySkinId, EnemySkinDef>> = {
   'watch-masked': { kind: 'watch-guard', tint: 0x8890a0 },
   // v0.9 item 11 (Act 5): rows that draw like their base until N5 sets the overrides (Grisel's green, the stokers' soot,
   // the lava golem's crust and glow).
-  'footman-grisel': { kind: 'blighted-soldier' },
-  'wraith-stoker': { kind: 'ash-wraith' },
-  'golem-lava': { kind: 'cinder-golem' },
+  // N5: Aldous's loyalists in Grisel green; the stokers' dead in soot with a low ember; the forge-thralls in black crust with a hotter glow.
+  'footman-grisel': { kind: 'blighted-soldier', tint: 0x5f8a58, emissive: 0x061a08 },
+  'wraith-stoker': { kind: 'ash-wraith', tint: 0x4a4540, emissive: 0x3a1608 },
+  'golem-lava': { kind: 'cinder-golem', tint: 0x3a322c, emissive: 0x7a2a08 },
 };
 
 export const ENEMY_SKIN_IDS = Object.keys(ENEMY_SKINS) as EnemySkinId[];

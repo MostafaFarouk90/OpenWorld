@@ -8,6 +8,7 @@ export const SPAWN_DATA_KEY = 'spawn';
 export interface SpawnData {
   area?: string;
   role?: string;
+  line?: string;
 }
 
 /** The spawn data on an actor's `data`, or undefined. */
