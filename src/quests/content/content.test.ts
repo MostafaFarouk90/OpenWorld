@@ -41,7 +41,7 @@ describe('quest content', () => {
       // Act 4 Ashen Waste (L11)
       'm42', 'm43', 'm44', 'r25', 'r24', 'm45', 'd08', 'm46',
       // Act 5 the Rim (N10 PR 1)
-      'm47', 'm48', 'm49', 'r26', 'r29', 'm50', 'm51']);
+      'm47', 'm48', 'm49', 'r26', 'r29', 'm50', 'm51', 'm52']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
