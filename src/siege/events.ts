@@ -18,6 +18,8 @@ declare module '../core/events' {
     'siege.companion.wounded': { siegeId: string; companionId: string };
     /** A break began: the orders on offer (the war post's talk reads them from flags too). */
     'siege.break': { siegeId: string; n: number; orders: readonly SiegeOrderId[] };
+    /** One of Vey's household guard (M52 wave 4) fell, to anyone (N10's objective: count 2, dedupe by actorId). */
+    'siege.guard.fallen': { siegeId: string; actorId: string };
     /** The gong starts waves 2 on (`by` 'cael' when R29 is done or Cael ordered it, else Ansgar off screen; N8's `sfx.gong.rim`). */
     'siege.gong': { siegeId: string; by: 'cael' | 'ansgar' };
     /** The war post's dialogue choices (effect events; the runner turns them into `siege.order`). */

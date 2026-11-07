@@ -90,6 +90,35 @@ describe('act5-hud plugin', () => {
     expect(textOf(vent.element)).toContain('Vent open: 4 s');
   }, PLUGIN_TEST_TIMEOUT);
 
+  it('Vey\'s Spare window shows the line and a countdown, and closes with the event', async () => {
+    const t = await boot();
+    const w = t.widget('spare-cue');
+    w.update?.(0);
+    expect(w.element.style.display).toBe('none');
+    t.emit('boss.releaseWindow', { bossId: 'vey', open: true });
+    w.update?.(1);
+    expect(textOf(w.element)).toContain('Spare him');
+    expect(textOf(w.element)).toContain('5 s');
+    t.emit('boss.releaseWindow', { bossId: 'vey', open: false });
+    w.update?.(0.1);
+    expect(w.element.style.display).toBe('none');
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('the shared structure bar never keeps the gate row, even when the gate is announced before the siege events', async () => {
+    const t = await boot();
+    const bar = t.widget('structure-bar');
+    (t.ctx.services as unknown as { provide(n: string, v: unknown): void }).provide('siege', {
+      current: { siegeId: 'r27', wave: 1, waves: 3 },
+      structures: () => ['caldera.tunnel.line'],
+    });
+    (t.ctx.services as unknown as { provide(n: string, v: unknown): void }).provide('waves', { structure: () => ({ kind: 'barricade', maxHealth: 100 }) });
+    t.emit('structure.damaged', { id: 'caldera.tunnel.line', health: 100 });
+    t.emit('siege.wave.started', { siegeId: 'r27', n: 1 });
+    t.emit('structure.damaged', { id: 'caldera.tunnel.line', health: 90 });
+    bar.update?.(0.1);
+    expect(textOf(bar.element)).not.toContain('Barricade');
+  }, PLUGIN_TEST_TIMEOUT);
+
   it('the screens service shows a phase card and resolves when dismissed headless', async () => {
     const t = await boot();
     const screens = t.ctx.services.require('act5Screens');
