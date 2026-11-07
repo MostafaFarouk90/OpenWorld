@@ -21,7 +21,7 @@ import { GONG_INTERACT_ID } from './lastGong';
 import { EORMEN_SPAWNERS } from './spawners';
 import { winEormenForTest } from './testing';
 import { HUSK_CATHEDRAL_DEF } from '../../../waste/interiors/huskCathedral';
-import { ARENA, DARK, EORMEN, EORMEN_BOSS_ID, eormenLevel, eormenScale, GONG, GONG_KIND, HUSKS, PRESENTATION, RELEASE_BOW, TOLL } from './tuning';
+import { ARENA, DARK, EORMEN, EORMEN_BOSS_ID, eormenLevel, eormenScale, GONG, GONG_KIND, HUSKS, PRESENTATION, RELEASE_BOW, GONG_WARD, TOLL } from './tuning';
 
 let physics: PhysicsWorld;
 
@@ -86,6 +86,8 @@ async function setup(opts: Opts = {}) {
     current: ('interior' in opts ? opts.interior! : ARENA.interiorId) as string | null,
     setBlocker: (id: string, closed: boolean) => blockers.push(`${id}:${closed}`),
   };
+  const huskIds = new Map<string, string[]>();
+  const pushes: string[] = [];
   const spawned: string[] = [];
   const resets: string[] = [];
   const toasts: string[] = [];
@@ -95,7 +97,17 @@ async function setup(opts: Opts = {}) {
     fake('enemies', 'enemies', {
       spawnGroup: (id: string) => (spawned.push(id), []),
       reset: (id: string) => void resets.push(id),
-      alive: () => [],
+      alive: (id: string) => huskIds.get(id) ?? [],
+      push: (id: string, p: { dir: { x: number; z: number }; metres: number }) => {
+        // The fake shove moves the husk at once (the real one is a 0.1 to 0.5 s knockback).
+        const a = game.ctx.actors.get(id);
+        const len = Math.hypot(p.dir.x, p.dir.z);
+        if (!a?.root || !(len > 0)) return false;
+        a.root.position.x += (p.dir.x / len) * p.metres;
+        a.root.position.z += (p.dir.z / len) * p.metres;
+        pushes.push(id);
+        return true;
+      },
       despawnGroup: () => {},
       view: () => undefined,
     }),
@@ -207,7 +219,7 @@ async function setup(opts: Opts = {}) {
   };
   return {
     glow, game, ctx, scene, interiors, events, blockers, spawned, resets, toasts, slots, hemi, follow, of, run, runHealed, until, at, local,
-    enter, exit, dir, enc, boss, gongActor, state, hit, start, gongF, strikeGong, toFloor, waitWindow, teardown,
+    enter, exit, dir, enc, boss, gongActor, state, hit, start, gongF, strikeGong, toFloor, waitWindow, teardown, huskIds, pushes,
     step: () => game.fixedUpdate(),
   };
 }
@@ -280,6 +292,57 @@ describe('eormen plugin', () => {
   );
 
   it(
+    'the gong’s ward: while the gong answers, husks near it are shoved back to 5 m; before the floor and after the bar, never',
+    async () => {
+      const h = await setup();
+      h.start();
+      const g = h.enc().lastGong!.mesh.position;
+      // Two husks crowd the gong, as in L13's run; a third stands far off.
+      const husk = (x: number, z: number) => {
+        const root = new THREE.Object3D();
+        root.position.set(g.x + x, g.y, g.z + z);
+        h.scene.add(root);
+        return h.ctx.actors.spawn({ kind: 'ash-wraith', team: 'hostile', maxHealth: 100, maxPoise: 10, root, owner: root });
+      };
+      const near1 = husk(0.6, -1.2);
+      const near2 = husk(-0.8, -1.0);
+      const far = husk(0, -12);
+      h.huskIds.set(HUSKS.groups[0], [near1.id, near2.id, far.id]);
+      const gap = (a: { root: THREE.Object3D | null }) => Math.hypot(a.root!.position.x - g.x, a.root!.position.z - g.z);
+      // Above the floor the gong does not answer: nobody is shoved.
+      h.run(secs(1));
+      expect(h.pushes).toEqual([]);
+      expect(gap(near1)).toBeLessThan(2);
+      // A last hit that leaves him a few points above the mark (inside the 1 % margin) still arms it; 2 % above does not.
+      const mark = Math.floor(h.enc().actor.maxHealth * EORMEN.phases[0]) + 1;
+      h.hit(h.enc().actor.health - (mark + h.enc().actor.maxHealth * 0.02));
+      h.run(secs(0.5));
+      expect(h.enc().brain.gongReady).toBe(false);
+      h.hit(h.enc().actor.health - (mark + 5));
+      h.run(secs(0.5));
+      expect(h.enc().brain.gongReady).toBe(true);
+      // At the floor (and through the window) they are held at the ward's edge.
+      h.toFloor();
+      h.run(secs(0.5));
+      expect(h.enc().brain.gongReady).toBe(true);
+      expect(gap(near1)).toBeGreaterThanOrEqual(GONG_WARD.radius);
+      expect(gap(near2)).toBeGreaterThanOrEqual(GONG_WARD.radius);
+      expect(h.pushes).not.toContain(far.id);
+      expect(h.enc().huskWards).toBeGreaterThanOrEqual(2);
+      // The bar breaks: the ward lapses.
+      h.waitWindow();
+      h.strikeGong('melee');
+      h.run(secs(0.2));
+      const n = h.pushes.length;
+      near1.root!.position.set(g.x + 0.5, g.y, g.z - 1);
+      h.run(secs(1));
+      expect(h.pushes).toHaveLength(n);
+      h.teardown();
+    },
+    T30,
+  );
+
+  it(
     'the Release window: he glides to within reach of the hold when the last bar breaks at the gong, 10 m from him',
     async () => {
       const h = await setup();
@@ -297,11 +360,16 @@ describe('eormen plugin', () => {
       // Cael rang the gong far from him; he comes to Cael while the window lasts and stops inside the hold's reach.
       const b0 = h.boss()!.root!.position.clone();
       const pos = () => h.boss()!.root!.position;
-      h.ctx.player.teleport({ x: b0.x, y: b0.y - EORMEN.hover, z: b0.z + 10 });
+      // Cael stands at the gong's stand, past the end of his drift rect: the glide still reaches him.
+      const stand = h.local(ARENA.gongLocal.x, ARENA.gongLocal.standZ);
+      expect(Math.hypot(stand.x - b0.x, stand.z - b0.z)).toBeGreaterThan(5);
+      h.ctx.player.teleport(stand);
       h.runHealed(2.5);
       const f = h.ctx.player.feet;
-      expect(Math.hypot(pos().x - f.x, pos().z - f.z)).toBeLessThanOrEqual(RELEASE_BOW.stopAt + 0.05);
+      // Inside the hold's 3 m (the player's capsule may nudge the stop by a hand).
+      expect(Math.hypot(pos().x - f.x, pos().z - f.z)).toBeLessThanOrEqual(RELEASE_BOW.stopAt + 0.2);
       expect(Math.hypot(pos().x - f.x, pos().z - f.z)).toBeGreaterThanOrEqual(RELEASE_BOW.stopAt - 0.05);
+      expect(h.state()!.releaseOpen).toBe(true);
       h.teardown();
     },
     T30,

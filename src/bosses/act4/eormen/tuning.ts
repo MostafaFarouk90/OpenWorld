@@ -56,8 +56,11 @@ export const ARENA = {
   gateClearance: 4,
   /** The nave floor (local), 30 by 40 m. */
   rect: HUSK_CATHEDRAL_ARENA,
-  /** Where he drifts (local): inside the pillar rows (|x| 12.3 and out), 3 m in from the arena gate, 2.5 m short of the altar. */
-  drift: { x0: -10.5, x1: 10.5, z0: HUSK_CATHEDRAL_ARENA.z0 + 3, z1: 44 },
+  /**
+   * Where he drifts (local): inside the pillar rows (|x| 12.3 and out), 3 m in from the arena gate, and 5.5 m short of the gong's
+   * stand so the gong's end of the nave stays open to step out of (L13's Phase H report M3).
+   */
+  drift: { x0: -10.5, x1: 10.5, z0: HUSK_CATHEDRAL_ARENA.z0 + 3, z1: HUSK_CATHEDRAL_GONG.z - 5.5 },
   abandonSeconds: 3,
   veilWidth: 4.6,
   veilHeight: 5,
@@ -76,6 +79,8 @@ export const EORMEN = {
   mercyVerb: ACT4_BOSS_RULES[EORMEN_BOSS_ID].mercyVerb ?? 'release',
   releaseBurnCost: ACT4_BOSS_RULES[EORMEN_BOSS_ID].releaseBurnCost ?? 20,
   healthFloor: 0.08,
+  /** The gong answers once his health is within this share of his maximum above a phase's floor (1 %, 26 points at 35). */
+  floorMargin: 0.01,
   floorModifierOrder: 99,
   wardModifierOrder: 60,
   /** He drifts toward Cael (a hand above the floor) until within this far, and holds his ground when Cael closes in. */
@@ -139,6 +144,12 @@ export const SWIPE = {
   recover: 0.6,
   cooldown: 2.5,
 } as const;
+
+/**
+ * The gong's ward (L13's Phase H report M3: two husks at 1 m pinned Cael at the gong for minutes): while the gong answers (his
+ * health held at the phase's floor, or the window open) the husks are shoved back to this far from it, checked this often.
+ */
+export const GONG_WARD = { radius: 5, interval: 0.25, margin: 0.4 } as const;
 
 /** The Release window (taste call): he glides toward Cael this fast and stops this close, inside the hold's 3 m. */
 export const RELEASE_BOW = { speed: 6, stopAt: 2 } as const;
