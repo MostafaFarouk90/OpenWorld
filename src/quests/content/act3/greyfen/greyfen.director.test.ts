@@ -401,15 +401,15 @@ describe('R13: the water-song', () => {
     r.use(R13_ALTAR);
     r.scene(R13_SONG_SCENE, R13_SONG_NPC);
     r.step(2);
-    // 180 ms late is a miss on the normal window
-    singBar(r, 1, { started: true, offsetMs: 180 });
+    // 140 ms late is a miss on the normal window (100 ms) and a hit on the wide one (155 ms since Act 4 L14)
+    singBar(r, 1, { started: true, offsetMs: 140 });
     expect(r.flag('story.r13.lesson')).toBe(false);
     expect(r.state.getNumber('story.r13.songFails')).toBe(1);
-    singBar(r, 1, { offsetMs: 180 });
-    singBar(r, 1, { offsetMs: 180 });
+    singBar(r, 1, { offsetMs: 140 });
+    singBar(r, 1, { offsetMs: 140 });
     expect(r.state.getNumber('story.r13.songFails')).toBe(3);
     expect(r.flag('story.r13.lesson')).toBe(false);
-    singBar(r, 1, { offsetMs: 180 }); // the window is wide now
+    singBar(r, 1, { offsetMs: 140 }); // the window is wide now
     expect(r.flag('story.r13.lesson')).toBe(true);
     // two more failures (silent bars), then the real bar passes without a strike
     singBar(r, 2, { silent: true });
