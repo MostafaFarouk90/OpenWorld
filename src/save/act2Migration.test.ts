@@ -24,6 +24,9 @@ const ACT3_NAMES = Object.keys(ACT3_FIXTURES).filter((k) => !k.endsWith('.meta.j
 // v0.8: Act 4 fixtures (L3's `weather` carrier now, L13's `?act4=` set later): counted for the coverage below.
 const ACT4_FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/act4/*.json', { eager: true, import: 'default' });
 const ACT4_NAMES = Object.keys(ACT4_FIXTURES).filter((k) => !k.endsWith('.meta.json'));
+// N12 PR 1: the Act 5 `?act5=` fixtures and the carried Phase H chain ends.
+const ACT5_FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/act5/*.json', { eager: true, import: 'default' });
+const ACT5_NAMES = Object.keys(ACT5_FIXTURES).filter((k) => !k.endsWith('.meta.json'));
 type Entries = Record<string, { version: number; data: unknown }>;
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
@@ -72,6 +75,7 @@ describe('the persistables', () => {
       ...NAMES.flatMap((n) => Object.keys((FIXTURES[n].entries as Entries))),
       ...ACT3_NAMES.flatMap((n) => Object.keys((ACT3_FIXTURES[n].entries as Entries))),
       ...ACT4_NAMES.flatMap((n) => Object.keys((ACT4_FIXTURES[n].entries as Entries))),
+      ...ACT5_NAMES.flatMap((n) => Object.keys((ACT5_FIXTURES[n].entries as Entries))),
     ]);
     // The keys an Act 1 save lacks are the ones Act 2 added: the Act 1 loads above are their no-key loads, and the
     // Phase C fixtures carry them.
@@ -82,8 +86,8 @@ describe('the persistables', () => {
     // v0.8: `respawn`, `scenes` and `escorts` are carried by L13's act4-*.json fixtures. A thread that adds a new key lists it
     // here until L13 regenerates the fixtures.
     const AWAITING_ACT4_FIXTURES: string[] = [];
-    // v0.9: Act 5 adds no persistable in N0 (favour snapshots are flags). A thread that adds one lists it here until N12
-    // PR 1 ships the act5-*.json fixtures.
+    // v0.9: Act 5 adds no persistable in N0 (favour snapshots are flags); wave 1 added none either. N12 PR 1's act5-*.json
+    // fixtures carry every key; a thread that adds one lists it here until N12 regenerates them.
     const AWAITING_ACT5_FIXTURES: string[] = [];
     const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES, ...AWAITING_ACT5_FIXTURES];
     const orphans = keys.filter((k) => !inAny.has(k) && !awaited.includes(k));

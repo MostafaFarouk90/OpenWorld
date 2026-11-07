@@ -1,0 +1,21 @@
+{
+  "fixture": "act5-r26.json",
+  "id": "r26",
+  "injected": [
+    "m47",
+    "m48",
+    "m49"
+  ],
+  "questDefs": [],
+  "base": {
+    "fixture": "act5-carried-chain-a.json",
+    "level": 30,
+    "xp": 87604
+  },
+  "xp": 98800,
+  "level": 32,
+  "rimGateOpen": true,
+  "foundryOpen": false,
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act5Fixtures.gen",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

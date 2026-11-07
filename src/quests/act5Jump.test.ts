@@ -52,7 +52,7 @@ describe('Act 5 jump tables', () => {
     expect(act5PhaseOf('d09')).toBe('J');
     expect(act5PhaseOf('m46')).toBeUndefined();
   });
-  it('ACT5_START_XP is the 105,000 placeholder', () => expect(ACT5_START_XP).toBe(105_000));
+  it('ACT5_START_XP is the measured Act 4 end, 98,800 (N12 PR 1, ruling A)', () => expect(ACT5_START_XP).toBe(98_800));
 });
 
 describe('favour presets', () => {
