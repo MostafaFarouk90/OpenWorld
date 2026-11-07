@@ -80,6 +80,7 @@ const plugin: GamePlugin = {
     const preset = q?.get('favour') ?? 'marshal';
     let wait = 2;
     let started = false;
+    let landing: { ready(): boolean } | null = null;
     ctx.systems.add({
       id: 'siege-dev',
       fixedPhase: 'rules',
@@ -88,6 +89,13 @@ const plugin: GamePlugin = {
         if (started || ctx.services.get('save')?.loading) return;
         wait -= dt;
         if (wait > 0) return;
+        // With N1's layout the siege has a start point: go there first (the set runs within its radius of the gate).
+        const start = ctx.anchors.find(SIEGE_ANCHORS.start[id]);
+        if (start && !landing) {
+          landing = ctx.player.teleport(start.position, start.yaw ?? 0);
+          return;
+        }
+        if (landing && !landing.ready()) return;
         started = true;
         console.info(`[siege-dev] preset '${preset}' -> ${String(applySiegePreset(ctx, preset))}`);
         const f = ctx.player.feet;
