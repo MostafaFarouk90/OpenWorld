@@ -53,8 +53,8 @@ describe('the shipped sets are untouched', () => {
   });
   it('the role and the line ride in the spawner id and on the spawner (N5 reads line ?? tag)', () => {
     const w0 = spawnersFor(RIM_SIEGE).filter((s) => s.id.startsWith('waves.rim-siege.w0.'));
-    const id = spawnerId(ID, 0, '2', 'blighted-soldier', 'shield', 'm52.w1.a');
-    expect(id).toBe('waves.rim-siege.w0.l2.blighted-soldier.rshield.nm52.w1.a');
+    const id = spawnerId(ID, 0, '2', 'warhost-soldier', 'shield', 'm52.w1.a');
+    expect(id).toBe('waves.rim-siege.w0.l2.warhost-soldier.rshield.nm52.w1.a');
     const sp = w0.find((s) => s.id === id)! as { line?: string; role?: string; count: number; tag: string };
     expect(sp).toMatchObject({ line: 'm52.w1.a', role: 'shield', count: 3, tag: 'm52.siege' });
     expect(WAVE_SPAWNERS.map((s) => s.id)).toContain(id);

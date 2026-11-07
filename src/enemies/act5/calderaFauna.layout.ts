@@ -10,12 +10,13 @@ import type { WarhostRole } from '../types';
 
 export const CALDERA_FAUNA_DOC = { title: 'Caldera ambient spawn anchors (N5)', source: 'enemies/act5/calderaFauna.layout.ts' } as const;
 
-/** When a group is live: outside the wall once the Caldera opens, inside once the Rim Gate opens, the Foundry's once it is held open. */
-export type CalderaGate = 'gate.a5' | 'rimGateOpen' | 'foundryOpen';
+/** When a group is live: outside the wall once the Caldera opens, inside once the Rim Gate opens, the terraces' scouts once M51's own scouts are done, the Foundry door's once the siege is won. */
+export type CalderaGate = 'gate.a5' | 'rimGateOpen' | 'm51complete' | 'm52complete';
 export const CALDERA_GATE_FLAGS: Readonly<Record<CalderaGate, string>> = {
   'gate.a5': 'story.gate.a5',
   rimGateOpen: 'story.m47.rimGateOpen',
-  foundryOpen: 'story.phase.foundryOpen',
+  m51complete: 'story.m51.complete',
+  m52complete: 'story.m52.complete',
 };
 
 export interface CalderaFaunaGroup {
@@ -32,6 +33,8 @@ export interface CalderaFaunaGroup {
   firstArrival?: boolean;
   /** Ring radius for the members (default 2.5 m); a steep perch takes a tighter ring. */
   ring?: number;
+  /** The group stops (despawns) once this flag is set (R29's gong lays the stokers' dead). */
+  until?: string;
 }
 
 /**
@@ -41,17 +44,17 @@ export interface CalderaFaunaGroup {
  * duel floor are inside D09 (N2); the quest and siege groups are N4's, N10's and N11's.
  */
 export const CALDERA_FAUNA_GROUPS: readonly CalderaFaunaGroup[] = [
-  { id: 'rim.stokers.1', site: 'rim-stairs.hairpin', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5' },
-  { id: 'rim.stokers.2', site: 'rim-perch.1', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5', ring: 2.5 },
+  { id: 'rim.stokers.1', site: 'rim-stairs.hairpin', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5', until: 'story.r29.struck' },
+  { id: 'rim.stokers.2', site: 'rim-perch.1', enemy: 'ash-wraith', skin: 'wraith-stoker', count: 2, gate: 'gate.a5', ring: 2.5, until: 'story.r29.struck' },
   { id: 'rim.gnats', site: 'rim-perch.3', enemy: 'cinder-gnat-swarm', count: 1, gate: 'gate.a5' },
   { id: 'stair.outriders', site: 'lava-stair.1', enemy: 'warhost-soldier', role: 'shield', count: 2, gate: 'rimGateOpen', firstArrival: true },
   { id: 'stair.gnats', site: 'lava-stair.2', enemy: 'cinder-gnat-swarm', count: 1, gate: 'rimGateOpen' },
-  { id: 'terraces.shields', site: 'terraces.scout.1', enemy: 'warhost-soldier', role: 'shield', count: 2, gate: 'rimGateOpen', line: 'caldera.fauna.terraces' },
-  { id: 'terraces.pikes', site: 'terraces.scout.2', enemy: 'warhost-soldier', role: 'pike', count: 2, gate: 'rimGateOpen', line: 'caldera.fauna.terraces' },
+  { id: 'terraces.shields', site: 'terraces.scout.1', enemy: 'warhost-soldier', role: 'shield', count: 2, gate: 'm51complete', line: 'caldera.fauna.terraces' },
+  { id: 'terraces.pikes', site: 'terraces.scout.2', enemy: 'warhost-soldier', role: 'pike', count: 2, gate: 'm51complete', line: 'caldera.fauna.terraces' },
   { id: 'terraces.gnats', site: 'terraces.scout.3', enemy: 'cinder-gnat-swarm', count: 1, gate: 'rimGateOpen' },
   { id: 'hall.thralls', site: 'cooling-hall.apron', enemy: 'cinder-golem', skin: 'golem-lava', count: 3, gate: 'rimGateOpen' },
-  { id: 'foundry.loyalists', site: 'inner-gate.head', enemy: 'blighted-soldier', skin: 'footman-grisel', count: 4, gate: 'foundryOpen' },
-  { id: 'foundry.guards', site: 'inner-gate.head', enemy: 'warhost-guard', role: 'shield', count: 2, gate: 'foundryOpen', line: 'caldera.fauna.foundry' },
+  { id: 'foundry.loyalists', site: 'inner-gate.head', enemy: 'blighted-soldier', skin: 'footman-grisel', count: 4, gate: 'm52complete' },
+  { id: 'foundry.guards', site: 'inner-gate.head', enemy: 'warhost-guard', role: 'shield', count: 2, gate: 'm52complete', line: 'caldera.fauna.foundry' },
 ];
 
 const RING = 2.5;
