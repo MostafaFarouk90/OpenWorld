@@ -30,7 +30,7 @@ const plugin: GamePlugin = {
     installGroupObjectives(kit, RIM_A5_GROUPS);
     installDoneWhenRecheck(kit);
     installM47(kit);
-    installM48(kit);
+    offs.push(installM48(kit));
     installM49(kit);
     offs.push(installR26(kit));
     offs.push(installR29(kit));

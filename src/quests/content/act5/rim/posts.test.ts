@@ -44,12 +44,16 @@ describe('Rim posts', () => {
     expect(at({}, { [M49_ARRIVED]: true, [F4_CLEANSED]: true }).maud!.anchorId).toBe(RIM('maud'));
   });
 
-  it('Alric: the gate in M47, the stair until the M48 brief, the foot after it, the Cooling Hall in M50, the camp otherwise', () => {
+  it('Alric: the gate in M47, the stair from M47\'s end until the M48 brief, the foot after it, the Cooling Hall in M50, the camp otherwise', () => {
     expect(at({ m47: 'active' })[ALRIC]!.anchorId).toBe(`${Q}.post.alric.gate`);
+    expect(at({ m47: 'completed' })[ALRIC]!.anchorId).toBe(`${Q}.post.alric.stair`);
     expect(at({ m48: 'active' })[ALRIC]!.anchorId).toBe(`${Q}.post.alric.stair`);
     expect(at({ m48: 'active' }, {}, { m48: ['brief'] })[ALRIC]!.anchorId).toBe(`${Q}.post.alric.foot`);
     expect(at({ m50: 'active' })[ALRIC]!.anchorId).toBe(`${COOL}.alric`);
     expect(at({ m47: 'completed', m48: 'completed' })[ALRIC]).toEqual({ anchorId: RIM(ALRIC), home: true });
+    // M51's word with him is at the camp, even with M50 under way
+    expect(at({ m50: 'active', m51: 'active' }, {}, { m51: ['call'] })[ALRIC]!.anchorId).toBe(RIM(ALRIC));
+    expect(at({ m50: 'active', m51: 'active' }, {}, { m51: ['call', 'alric'] })[ALRIC]!.anchorId).toBe(`${COOL}.alric`);
   });
 
   it('R26: a wounded guard reaches the camp at once; the master and the other guard when the convoy is in', () => {

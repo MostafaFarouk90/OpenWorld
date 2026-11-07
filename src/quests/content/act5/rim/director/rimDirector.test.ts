@@ -3,13 +3,13 @@
 // M49's talks in any order.
 import { afterEach, describe, expect, it } from 'vitest';
 import { makeRig, NOTES, type Rig } from './rig.testkit';
-import { ACT5_GATE } from './gate';
+import { ACT5_GATE, M48_REOPEN } from './gate';
 import { M51_HORN, forecast } from './camp';
 import { CoolingChannel } from './hall';
 import { R26_CRATES_LOST } from './convoy';
 import { M47_ARM, M48_ARM } from '../spawners';
 import { M47_GROUPS, M47_HAIRPIN_TRIGGER, M47_LAMP, M47_BRAZIER, M47_NOTES, M47_RIM_GATE_OPEN, M47_SIGHT_SCENE, M47_WINCH } from '../m47.quest';
-import { M48_CHAN_TRIGGER, M48_GHOST, M48_GROUPS, M48_LEVER, M48_NOTES, M48_VENTS_ROAR, M48_WHEEL } from '../m48.quest';
+import { M48_CHAN_TRIGGER, M48_VENT_ID, M48_GHOST, M48_GROUPS, M48_LEVER, M48_NOTES, M48_VENTS_ROAR, M48_WHEEL } from '../m48.quest';
 import { M49_ALLIES, M49_ARRIVED, M49_BANNER, M49_BANNERS, M49_FORECAST, M49_NOTES, M49_POST, M49_POSTS, M49_SIGNAL, M49_TABLE, M49_TABLE_DIALOGUE, M49_TABLE_NPC } from '../m49.quest';
 import {
   R26_AMBUSH, R26_AMBUSH_ARM, R26_ARRIVED, R26_AT_HALT, R26_BRAKE, R26_CART_OUT, R26_CHOICE, R26_CRATES_LEFT, R26_ESCORT, R26_GUARD, R26_GUARD_OUT,
@@ -169,6 +169,25 @@ describe('M47 to M49 from the Act 5 gate', () => {
     settle(r);
     expect(r.flag('story.m48.chan.2')).toBe(false);
     expect(r.flag(M48_ARM.golems)).toBe(false);
+  });
+
+  it('a real vent\'s wheel is offered again until its channel is crossed; a stand-in never is', () => {
+    const r = make();
+    playM47(r);
+    r.begin('m48', 'alric');
+    expect(r.interactables.get(M48_REOPEN(1))!.enabled(), 'stand-in').toBe(false);
+    r.lava.vents = () => [1, 2, 3, 4].map((v) => ({ id: M48_VENT_ID(v) }));
+    const id = M48_VENT_ID(1);
+    expect(r.interactables.get(M48_REOPEN(1))!.enabled(), 'before its step').toBe(false);
+    r.use(M48_WHEEL(1));
+    settle(r);
+    const again = r.interactables.get(M48_REOPEN(1))!;
+    expect(again.enabled()).toBe(true);
+    again.onInteract();
+    expect(r.lavaWheels.filter((w) => w === id).length).toBe(2);
+    r.enter(M48_CHAN_TRIGGER(1));
+    settle(r);
+    expect(again.enabled(), 'crossed').toBe(false);
   });
 
   it('a save in the middle of M49 keeps the arrival and the talks', () => {

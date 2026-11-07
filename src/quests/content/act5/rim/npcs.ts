@@ -83,8 +83,12 @@ export const RIM_A5_POST_ROWS: readonly PostRule[] = [
     npcId: ALRIC, home: RIM(ALRIC),
     posts: [
       { when: active('m47'), anchorId: `${Q}.post.alric.gate` },
+      // he waits at the stair head with M48's brief (M48 starts from that talk), and again if the talk was cut short
+      { when: { all: [{ quest: 'm47', state: 'completed' }, { quest: 'm48', state: 'inactive' }] }, anchorId: `${Q}.post.alric.stair` },
       { when: { all: [active('m48'), { objective: ['m48', 'brief'], done: false }] }, anchorId: `${Q}.post.alric.stair` },
       { when: active('m48'), anchorId: `${Q}.post.alric.foot` },
+      // M51's word with him is at the camp, even while M50 has him in the Cooling Hall
+      { when: { all: [active('m51'), { objective: ['m51', 'call'], done: true }, { objective: ['m51', 'alric'], done: false }] }, anchorId: RIM(ALRIC) },
       { when: active('m50'), anchorId: `${COOL}.alric` },
     ],
   },
