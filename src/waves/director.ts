@@ -222,6 +222,11 @@ export class WaveDirector implements WavesService {
     return this.run?.phase ?? null;
   }
 
+  /** N4: the live set is paused (beyond its radius, outside its interior, travelling, or the player dead). */
+  get isPaused(): boolean {
+    return !!this.run && this.paused(this.run.def);
+  }
+
   get parked(): boolean {
     return !!this.run && !this.run.live;
   }
@@ -250,6 +255,8 @@ export class WaveDirector implements WavesService {
   }
 
   load(data: unknown, version: number): void {
+    // N4: before anything else loads on top of a live run (the siege tears its run down here, not after save.loaded).
+    this.host.events.emit('waves.loading', {});
     this.sawEntry = true;
     this.teardown();
     this.run = null;
