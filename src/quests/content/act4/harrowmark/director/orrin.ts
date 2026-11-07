@@ -1,4 +1,5 @@
 import type { Kit, Off } from '../../../act2/director/kit';
+import { M35_ESCORT } from '../m35.quest';
 
 /**
  * Orrin, Grisel's steward (`grisel-steward`), stands in the Keep hall for M22 and leaves when it completes (density.layout.ts).
@@ -7,8 +8,16 @@ import type { Kit, Off } from '../../../act2/director/kit';
  */
 export const ORRIN_AWAY = 'story.a4.orrinAway';
 
-export function orrinAway(k: Pick<Kit, 'flag'>): boolean {
-  return (k.flag('story.m22.complete') && !k.flag('story.gate.a4')) || k.flag('story.m38.complete');
+export function orrinAway(k: Pick<Kit, 'flag'> & Partial<Pick<Kit, 'ctx'>>): boolean {
+  return (k.flag('story.m22.complete') && !k.flag('story.gate.a4')) || k.flag('story.m38.complete') || orrinWalking(k);
+}
+
+/**
+ * Act 4 L14 (Phase G report L2): in M35 Orrin walks to the Keep as the Grisel party's delegate (`delegate.grisel`, "He
+ * sends me, and two guards"), so the layout Orrin steps out while that escort is out, or the player sees two of him.
+ */
+export function orrinWalking(k: Partial<Pick<Kit, 'ctx'>>): boolean {
+  return k.ctx?.services.get('escortsAct4')?.active() === M35_ESCORT('grisel');
 }
 
 export function installOrrin(k: Kit): Off {
