@@ -33,7 +33,7 @@ afterEach(() => {
 
 const allies = () => kit.siege().run!.squads.flatMap((s) => s.set.all);
 /** Ends the current break with an order (or the timeout) and runs the gong's beat. */
-const endBreak = (order?: Parameters<SiegeKit['siege']>[0] extends never ? never : string) => {
+const endBreak = (order?: string) => {
   if (order) kit.ctx.events.emit(`siege.order.${order}` as 'siege.order.hold', undefined);
   runUntil(kit, () => kit.director().phase === 'running', BREAK.orderTimeoutS + BREAK.beatS + 2, false);
 };
