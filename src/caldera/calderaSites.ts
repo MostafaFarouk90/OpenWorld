@@ -143,14 +143,17 @@ export const LAVA_STAIR = {
 /** Exterior door points (N2 owns every interior; `caldera.door.<id>` anchors face out, toward the way in). */
 export const CALDERA_DOORS = {
   coolingHall: COOLING_HALL_DOOR,
-  /** In the Inner Gate's passage, 20 m inside the face: reached only once the gate opens (M53). */
-  foundry: [11000, 7500] as XZ,
+  /**
+   * On the bowl floor 25 m past the Inner Gate ramp's foot, behind the face: reached only once the gate opens (M53). The floor
+   * is flat there, as an interior's exit needs (it lands at the anchor's height, 1.6 m out).
+   */
+  foundry: [11000, 7625] as XZ,
   tunnel: TUNNEL_MOUTH,
 } as const;
 /** Where each door's way in comes from (the anchors face it). */
 export const CALDERA_DOOR_APPROACH: Readonly<Record<keyof typeof CALDERA_DOORS, XZ>> = {
   coolingHall: LAVA_STAIR_POINTS[LAVA_STAIR_POINTS.length - 1],
-  foundry: INNER_GATE_RAMP_POINTS[0],
+  foundry: INNER_GATE_RAMP_POINTS[1],
   tunnel: TUNNEL_PATH_POINTS[TUNNEL_PATH_POINTS.length - 1],
 };
 
