@@ -16,11 +16,16 @@ export const ENDING_REACHED: Readonly<Record<string, unknown>> = {
   'story.m52.complete': true,
   'story.phase.foundryOpen': true,
   'story.m53.complete': true,
+  // M54 has started in any save past the ending (N11 gates the Rim's R28, R29 and R30 offers on its absence)
+  'story.m54.started': true,
   'story.gate.end': true,
   // Act 4's ending was seen (its camp scene and card), as in a save that played through
   'story.a4.campSeen': true,
   'codex.actEnding.a4.seen': true,
 };
+
+/** The Rim side quests an after-ending save never has open (N11's M54 withdraws them; marked done here so the save holds either way). */
+export const RIM_QUESTS_CLOSED = ['r27', 'r28', 'r30'] as const;
 
 type Save = { entries: Record<string, { data: Record<string, any> }> };
 
@@ -41,6 +46,9 @@ export async function strandedSave(after: boolean, choice: 'rekindle' | 'let-it-
     flags[M56_CHOICE_FLAG] = choice;
     flags[CAEL_LIVES_FLAG] = true;
     flags[AFTER_ENDING_FLAG] = true;
+    // The Rim's quests are no longer open after the ending (M54 withdraws what is left, N11), so no Rim offer (Tobb's R30)
+    // stands in front of the stranded quests' offers.
+    for (const q of RIM_QUESTS_CLOSED) quests[q] = { objectives: {}, state: 'completed' };
   }
   return save;
 }
