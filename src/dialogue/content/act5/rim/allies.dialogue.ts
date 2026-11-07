@@ -239,7 +239,8 @@ export const ANSGAR_A5R = ext('ansgar', [
 });
 
 /** Aelfreda and Tobb at the aid tent after M52 (Hrolf's is in his extension above). */
-export const AELFREDA_A5R = ext('aelfreda', M52_COMPANION_RULES('aelfreda'), M52_COMPANION_SEGMENTS('aelfreda'));
+// Aelfreda talks through her companion tree while she travels with Cael (src/companions/aelfreda.ts)
+export const AELFREDA_A5R = buildTree({ id: 'npc-aelfreda-companion', start: M52_COMPANION_RULES('aelfreda'), segments: M52_COMPANION_SEGMENTS('aelfreda') });
 export const TOBB_A5R = ext('tobb', M52_COMPANION_RULES('tobb'), M52_COMPANION_SEGMENTS('tobb'));
 
 export const ALLY_EXTENSIONS: readonly BuiltTree[] = [

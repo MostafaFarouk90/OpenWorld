@@ -70,8 +70,8 @@ export function installM52(k: Kit): Off {
   k.on('siege.wave.started', (e) => { if (e.siegeId === 'm52' && e.n === 4 && !guardToast) { guardToast = true; toast(k, 'rim.q.m52.guard'); } });
 
   k.every(15, () => {
-    // the named allies' world bodies step out while their squads stand (Rook and Edric always; Wulfhild under F8 All)
-    const on = running();
+    // the named allies' world bodies step out while N4's run (and so their squads) stands: Rook and Edric always, Wulfhild under F8 All
+    const on = k.active('m52') && svc()?.current?.siegeId === 'm52';
     const named = new Set(on ? siegeRoster(k.ctx.state, 'm52').squads.flatMap((s) => s.named ?? []) : []);
     for (const id of M52_OUT_NPCS) {
       const want = on && named.has(id);
