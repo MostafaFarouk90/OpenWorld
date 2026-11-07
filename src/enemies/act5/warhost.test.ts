@@ -160,7 +160,7 @@ describe('the shield line in the enemy stack', () => {
     expect(t.fake.bus.log.some((e) => e.type === 'enemies.shieldLine.broken')).toBe(true);
     const hold = t.fake.interactables.get(mercyInteractableId(sh[0]!.enemy.slug))!;
     expect(hold.enabled?.()).toBe(true);
-    hold.onInteract?.();
+    hold.onInteract(t.fake.player);
     t.tick(0.1);
     expect(t.m.service.alive('sh').length).toBeLessThanOrEqual(2);
     expect(lineSize('ln')).toBeLessThanOrEqual(3);
@@ -175,6 +175,19 @@ describe('the shield line in the enemy stack', () => {
     expect(sh.slice(1).every((s) => s.enemy.state !== 'yield')).toBe(true);
     resetLines();
     expect(lineBroken('ln2')).toBe(false);
+  });
+});
+
+describe('line id', () => {
+  it('SpawnerDef.line wins over tag, so a wave spawner keeps its tag for kill objectives', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -12 } });
+    fake.defineAnchor('a', 0, 0);
+    const defs: SpawnerDef[] = [{ id: 'w', tag: 'm52.wave1', line: 'siege.l1', enemy: 'warhost-soldier', role: 'shield', count: 2, anchor: 'a', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never', leash: false }];
+    const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: defs, seed: 5 });
+    const ids = m.service.spawnGroup('w', { aggro: true });
+    expect(warhostView(ids[0]!)!.lineId).toBe('siege.l1');
+    expect(lineSize('siege.l1')).toBe(2);
+    expect(lineSize('m52.wave1')).toBe(0);
   });
 });
 
