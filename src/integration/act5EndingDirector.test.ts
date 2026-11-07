@@ -1,10 +1,11 @@
 // The final ending director on fake ports (N12 PR 2, plan 9): step order, flags written only at the gate and after the
-// credits, the save hold, a load mid-ending, and the stand-in data's three cards and speaker rule.
+// credits, the save hold, a load mid-ending, on N11's ending data (src/scenes/act5/ending.ts).
 import { describe, expect, it, vi } from 'vitest';
 import { FinalEndingDirector, type FinalEndingPorts } from './act5EndingDirector';
-import { ACT5_ENDING_DATA, M56_CAEL_LIVES_FLAG, M56_CHOICE_FLAG, R30_VERSE_FLAG, TIE_SPEAKER } from './act5EndingData';
+import { ACT5_ENDING_DATA, M56_CAEL_LIVES_FLAG, M56_CHOICE_FLAG, R30_VERSE_FLAG } from './act5EndingData';
+
+const TIE_SPEAKER = 'Tobb Fenwick';
 import { finalEnding } from './actEndings';
-import { FAVOUR_TRACKS, snapshotFlag } from '../state/favour';
 
 const DEF = finalEnding();
 
@@ -97,9 +98,9 @@ describe('the final ending director', () => {
       'set story.gate.end',
       'ended 5 embers-or-dawn',
       'scene scene-ending-rekindle',
-      'title hud.ending.a5.lastEmber',
-      `epilogue ${TIE_SPEAKER}`, // no M56 snapshot in these flags: the stand-in falls back to Tobb
-      'music credits keepers false',
+      'title scene.ending.title.lastEmber',
+      `epilogue ${TIE_SPEAKER}`, // no M56 snapshot in these flags: Tobb speaks (N11)
+      'music credits keepers true', // no snapshot reads as a tie: Tobb sings (N11)
       'music verse1',
       'music chosen',
       'music last',
@@ -153,13 +154,13 @@ describe('the final ending director', () => {
     dies.d.tick();
     await dies.settle();
     await dies.next();
-    expect(dies.calls).toContain('title hud.ending.a5.lastEmber / hud.ending.a5.lastBearer');
+    expect(dies.calls).toContain('title scene.ending.title.lastEmber / scene.ending.title.lastBearer');
     const dawn = fake({ [M56_CHOICE_FLAG]: 'let-it-die', [M56_CAEL_LIVES_FLAG]: true, 'story.m56.complete': true });
     dawn.d.tick();
     await dawn.settle();
     await dawn.next();
     expect(dawn.calls).toContain('scene scene-ending-let-it-die');
-    expect(dawn.calls).toContain('title hud.ending.a5.longDawn');
+    expect(dawn.calls).toContain('title scene.ending.title.longDawn');
   });
 
   it('a load mid-ending drops the running steps and plays again from the cutscene; the gate and act.ended are not repeated', async () => {
@@ -226,24 +227,5 @@ describe('the final ending director', () => {
     for (let i = 0; i < 4; i++) await f.next();
     await f.settle();
     expect(f.calls.slice(-3)).toEqual(['set world.afterEnding', 'release', 'save']);
-  });
-});
-
-describe('the ending data stand-ins (until N11 PR 2)', () => {
-  const snap = (vals: number[]) => {
-    const o: Record<string, unknown> = { [snapshotFlag('m56', 'taken')]: true };
-    FAVOUR_TRACKS.forEach((t, i) => (o[snapshotFlag('m56', t)] = vals[i]));
-    return o;
-  };
-  it('the speaker is the top track at M56; a tie is Tobb, and tie is set', () => {
-    const top = ACT5_ENDING_DATA.epilogueFor((k) => snap([50, 10, 10, 10, 10])[k]);
-    expect(top).toMatchObject({ speaker: 'Halvard', tie: false });
-    const tie = ACT5_ENDING_DATA.epilogueFor((k) => snap([50, 50, 10, 10, 10])[k]);
-    expect(tie).toMatchObject({ speaker: TIE_SPEAKER, tie: true });
-  });
-  it('the credits carry the three ballad steps, the chosen verse named or the fixed one', () => {
-    const steps = (v: unknown) => ACT5_ENDING_DATA.creditsFor((k) => (k === R30_VERSE_FLAG ? v : undefined)).blocks.filter((b) => b.kind === 'verse');
-    expect(steps('gaut').map((b) => (b as { step: string }).step)).toEqual(['verse1', 'chosen', 'last']);
-    expect(JSON.stringify(steps(undefined))).toContain('fixed');
   });
 });
