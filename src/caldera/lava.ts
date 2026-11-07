@@ -98,7 +98,11 @@ export function inLava(def: LavaVolumeDef, feet: Vec3): boolean {
   return feet.y < def.surfaceY && onLavaShape(def.shape, feet.x, feet.z);
 }
 
-/** A vent's state `t` seconds into its cycle (open first): 'open' or 'closed'. A held wheel keeps it closed. */
+/**
+ * A vent's state `t` seconds into its cycle (open first). 'open' means vented (plan 2.7, M48): the heat is let out, the
+ * crust over the channel is cooled and walkable for `openS`; 'closed' means the crust is hot (lava rules apply). A turned
+ * wheel starts a cycle (pass `t` from the turn). `wheelHeld` (a wheel jammed or held shut) keeps it closed.
+ */
 export function ventStateAt(def: Pick<VentDef, 'openS' | 'closedS'>, t: number, wheelHeld = false): 'open' | 'closed' {
   if (wheelHeld) return 'closed';
   const cycle = def.openS + def.closedS;
