@@ -12,7 +12,9 @@ export type VendorId =
   // Act 3 (v0.7 item 16). Stock rows arrive with K10 and K13; 'ysmeryth' is band-stocked by the dragons' trust from `story.m32.complete`.
   | 'leofa' | 'dudda' | 'gytha' | 'thorgar' | 'eadgyth' | 'ansgar' | 'ysmeryth'
   // Act 4 (v0.8 item 16): Wulfhild at the Ashgate refuge, Hild the Waste's guide. Stock rows arrive with L7.
-  | 'wulfhild' | 'hild';
+  | 'wulfhild' | 'hild'
+  // Act 5 (v0.9 item 15): Alric and Maud at the Rim Camp. Empty and closed until N7 sets their stock and rows.
+  | 'alric' | 'maud-rim';
 
 export interface StockLine {
   itemId: string;
@@ -130,6 +132,9 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
   wenna: WENNA,
   wulfhild: WULFHILD,
   hild: HILD,
+  // v0.9 item 15: reserved, empty until N7 (closed by VENDOR_OPEN_WHEN below).
+  alric: { id: 'alric', buys: false, lines: [] },
+  'maud-rim': { id: 'maud-rim', buys: false, lines: [] },
   slagg: {
     id: 'slagg',
     buys: true,
@@ -246,7 +251,13 @@ export function discountPercent(
 export const VENDOR_OPEN_WHEN: Partial<Record<VendorId, FlagCondition>> = {
   // L7 (economy/refugePosts.act4.ts): Wenna from M38, Aldous until M38, Hild from M41, Wulfhild from M43.
   ...ACT4_VENDOR_OPEN_WHEN,
+  // v0.9 item 15: closed until N7 writes their rows (the Rim Camp from M49, RIM_CAMP_MOVE_FLAG).
+  alric: { any: ['region.never'] },
+  'maud-rim': { any: ['region.never'] },
 };
+
+/** v0.9 item 15: the Rim Camp's posts move inside the Rim Gate when M49 completes (N7's VENDOR_POSTS and TRAINER_POSTS rows). */
+export const RIM_CAMP_MOVE_FLAG = 'story.m49.complete';
 
 /**
  * A vendor whose shop moves: while `when` holds the `shop:<id>` interactable stands at `anchorId` instead of

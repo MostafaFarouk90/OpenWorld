@@ -247,10 +247,13 @@ export class Shop {
   }
 
   serialize(): VendorsSave {
+    // v0.9: a vendor with no stock lines and nothing to buy back (Act 5's reserved rows until N7 stocks them) is left out,
+    // so adding a vendor id never changes an older save's bytes. A load fills it from the defaults as before.
+    const silent = (v: VendorId) => VENDORS[v].lines.length === 0 && (this.buyBackList.get(v)?.length ?? 0) === 0;
     const stock: VendorsSave['stock'] = {};
-    for (const [v, m] of this.stock) stock[v] = Object.fromEntries(m);
+    for (const [v, m] of this.stock) if (!silent(v)) stock[v] = Object.fromEntries(m);
     const buyBack: VendorsSave['buyBack'] = {};
-    for (const [v, l] of this.buyBackList) buyBack[v] = l.map((e) => ({ ...e }));
+    for (const [v, l] of this.buyBackList) if (!silent(v)) buyBack[v] = l.map((e) => ({ ...e }));
     return { stock, buyBack };
   }
 

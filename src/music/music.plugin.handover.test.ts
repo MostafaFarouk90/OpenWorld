@@ -622,7 +622,8 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
 
   it('nothing is reserved any more (the Act 3 tracks are built) and both Act 2 tracks are registered', () => {
     // v0.8 item 19 reserved the two Act 4 ids; L8 built them, so nothing is reserved.
-    expect(RESERVED_TRACK_IDS).toEqual([]);
+    // v0.9 item 17 reserves the Caldera's track until N8 builds it.
+    expect(RESERVED_TRACK_IDS).toEqual(['heart-of-the-anvil']);
     expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
     expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
     expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);

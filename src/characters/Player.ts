@@ -346,6 +346,9 @@ export class Player {
     } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing && (leap || !forced || forced.turn)) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
+    } else if (this.controller.carryYaw !== 0 && !mod?.lockFacing) {
+      // v0.9 item 7b: standing on a turning platform, the player turns with it.
+      this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingYaw + this.controller.carryYaw);
     }
   }
 

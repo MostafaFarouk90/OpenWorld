@@ -19,6 +19,15 @@ export const REGION_BOXES_MAP: Readonly<Record<RegionId, MapBox>> = Object.fromE
 
 const BUILT: readonly RegionId[] = REGION_IDS.filter((id) => !REGION_INFO[id].reserved);
 const RESERVED: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].reserved);
+const inside = (a: MapBox, b: MapBox): boolean => a.x0 >= b.x0 && a.x1 <= b.x1 && a.z0 >= b.z0 && a.z1 <= b.z1;
+/**
+ * v0.9: a built region whose box lies inside another built box (the Caldera inside the Waste's ring) answers first, so
+ * the inner region wins inside its box and the outer one keeps the rest. Every other region keeps its table order.
+ */
+const BUILT_ORDER: readonly RegionId[] = [
+  ...BUILT.filter((id) => BUILT.some((o) => o !== id && inside(REGION_INFO[id].box, REGION_INFO[o].box))),
+  ...BUILT.filter((id) => !BUILT.some((o) => o !== id && inside(REGION_INFO[id].box, REGION_INFO[o].box))),
+];
 
 export function regionAt(x: number, z: number): RegionInfo | null {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
@@ -29,7 +38,7 @@ export function regionAt(x: number, z: number): RegionInfo | null {
     const b = REGION_INFO[id].box;
     if (mx >= b.x0 && mx < b.x1 && mz >= b.z0 && mz < b.z1) return null;
   }
-  for (const id of BUILT) {
+  for (const id of BUILT_ORDER) {
     const b = REGION_INFO[id].box;
     if (mx >= b.x0 && mx < b.x1 && mz >= b.z0 && mz < b.z1) {
       const info = REGION_INFO[id];

@@ -80,6 +80,17 @@ export const ACT3_ENEMY_KINDS: readonly Act3EnemyKind[] = ['fen-leech', 'peat-sh
 export type Act4EnemyKind = 'waste-strider' | 'husk-knight' | 'cinder-gnat-swarm';
 export const ACT4_ENEMY_KINDS: readonly Act4EnemyKind[] = ['waste-strider', 'husk-knight', 'cinder-gnat-swarm'];
 
+/**
+ * Act 5 kind ids (v0.9 item 11), reserved the same way: N5 moves `warhost-soldier` into `EnemyKind` with its def. Grisel's
+ * footmen, the stokers and the lava golems are shipped kinds in skins (skins.ts).
+ */
+export type Act5EnemyKind = 'warhost-soldier';
+export const ACT5_ENEMY_KINDS: readonly Act5EnemyKind[] = ['warhost-soldier'];
+
+/** v0.9: a warhost member's role in its line (`SpawnerDef.role`, carried as `actor.data.spawn.role`). */
+export type WarhostRole = 'shield' | 'pike' | 'torch';
+export const WARHOST_ROLES: readonly WarhostRole[] = ['shield', 'pike', 'torch'];
+
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
 
@@ -326,6 +337,8 @@ export interface SpawnerDef {
   firstArrival?: boolean;
   /** v0.8 item 11: the members' look over their kind's model (enemies/skins.ts); passed to the spawn and set on `actor.skin`. */
   skin?: EnemySkinId;
+  /** v0.9 item 11: the members' role (the warhost's `WarhostRole`), passed to the spawn and set on `actor.data.spawn.role`. */
+  role?: WarhostRole;
   /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).

@@ -2,6 +2,7 @@
 // section 5), each lit from its own `shrine.<id>.lit` flag, plus the Warmth tier and the Cooled pip.
 
 import { GLASSLANDS } from '../terrain/shape/waste';
+import { CALDERA_CENTRE } from '../region/act5Regions';
 
 export const SHRINE_IDS = [
   'quenchstone',
@@ -25,7 +26,13 @@ export const SHRINE_POSITIONS: Readonly<Partial<Record<ShrineId, { x: number; z:
   // Act 4 (v0.8 item 13): in the Glasslands, east of the Caldera. Read from L1's master position (its shrine anchor
   // `waste.glasslands.singing-slag` stands on the same point), so a move there moves the mark too (Act 4 L9).
   'singing-slag': { x: GLASSLANDS[0], z: GLASSLANDS[1] },
+  // Act 5 (v0.9 item 13): the Anvil at the Caldera's heart (CALDERA_CENTRE), anchor `caldera.anvil.shrine` (N1 may move
+  // both together). M56 lights it in both endings (N11).
+  'anvil-of-ages': { x: CALDERA_CENTRE.x, z: CALDERA_CENTRE.z },
 };
+
+/** v0.9: the Anvil of Ages' shrine anchor (N1 places it; the Act 5 core defines it at CALDERA_CENTRE until then). */
+export const ANVIL_SHRINE_ANCHOR = 'caldera.anvil.shrine';
 
 export interface ForgeMark {
   id: ShrineId;

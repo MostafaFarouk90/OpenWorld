@@ -184,7 +184,12 @@ export interface CartSpec {
   /** The set's origin: positions are kept as offsets from it, so far coordinates cost no precision. */
   origin: { x: number; z: number };
   onResolve(cart: Cart, how: CartOutcome): void;
+  /** v0.9 item 5: 'ram' for the siege's ram (N4 builds its repeated strikes); default 'brazier', the shipped cart. */
+  role?: CartRole;
 }
+
+/** v0.9: what a cart is; Act 2's data names none and reads as 'brazier'. */
+export type CartRole = 'brazier' | 'ram';
 
 const GRAVITY_FREE_TILT = 0.7;
 
@@ -210,12 +215,16 @@ export class Cart {
   private clock = 0;
   private spill: THREE.Mesh | null = null;
   private disposed = false;
+  private stallLeft = 0;
+  /** v0.9: 'brazier' (the shipped cart) or 'ram'. */
+  readonly role: CartRole;
 
   constructor(
     private readonly host: StructureHost,
     private readonly spec: CartSpec,
   ) {
     this.id = spec.id;
+    this.role = spec.role ?? 'brazier';
     const ex = spec.end.x - spec.start.x;
     const ez = spec.end.z - spec.start.z;
     const len = Math.hypot(ex, ez);
@@ -277,10 +286,28 @@ export class Cart {
     return { x: this.lx + this.dx * this.s, z: this.lz + this.dz * this.s };
   }
 
+  /** v0.9: seconds of stall left (0 when moving). */
+  get stalled(): number {
+    return this.stallLeft;
+  }
+
+  /**
+   * v0.9 item 5: holds the cart where it is, rolling or winding up, for `seconds` (the siege's sappers, a dragon's
+   * strike). Stalls do not stack: the longest standing one wins. Ignored once the cart has struck or been destroyed.
+   */
+  stall(seconds: number): void {
+    if (!(seconds > 0) || !Number.isFinite(seconds) || this._outcome !== null) return;
+    if (this._phase !== 'rolling' && this._phase !== 'windup') return;
+    this.stallLeft = Math.max(this.stallLeft, seconds);
+  }
+
   fixedUpdate(dt: number): void {
     if (this._phase === 'gone') return;
     this.clock += dt;
-    switch (this._phase) {
+    const held = this.stallLeft > 0 && (this._phase === 'rolling' || this._phase === 'windup');
+    if (held) this.stallLeft = Math.max(0, this.stallLeft - dt);
+    else this.stallLeft = 0;
+    switch (held ? 'held' : this._phase) {
       case 'rolling': {
         this.s = Math.min(this.stopAt, this.s + CART.speed * dt);
         this.spinWheels(CART.speed * dt);

@@ -1,4 +1,5 @@
 import type { GameContext } from '../core/Game';
+import { killXpRegionOf } from '../enemies/spawnData';
 import type { GamePlugin } from '../core/plugins';
 import '../hud/events';
 import { hudDocument, asHtml, emitLoose, injectCss, soft } from '../hud/soft';
@@ -82,7 +83,10 @@ const progressionPlugin: GamePlugin = {
     // actor.died carries no position; the handler runs before despawn, so the actor is still there to read.
     const at = new Vector3();
     const regionOf = (actorId: string): string | null => {
-      const a = ctx.actors.get(actorId) as { worldPosition?(out: Vector3): Vector3 } | undefined;
+      const a = ctx.actors.get(actorId) as { worldPosition?(out: Vector3): Vector3; data?: Record<string, unknown> } | undefined;
+      // v0.9: the factor answers by area first (a `caldera-*` member pays the Caldera's x 3.0 inside the Waste's box too).
+      const byArea = killXpRegionOf(a?.data);
+      if (byArea) return byArea;
       if (!a?.worldPosition) return null;
       a.worldPosition(at.set(NaN, NaN, NaN));
       return regionAt(at.x, at.z)?.id ?? null;
