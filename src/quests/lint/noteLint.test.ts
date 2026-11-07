@@ -1,3 +1,4 @@
+import { ACT5_QUEST_NOTES } from '../content/act5';
 import { describe, expect, it } from 'vitest';
 import { NOTES_UNDER_NPCS } from '../content/act2/notes';
 import { QUEST_NOTES } from '../content/notes';
@@ -13,7 +14,7 @@ const hits = findNoteHits(input);
 describe('note lint over the shipped content', () => {
   it('resolves every note anchor', () => {
     for (const n of input.notes) expect(input.anchors.has(n.anchorId), n.anchorId).toBe(true);
-    expect(input.notes.length).toBe(QUEST_NOTES.length + ACT2_QUEST_NOTES.length + ACT3_QUEST_NOTES.length + ACT4_QUEST_NOTES.length);
+    expect(input.notes.length).toBe(QUEST_NOTES.length + ACT2_QUEST_NOTES.length + ACT3_QUEST_NOTES.length + ACT4_QUEST_NOTES.length + ACT5_QUEST_NOTES.length);
   });
 
   it('has no unlisted hit', () => {

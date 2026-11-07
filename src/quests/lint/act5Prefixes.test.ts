@@ -6,6 +6,7 @@ import { TUTORIAL_ANCHORS } from '../../tutorial/beats';
 import { ACT2_TRIGGERS } from '../content/act2';
 import { OLDSMOKE_TRIGGERS } from '../content/act2/oldsmoke';
 import { questDefs } from '../content';
+import { ACT5_QUEST_DEFS } from '../content/act5';
 import { ALL_LAYOUTS } from './noteLint';
 import { ACT4_WORLD_LAYOUT } from '../../region/act4/act4World.layout';
 import { WASTE_LAYOUT } from '../../waste/waste.layout';
@@ -41,6 +42,8 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'caldera.inner-gate.',
   'caldera.anvil.causeway',
   'caldera.siege.',
+  // N11: the Foundry quests' own anchors (src/quests/content/act5/foundry/anchors.ts)
+  'caldera.q.f.',
 ];
 const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   // N2: the Act 5 interiors
@@ -53,6 +56,8 @@ const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   'trg.caldera.terraces',
   'trg.caldera.cooling-hall',
   'trg.caldera.tunnel',
+  // N11: the Foundry quests' triggers
+  'trg.caldera.q.f.',
 ];
 
 describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {
@@ -99,9 +104,11 @@ describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {
   });
 
   it('no shipped quest uses an Act 5 id or an Act 5 quest flag', () => {
-    const shipped = new Set(questDefs.map((q) => q.id));
+    // Act 5's own blocks (N10, N11) are the writers; every other quest must not touch an Act 5 id or flag
+    const before = questDefs.filter((q) => !ACT5_QUEST_DEFS.includes(q));
+    const shipped = new Set(before.map((q) => q.id));
     for (const id of ACT5_QUEST_IDS) expect(shipped.has(id), id).toBe(false);
-    const json = JSON.stringify(questDefs);
+    const json = JSON.stringify(before);
     for (const id of ACT5_QUEST_IDS) expect(json.includes(`story.${id}.`), id).toBe(false);
   });
 });

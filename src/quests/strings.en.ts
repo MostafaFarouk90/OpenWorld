@@ -7,6 +7,7 @@ import { questStringsSide } from './content/side/strings.side.en';
 import { ACT2_QUEST_STRINGS } from './content/act2/strings';
 import { ACT3_QUEST_STRINGS } from './content/act3';
 import { ACT4_QUEST_STRINGS } from './content/act4';
+import { ACT5_QUEST_STRINGS } from './content/act5';
 
 export const questStrings: Record<string, string> = {
   ...questStringsHarrowmark,
@@ -96,4 +97,5 @@ export const questStrings: Record<string, string> = {
   ...ACT3_QUEST_STRINGS,
   // Act 4 quests (L10 Harrowmark)
   ...ACT4_QUEST_STRINGS,
+  ...ACT5_QUEST_STRINGS,
 };
