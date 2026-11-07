@@ -20,6 +20,7 @@ import {
   EORMEN_NAME_KEY,
   eormenScale,
   GONG_PART_ID,
+  GONG_WARD,
   HUSKS,
   PRESENTATION,
   RELEASE_BOW,
@@ -58,6 +59,8 @@ export interface EormenPlaces {
   gongYaw: number;
   /** Where he may drift, in world metres: the open nave between the pillar rows, short of the altar (never behind a pillar). */
   rect: { x0: number; x1: number; z0: number; z1: number };
+  /** The whole nave floor less a metre, world metres: where the Release glide may take him (to Cael at the gong). */
+  floor?: { x0: number; x1: number; z0: number; z1: number };
 }
 
 export type EormenEnd = 'released' | 'defeated' | 'reset';
@@ -121,6 +124,9 @@ export class EormenEncounter implements EormenHooks {
   private readonly summoned = new Set<number>();
   private floorLifted = false;
   private releaseOpen = false;
+  private wardT = 0;
+  /** Husk shoves by the gong's ward (tests, the driver). */
+  huskWards = 0;
   private telegraphKind: EormenAttack | null = null;
   private telegraphT = 0;
   private telegraphLead = 1;
@@ -303,6 +309,7 @@ export class EormenEncounter implements EormenHooks {
       this.brain.tick(dt, { dist });
       if (this.ended || this.outcomeT >= 0) return;
       this.checkFloor();
+      this.wardGong(dt);
     } else {
       this.turn(dt, feet);
       this.bow(dt, feet, dist);
@@ -437,7 +444,9 @@ export class EormenEncounter implements EormenHooks {
     if (this.broken.has(phase) || this.floored.has(phase)) return;
     const next = EORMEN.phases[phase - 1];
     const floor = next !== undefined ? Math.floor(this.actor.maxHealth * next) + 1 : Math.ceil(this.actor.maxHealth * EORMEN.healthFloor);
-    if (this.actor.health > floor) return;
+    // Within a hair of the mark counts (a last hit may leave him a few points above it, and the bar already reads empty to Cael):
+    // otherwise a player waiting at the gong would wait for a toll that never opens it (real-game Knight run).
+    if (this.actor.health > floor + this.actor.maxHealth * EORMEN.floorMargin) return;
     // Marked only once the toll is scheduled: at the floor inside an open window, it is asked again after the window closes.
     if (this.brain.onFloor()) this.floored.add(phase);
   }
@@ -532,6 +541,44 @@ export class EormenEncounter implements EormenHooks {
     c.z = THREE.MathUtils.clamp(c.z + ((feet.z - c.z) / dist) * step, r.z0, r.z1);
   }
 
+  /** While the gong answers, his husks are shoved back from it, so Cael can stand there and strike (GONG_WARD). */
+  private wardGong(dt: number): void {
+    if (!this.brain.gongReady && !this.brain.windowOpen) {
+      this.wardT = 0;
+      return;
+    }
+    this.wardT -= dt;
+    if (this.wardT > 0) return;
+    this.wardT = GONG_WARD.interval;
+    const enemies = this.ctx.services.get('enemies');
+    if (!enemies) return;
+    const g = this.places.gong;
+    const at = new THREE.Vector3();
+    for (const group of HUSKS.groups) {
+      let ids: readonly string[] = [];
+      try {
+        ids = enemies.alive(group);
+      } catch {
+        continue;
+      }
+      for (const id of ids) {
+        const a = this.ctx.actors.get(id);
+        if (!a || a.dead) continue;
+        a.worldPosition(at);
+        let dx = at.x - g.x;
+        let dz = at.z - g.z;
+        const d = Math.hypot(dx, dz);
+        if (d >= GONG_WARD.radius) continue;
+        // Straight out from the gong; one on top of it goes toward the nave's middle.
+        if (d < 1e-3) {
+          dx = this.places.centre.x - g.x;
+          dz = this.places.centre.z - g.z;
+        }
+        if (enemies.push(id, { dir: { x: dx, z: dz }, metres: GONG_WARD.radius - d + GONG_WARD.margin })) this.huskWards++;
+      }
+    }
+  }
+
   /**
    * The Release window: he sinks toward Cael and stops within reach of the hold. The last bar breaks at the gong, often 10 m from
    * him, and the window is 4 s (real-game run: the hold was out of reach before it closed).
@@ -539,7 +586,7 @@ export class EormenEncounter implements EormenHooks {
   private bow(dt: number, feet: THREE.Vector3Like, dist: number): void {
     if (dist <= RELEASE_BOW.stopAt) return;
     const c = this.root.position;
-    const r = this.places.rect;
+    const r = this.places.floor ?? this.places.rect;
     const step = Math.min(RELEASE_BOW.speed * dt, dist - RELEASE_BOW.stopAt);
     c.x = THREE.MathUtils.clamp(c.x + ((feet.x - c.x) / dist) * step, r.x0, r.x1);
     c.z = THREE.MathUtils.clamp(c.z + ((feet.z - c.z) / dist) * step, r.z0, r.z1);
