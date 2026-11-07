@@ -7,7 +7,7 @@
  * - M48: each vent's wheel turned, then the channel's far lip entered (a Surge crossing and a crust walk count the same);
  *   the levers pressed; the roar sat through.
  * - M49: the signal fire, the arrival scene, each won House's banner raised, the rise scene, the war table pressed and read.
- * - R26: the master's road (run A fast, run B long), the crates loaded, the convoy followed: the ambushes fought on the fast
+ * - R26: the master's road (run A long, run B fast, as the design pairs them), the crates loaded, the convoy followed: the ambushes fought on the fast
  *   road, the brakes set and the 30 s storm walls waited at the long road's halts; the arrival scene; the crates unloaded.
  * - R29: each part carried by the shipped carry kit to the gong frame, the gong hung, struck in Ansgar's count on the beat.
  * - M50: in each chamber the three sluice wheels turned in the chart's order before the gauge fills.
@@ -44,11 +44,14 @@ export type PhaseIQuest = (typeof ACT5_PHASE_I)[number];
 export const PHASE_I_ORDER: readonly string[] = ACT5_PHASE_I;
 
 export interface PhaseIChoices {
-  /** R26's road: run A the fast road (the shorter branch, measured), run B the long safe road (coverage). */
+  /**
+   * R26's road, as the design pairs them (N10, coordinator 2026-11-07 15:20): the marshal run (A) takes the long road
+   * (Oswin +3), the keepers run (B) the fast road (Oswin -3), so M52's snapshot reads the design's table (Oswin 20 and 52).
+   */
   r26: 'fast' | 'long';
 }
-export const PHASE_I_RUN_A: PhaseIChoices = { r26: R26_FAST };
-export const PHASE_I_RUN_B: PhaseIChoices = { r26: R26_LONG };
+export const PHASE_I_RUN_A: PhaseIChoices = { r26: R26_LONG };
+export const PHASE_I_RUN_B: PhaseIChoices = { r26: R26_FAST };
 
 export interface PhaseIRun extends PhaseGRun { ic: PhaseIChoices }
 /** Run B's mercy on the Rim: the Spare (Warhost scouts) and the Release (stoker wraiths). */

@@ -4,19 +4,19 @@
   "preset": "keepers",
   "chain": "N12 Phase I run B (keepers) on act5-carried-chain-b: M47 to M52 with R26 and R29, the Rim card",
   "level": 33,
-  "xp": 105394,
+  "xp": 106042,
   "gold": 650,
   "scars": 0,
   "deaths": 0,
   "favour": {
     "halvard": 21,
-    "oswin": 55,
+    "oswin": 52,
     "grisel": 34,
     "dragons": 51,
     "ashwalkers": 53
   },
   "choices": {
-    "story.r26.choice": "long",
+    "story.r26.choice": "fast",
     "siege.m52.wounded": "aelfreda",
     "story.m52.sparedAny": true,
     "story.m52.gateHeld": true,
@@ -312,8 +312,8 @@
         "r26.manifest",
         "r26.master",
         "r26.load",
-        "r26.halt1",
-        "r26.halt2",
+        "r26.ambush1",
+        "r26.ambush2",
         "r26.road",
         "r26.in",
         "r26.unload",
@@ -546,8 +546,7 @@
         }
       ],
       "scripted": [
-        "m52.stairs: the scene played, 12 s",
-        "m52.holds: the scene played, 23 s"
+        "m52.stairs: the scene played, 12 s"
       ],
       "order": [
         "m52.stairs",

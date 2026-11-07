@@ -4,19 +4,19 @@
   "preset": "marshal",
   "chain": "N12 Phase I run A (marshal) on act5-carried-chain-a: M47 to M52 with R26 and R29, the Rim card",
   "level": 34,
-  "xp": 113206,
+  "xp": 111979,
   "gold": 350,
   "scars": 0,
   "deaths": 0,
   "favour": {
     "halvard": 71,
-    "oswin": 17,
+    "oswin": 20,
     "grisel": 25,
     "dragons": 10,
     "ashwalkers": 19
   },
   "choices": {
-    "story.r26.choice": "fast",
+    "story.r26.choice": "long",
     "siege.m52.wounded": "aelfreda",
     "story.m52.gateHeld": true,
     "story.m52.stood.halvard": true,
@@ -312,8 +312,8 @@
         "r26.manifest",
         "r26.master",
         "r26.load",
-        "r26.ambush1",
-        "r26.ambush2",
+        "r26.halt1",
+        "r26.halt2",
         "r26.road",
         "r26.in",
         "r26.unload",
@@ -546,8 +546,7 @@
         }
       ],
       "scripted": [
-        "m52.stairs: the scene played, 12 s",
-        "m52.holds: the scene played, 18 s"
+        "m52.stairs: the scene played, 12 s"
       ],
       "order": [
         "m52.stairs",
