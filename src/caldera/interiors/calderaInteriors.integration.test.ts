@@ -26,11 +26,11 @@ const modules: Record<string, PluginModule> = {
   '/src/test/caldera-interiors.plugin.ts': { default: calderaInteriorsPlugin },
 };
 
-/** N1's outside door anchors stand in here (positions from plan 3.4). */
+/** N1's outside door anchors stand in here (N1's built positions). */
 const OUTSIDE: Record<string, { x: number; z: number; heading: number }> = {
   [DOOR_COOLING_HALL]: { x: 11150, z: 7420, heading: 0 },
-  [DOOR_FOUNDRY]: { x: 11000, z: 7500, heading: 0 },
-  [DOOR_TUNNEL]: { x: 10550, z: 6900, heading: 0 },
+  [DOOR_FOUNDRY]: { x: 11000, z: 7625, heading: 0 },
+  [DOOR_TUNNEL]: { x: 10550, z: 6955, heading: 0 },
 };
 
 let physics: PhysicsWorld;
@@ -79,7 +79,7 @@ async function boot() {
   };
   // Thread 17 defines its door anchors after this plugin.
   for (const [id, a] of Object.entries(OUTSIDE)) {
-    game.ctx.anchors.define({ id, position: { x: a.x, y: heightAt(a.x, a.z), z: a.z }, yaw: ((a.heading + 180) * Math.PI) / 180 });
+    game.ctx.anchors.define({ id, position: { x: a.x, y: heightAt(a.x, a.z + 1.6), z: a.z }, yaw: ((a.heading + 180) * Math.PI) / 180 });
   }
   const svc = () => game.ctx.services.get('interiors')!;
   const anchor = (id: string) => game.ctx.anchors.get(id);
