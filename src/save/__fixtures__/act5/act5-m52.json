@@ -92,8 +92,15 @@
           "eormen",
           "lore.place.rimfoot",
           "lore.place.caldera",
+          "lore.person.alric",
           "lore.place.rim-gate",
+          "skin.grisel-loyalist",
+          "skin.stoker-wraith",
+          "skin.forge-thrall",
+          "howto.lava-vents",
           "lore.place.lava-stair",
+          "howto.sunforged",
+          "lore.person.edric",
           "lore.place.rim-camp",
           "lore.person.rook",
           "lore.place.cooling-hall",
@@ -1624,11 +1631,14 @@
           "ashmare-saddlebags": 1,
           "ashplate": 1,
           "barley-cake": 5,
+          "cinderproof-mantle": 1,
           "cliff-crampons": 1,
+          "cooling-bead": 1,
           "couriers-cloak": 1,
           "favour-mark": 1,
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
+          "forge-heart-fragment": 2,
           "fox-fire-ember": 1,
           "frostbrows-axe": 1,
           "frostbrows-hunting-knife": 1,
@@ -1646,6 +1656,7 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.allied-banners": 1,
           "key.banner-standard": 1,
           "key.bond-cord": 1,
           "key.chime-key": 1,
@@ -1656,6 +1667,7 @@
           "key.engine-gear": 1,
           "key.eormens-crown-shard": 1,
           "key.ferry-token": 1,
+          "key.keepers-call": 1,
           "key.music-box": 1,
           "key.oswin-silver-key": 1,
           "key.rooks-whistle": 1,
@@ -1670,6 +1682,7 @@
           "miners-helm": 1,
           "murkjaw-tooth": 1,
           "orsks-cinder": 1,
+          "oswin-bounty": 1,
           "oswin-lockpicks": 5,
           "picketts-lantern": 1,
           "ranger-longbow": 1,
@@ -1685,6 +1698,7 @@
           "slag-core": 1,
           "spike-shield": 1,
           "squires-arming-sword": 1,
+          "stokers-gloves": 1,
           "tobbs-lucky-whistle": 1,
           "training-weights": 1,
           "union-badge": 1,
@@ -2346,6 +2360,26 @@
             },
             "state": "completed"
           },
+          "m47": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m48": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m49": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m50": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m51": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -2621,6 +2655,10 @@
               "register": 2,
               "report": 1
             },
+            "state": "completed"
+          },
+          "r26": {
+            "objectives": {},
             "state": "completed"
           },
           "t01": {
@@ -3343,10 +3381,15 @@
           "story.m46.started": true,
           "story.m47.complete": true,
           "story.m47.rimGateOpen": true,
+          "story.m47.started": true,
           "story.m48.complete": true,
+          "story.m48.started": true,
           "story.m49.complete": true,
+          "story.m49.started": true,
           "story.m50.complete": true,
+          "story.m50.started": true,
           "story.m51.complete": true,
+          "story.m51.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -3540,6 +3583,7 @@
           "story.r25.lit3": true,
           "story.r25.started": true,
           "story.r26.complete": true,
+          "story.r26.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "trainer.pathfinder.masterBook": true,

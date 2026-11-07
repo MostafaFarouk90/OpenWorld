@@ -10,7 +10,14 @@
     "m51",
     "m52"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m47",
+    "m48",
+    "m49",
+    "m50",
+    "m51",
+    "r26"
+  ],
   "base": {
     "fixture": "act5-carried-chain-a.json",
     "level": 30,

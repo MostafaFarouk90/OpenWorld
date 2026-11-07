@@ -92,8 +92,14 @@
           "eormen",
           "lore.place.rimfoot",
           "lore.place.caldera",
+          "lore.person.alric",
           "lore.place.rim-gate",
-          "lore.place.lava-stair"
+          "skin.grisel-loyalist",
+          "skin.stoker-wraith",
+          "skin.forge-thrall",
+          "howto.lava-vents",
+          "lore.place.lava-stair",
+          "howto.sunforged"
         ]
       },
       "version": 1
@@ -1620,11 +1626,13 @@
           "ashmare-saddlebags": 1,
           "ashplate": 1,
           "barley-cake": 5,
+          "cinderproof-mantle": 1,
           "cliff-crampons": 1,
           "couriers-cloak": 1,
           "favour-mark": 1,
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
+          "forge-heart-fragment": 1,
           "fox-fire-ember": 1,
           "frostbrows-axe": 1,
           "frostbrows-hunting-knife": 1,
@@ -1681,6 +1689,7 @@
           "slag-core": 1,
           "spike-shield": 1,
           "squires-arming-sword": 1,
+          "stokers-gloves": 1,
           "tobbs-lucky-whistle": 1,
           "training-weights": 1,
           "union-badge": 1,
@@ -2340,6 +2349,14 @@
               "wave2": 1,
               "wave3": 1
             },
+            "state": "completed"
+          },
+          "m47": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m48": {
+            "objectives": {},
             "state": "completed"
           },
           "r01": {
@@ -3339,7 +3356,9 @@
           "story.m46.started": true,
           "story.m47.complete": true,
           "story.m47.rimGateOpen": true,
+          "story.m47.started": true,
           "story.m48.complete": true,
+          "story.m48.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
