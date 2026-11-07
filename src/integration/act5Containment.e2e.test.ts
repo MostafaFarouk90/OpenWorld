@@ -24,7 +24,12 @@ interface Read { floor: boolean; anvil: boolean; camp: boolean; court: boolean; 
 
 async function read(save: Record<string, unknown>): Promise<{ r: Read; h: ChapterHarness }> {
   const h = await bootFromSave(save, { models: false, virtualClock: true });
-  await h.runAsync(10);
+  try {
+    await h.runAsync(10);
+  } catch (e) {
+    h.dispose();
+    throw e;
+  }
   const c = h.ctx.services.require('containment');
   const s = h.ctx.state as never;
   return {
