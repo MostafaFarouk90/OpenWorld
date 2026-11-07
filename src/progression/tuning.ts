@@ -59,6 +59,10 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // Morcant Vey, D09 (Act 5 N6 PR 1): the Foundry floats over the Caldera, whose kill XP factor is 3.0, so plan 6.2's 900 at an
   // even level when he is struck down.
   'vey-reforged': 900 / 3,
+  // Ulthred, D10 (Act 5 N6 PR 2): he dies on the Anvil of Ages inside the Caldera (factor 3.0), so plan 3's 1,200 at an even level;
+  // M55's trial stand-in is never a kill.
+  'ulthred-ash-king': 1200 / 3,
+  'ulthred-trial': 0,
   // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
