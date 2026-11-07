@@ -7,36 +7,51 @@ import type { ContainmentHoleDef, ContainmentKeepInDef } from './containment';
 import { phaseHolds } from './regions';
 import {
   ACT5_GATE_FLAG,
+  CALDERA_ANVIL_RADIUS,
   CALDERA_CENTRE,
   CALDERA_FLOOR_RADIUS,
+  D10_STARTED_FLAG,
   INNER_GATE_FLAG,
   SIEGE_COMPLETE_FLAG,
   SIEGE_STARTED_FLAG,
+  ULTHRED_OUTCOME_FLAG,
 } from './act5Regions';
 
 /** The bowl floor and the Inner Gate open after M53, once the Phase I hold is retired. */
 export const INNER_GATE_OPEN_WHEN: FlagCondition = { all: [INNER_GATE_FLAG, ...phaseHolds('caldera')] };
 
-/** The bowl floor (placeholder circle; N1 sets the radius from the floor wall). */
+/** The bowl floor, inside N1's floor wall (r 520): the Inner Gate's face stands on its edge. */
 export const CALDERA_FLOOR_HOLE: ContainmentHoleDef = {
   id: 'hole.caldera.floor',
   circle: { x: CALDERA_CENTRE.x, z: CALDERA_CENTRE.z, r: CALDERA_FLOOR_RADIUS },
   openWhen: INNER_GATE_OPEN_WHEN,
 };
 
-export const ACT5_HOLES: readonly ContainmentHoleDef[] = [CALDERA_FLOOR_HOLE];
+/**
+ * The Anvil's island and its lava lake (N1, coordinator ruling 2026-11-07): the causeway makes them walkable once the
+ * floor opens, but D10's phases 2 and 3 are reached by its floor drop, so they hold until D10 starts. They also open on
+ * Ulthred's outcome, so a load after the fight never strands anyone.
+ */
+export const ANVIL_OPEN_WHEN: FlagCondition = { any: [D10_STARTED_FLAG, ULTHRED_OUTCOME_FLAG] };
+export const CALDERA_ANVIL_HOLE: ContainmentHoleDef = {
+  id: 'hole.caldera.anvil',
+  circle: { x: CALDERA_CENTRE.x, z: CALDERA_CENTRE.z, r: CALDERA_ANVIL_RADIUS },
+  openWhen: ANVIL_OPEN_WHEN,
+};
+
+export const ACT5_HOLES: readonly ContainmentHoleDef[] = [CALDERA_FLOOR_HOLE, CALDERA_ANVIL_HOLE];
 
 export const SIEGE_KEEPIN_TOAST = 'region.siege.holdTheGate';
 /** M52 running: from its start until it completes (a load mid-siege re-derives it from the flags). */
 export const SIEGE_KEEPIN_LIVE_WHEN: FlagCondition = { all: [SIEGE_STARTED_FLAG], none: [SIEGE_COMPLETE_FLAG] };
 
 /**
- * The siege's soft boundary (placeholder box round the Rim Gate's court and the stairs' head; N1 sets the shape). The
- * plan's Rim Gate stands on the Caldera's south edge (engine z 6500) above Rimfoot.
+ * The siege's soft boundary (N1): the Rim Gate's outer landing (Wystan's sally), the court in the cut, the Rim Camp, with
+ * the Lava Stair's head as its north edge and the camp's west edge as its west (plan 3.3).
  */
 export const SIEGE_KEEPIN: ContainmentKeepInDef = {
   id: 'keepin.caldera.siege',
-  box: { x0: 10850, z0: 6300, x1: 11150, z1: 6900 },
+  box: { x0: 10860, z0: 6400, x1: 11180, z1: 6830 },
   liveWhen: SIEGE_KEEPIN_LIVE_WHEN,
   toastKey: SIEGE_KEEPIN_TOAST,
 };

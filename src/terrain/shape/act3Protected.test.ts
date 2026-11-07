@@ -9,13 +9,15 @@ import { ACT3_PLATEAUS, ACT3_PROTECTED_BOXES, ACT3_PROTECTED_REGIONS, ACT3_ROADS
 import { detailRelief } from './detailRelief';
 import { WORLD_SHAPE } from './index';
 import { WASTE_PLATEAUS, WASTE_ROADS } from './waste';
+import { CALDERA_PLATEAUS, CALDERA_ROADS, CALDERA_WASTE_SIDE_PLATEAUS } from './caldera';
 
 const shipped = buildShaper(
   {
     suppressions: WORLD_SHAPE.suppressions,
     // Act 4 (L1): the Waste's plateaus and roads are left out too; their reach is skipped below like an Act 3 road's.
-    plateaus: WORLD_SHAPE.plateaus.filter((p) => !ACT3_PLATEAUS.includes(p) && !WASTE_PLATEAUS.includes(p)),
-    roads: WORLD_SHAPE.roads.filter((r) => !ACT3_ROADS.includes(r) && !WASTE_ROADS.includes(r)),
+    // Act 5 (N1): the Caldera's too (all inside the Waste's box, nowhere near Acts 1 and 2).
+    plateaus: WORLD_SHAPE.plateaus.filter((p) => !ACT3_PLATEAUS.includes(p) && !WASTE_PLATEAUS.includes(p) && !CALDERA_PLATEAUS.includes(p) && !CALDERA_WASTE_SIDE_PLATEAUS.includes(p)),
+    roads: WORLD_SHAPE.roads.filter((r) => !ACT3_ROADS.includes(r) && !WASTE_ROADS.includes(r) && !CALDERA_ROADS.includes(r)),
   },
   shapeBaseHeight,
   { bounds: WORLD_SHAPER_OPTIONS.bounds, heightRange: WORLD_SHAPER_OPTIONS.heightRange },

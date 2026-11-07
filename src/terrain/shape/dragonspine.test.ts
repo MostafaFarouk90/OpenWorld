@@ -1,6 +1,7 @@
 // Act 3 thread K1: the Dragonspine fitted on the real ground (plans/act3-K1.md section 2 and 3). The grades are true by
 // construction (core's shaper); what can fail is the fit: pad heights, the summit, the height range, road lengths and
 // banks, the chasm, the cliffs, and shipped ground that must not move.
+import { CALDERA_ROADS } from './caldera';
 import { describe, expect, it } from 'vitest';
 import { heightAt, shapeBaseHeight, WORLD_SHAPER_OPTIONS, worldRoads } from '../heightfield';
 import { buildShaper, type RoadDef, type ShapeBox } from '../shaping';
@@ -68,7 +69,9 @@ describe('the Dragonspine shape is registered in the world shape', () => {
     expect(DRAGONSPINE_ROADS.map((r) => r.id)).toEqual(order);
     // Act 4 (L1): the Waste's roads come after every shipped road.
     const ids = WORLD_SHAPE.roads.map((r) => r.id);
-    expect(ids.slice(-order.length - WASTE_ROADS.length, -WASTE_ROADS.length)).toEqual(order);
+    // Act 5 (N1): the Caldera's roads after the Waste's.
+    const after = WASTE_ROADS.length + CALDERA_ROADS.length;
+    expect(ids.slice(-order.length - after, -after)).toEqual(order);
   });
 
   it('keeps the uplifts few (they run for every terrain vertex) and the spines short', () => {
