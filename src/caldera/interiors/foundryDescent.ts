@@ -10,6 +10,9 @@ const P = `${INT_ANCHOR}.foundry`;
 const T = `${INT_TRIGGER}.foundry`;
 export const FOUNDRY_LINK_ANCHOR = `${P}.link.hammer`;
 export const FOUNDRY_CHEST_ANCHOR = `${P}.chest`;
+/** Local z of the entry anchor, and of the exit gate across the passage (the plugin's foot check). */
+export const FOUNDRY_ENTRY_Z = 2;
+export const FOUNDRY_EXIT_GATE_Z = 166;
 export const FOUNDRY_CHEST_ID = 'chest:foundry-cache';
 const STEP = 0.3;
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -116,7 +119,7 @@ export const FOUNDRY_DESCENT_DEF: InteriorDef = {
     { x: 5.9, y: -8, z: 172 },
   ],
   anchors: [
-    { id: `${P}.entry`, x: 0, z: 2, yaw: 180 },
+    { id: `${P}.entry`, x: 0, z: FOUNDRY_ENTRY_Z, yaw: 180 },
     { id: `${P}.exit`, x: 0, z: -0.8, yaw: 0 },
     { id: `${P}.alric`, x: 3, z: 3.5, facing: { x: 0, z: 2 } },
     // Floor 1: patrol loop, the slag puzzle (three sluices, the cooling basin at the lift head), checkpoint.

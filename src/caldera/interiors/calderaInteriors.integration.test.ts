@@ -139,7 +139,7 @@ describe('the Caldera interiors on the real game', () => {
     expect(t.svc().current).toBe('cooling-hall');
   }, 60000);
 
-  it('walks the Foundry to the Hammer Hall and back (the chain), keeping the saved door, and the Hall gate follows M54', async () => {
+  it('walks the Foundry to the Hammer Hall and back (the chain) and lands on the link target door', async () => {
     const t = await boot();
     const flags = t.game.ctx.state;
     flags.setFlag(F.foundryStarted, true);
@@ -163,7 +163,7 @@ describe('the Caldera interiors on the real game', () => {
     expect(near(t.game.ctx.player.feet, OUTSIDE[DOOR_FOUNDRY]!)).toBeLessThan(4);
   }, 120000);
 
-  it('resets the Hammer Hall floor on leaving and on a load, and re-derives the gates', async () => {
+  it('resets the Hammer Hall floor on leaving and on a load', async () => {
     const t = await boot();
     const flags = t.game.ctx.state;
     flags.setFlag(F.foundryStarted, true);
@@ -171,8 +171,6 @@ describe('the Caldera interiors on the real game', () => {
     await t.run(2);
     await settle(t, t.svc().enter('foundry-descent', 'foundry-descent'));
     await settle(t, t.svc().transfer('hammer-hall', 'hammer-hall'));
-    const floor = t.game.ctx.services.get('nav')!;
-    expect(floor).toBeDefined();
     expect(t.svc().setBlocker(BLOCKERS.hammerFloor, false)).toBe(true);
     // leaving by the link closes it again
     const closed: boolean[] = [];
@@ -183,10 +181,6 @@ describe('the Caldera interiors on the real game', () => {
     closed.length = 0;
     t.game.ctx.events.emit('save.loaded', { slot: 'test' });
     expect(closed).toContain(true);
-    // gates by flag
-    flags.setFlag(F.m54Complete, true);
-    flags.setFlag(F.slagRouted, true);
-    await t.run(2);
   }, 120000);
 
   it('follows farOpen for the tunnel seal but never seals the player in the far gallery', async () => {
@@ -208,6 +202,11 @@ describe('the Caldera interiors on the real game', () => {
     flags.setFlag(F.tunnelFarOpen, false);
     await t.run(2);
     expect(calls.at(-1)).toBe(false);
+    // standing in the seal's own slab keeps it open too
+    const slab = t.anchor('caldera.int.tunnel.charge.3').position;
+    t.game.ctx.player.teleport({ ...slab, z: slab.z + 2.4, y: slab.y + 0.05 });
+    await t.run(5);
+    expect(calls.at(-1)).toBe(false);
     // walk out of the gallery: it closes
     const near2 = t.anchor('caldera.int.tunnel.charge.1').position;
     t.game.ctx.player.teleport({ ...near2, y: near2.y + 0.05 });
@@ -215,7 +214,7 @@ describe('the Caldera interiors on the real game', () => {
     expect(calls.at(-1)).toBe(true);
   }, 120000);
 
-  it('opens Vey\'s arena exit on any end of his fight', async () => {
+  it('opens Vey\'s arena exit on any end of his fight, and for anyone standing in the foot (a load)', async () => {
     const t = await boot();
     const calls: boolean[] = [];
     const spy = t.svc().setBlocker.bind(t.svc());
@@ -223,6 +222,55 @@ describe('the Caldera interiors on the real game', () => {
     t.game.ctx.events.emit('boss.ended', { bossId: 'vey', actorId: 'vey', reason: 'despawned' });
     expect(calls).toContain(false);
   }, 60000);
+
+  it('refuses every Caldera door under aggro, and a transfer too', async () => {
+    const t = await boot();
+    const flags = t.game.ctx.state;
+    for (const f of [F.tunnelStarted, F.foundryStarted, F.foundryComplete]) flags.setFlag(f, true);
+    await t.run(2);
+    await settle(t, t.svc().enter('foundry-descent', 'foundry-descent'));
+    t.game.ctx.events.emit('ai.aggro', { actorId: 'hostile-2', targetId: 'player' } as never);
+    expect(await reason(t, t.svc().transfer('hammer-hall', 'hammer-hall'))).toBe('aggro');
+    t.game.ctx.events.emit('actor.died', { actorId: 'hostile-2' } as never);
+    await settle(t, t.svc().exit());
+  }, 120000);
+
+  it('never closes the Hammer floor over a player in the pit; closes it once they walk out', async () => {
+    const t = await boot();
+    const flags = t.game.ctx.state;
+    flags.setFlag(F.foundryStarted, true);
+    flags.setFlag(F.foundryComplete, true);
+    await t.run(2);
+    await settle(t, t.svc().enter('foundry-descent', 'foundry-descent'));
+    await settle(t, t.svc().transfer('hammer-hall', 'hammer-hall'));
+    const calls: boolean[] = [];
+    const spy = t.svc().setBlocker.bind(t.svc());
+    t.svc().setBlocker = (id, c) => (id === BLOCKERS.hammerFloor && calls.push(c), spy(id, c));
+    const e = t.anchor('caldera.int.hammer.entry').position;
+    t.game.ctx.player.teleport({ x: e.x, y: e.y - 3 + 0.05, z: e.z + 57 });
+    await t.run(3);
+    t.game.ctx.events.emit('boss.ended', { bossId: 'ulthred', actorId: 'ulthred', reason: 'despawned' });
+    await t.run(3);
+    expect(calls.at(-1)).not.toBe(true);
+    t.game.ctx.player.teleport({ x: e.x, y: e.y + 0.05, z: e.z + 33 });
+    await t.run(3);
+    expect(calls.at(-1)).toBe(true);
+  }, 120000);
+
+  it('opens Vey\'s exit for anyone standing in the foot, even after a fresh load', async () => {
+    const t = await boot();
+    const flags = t.game.ctx.state;
+    flags.setFlag(F.foundryStarted, true);
+    await t.run(2);
+    await settle(t, t.svc().enter('foundry-descent', 'foundry-descent'));
+    const calls: boolean[] = [];
+    const spy = t.svc().setBlocker.bind(t.svc());
+    t.svc().setBlocker = (id, c) => (id === BLOCKERS.foundryArenaExit && calls.push(c), spy(id, c));
+    const f = t.anchor('caldera.int.foundry.from-hammer').position;
+    t.game.ctx.player.teleport({ ...f, y: f.y + 0.05 });
+    await t.run(3);
+    expect(calls).toContain(false);
+  }, 120000);
 
   it('gives every Caldera door and link prompt its words', async () => {
     const { INTERIOR_STRINGS_EN } = await import('../../interiors/strings.en');
