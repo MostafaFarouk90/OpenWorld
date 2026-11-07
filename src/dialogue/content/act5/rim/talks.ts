@@ -7,6 +7,7 @@ import { R26_GUARD, R26_MASTER } from '../../../../quests/content/act5/rim/r26.q
 import { R29_GHOST, R29_POSTS } from '../../../../quests/content/act5/rim/r29.quest';
 import { M50_KEEPER } from '../../../../quests/content/act5/rim/m50.quest';
 import { M51_CALL_DIALOGUE, M51_CALL_NPC, M51_CAPTAIN } from '../../../../quests/content/act5/rim/m51.quest';
+import { M52_COMPANIONS } from '../../../../quests/content/act5/rim/m52.quest';
 
 export interface TalkRow { quest: string; objective: string; tree: string; npc: string; seg: string }
 const t = (quest: string, objective: string, npc: string, seg: string, tree = `npc-${npc}`): TalkRow => ({ quest, objective, tree, npc, seg });
@@ -43,4 +44,8 @@ export const RIM_A5_TALKS: readonly TalkRow[] = [
   t('m51', 'hathren', 'hathren', 'm51-hathren'),
   t('m51', 'captain', M51_CAPTAIN, 'm51-captain'),
   t('m51', 'report', 'ysmeryth', 'a5r-m51-report'),
+  t('m52', 'brief', 'wystan', 'a5r-m52-brief'),
+  t('m52', 'gate', 'wystan', 'a5r-m52-gate'),
+  ...M52_COMPANIONS.map((c) => t('m52', 'wounded', c, 'a5r-m52-wounded')),
+  t('m52', 'report', 'wystan', 'a5r-m52-report'),
 ];

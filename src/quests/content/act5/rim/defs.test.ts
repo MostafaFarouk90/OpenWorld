@@ -26,7 +26,8 @@ describe('the Rim unlock graph', () => {
   });
 
   it('each quest is refused until its prerequisites are done, then starts', () => {
-    for (const q of RIM_A5_QUEST_DEFS.slice(1)) {
+    // M52's six prerequisites are pinned one by one in siegeQuest.test.ts
+    for (const q of RIM_A5_QUEST_DEFS.slice(1).filter((x) => x.id !== 'm52')) {
       r = makeRig({ flags: { 'story.gate.a5': true } });
       const chain = ['m47', 'm48', 'm49'].filter((id) => id !== q.id && (q.id !== 'm48' || id === 'm47') && (q.id !== 'm49' || id !== 'm49'));
       const need = ACT5_DIRECT[q.id]![0]!;

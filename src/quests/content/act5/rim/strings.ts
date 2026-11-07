@@ -88,6 +88,16 @@ const QUEST_TEXT: Record<string, QuestText> = {
       orders: 'Read the scouts\' orders', bones: 'Look at the old bones on the ledge', report: 'Speak to Ysmeryth',
     },
   },
+  m52: {
+    title: 'The Siege of the Rim',
+    summary: 'Vey\'s warhost is on the stairs. Everyone who came up the mountain stands at the Rim Gate now, and the gate has to hold.',
+    o: {
+      brief: 'Speak to Wystan', gate: 'Speak to Wystan at the war post', stairs: 'Look down the stairs', start: 'Take your place behind the Rim Gate',
+      wave1: 'Hold the gate: the first wave', wave2: 'Hold the gate: the second wave', wave3: 'Hold the gate: the third wave',
+      guard: 'Bring down Vey\'s household guard', wave4: 'Hold the gate: the last wave', holds: 'Watch the gate hold',
+      wounded: 'See to your wounded companion at the aid tent', report: 'Speak to Wystan',
+    },
+  },
 };
 
 /** The director's toasts and the escort's name. */
@@ -113,6 +123,8 @@ export const RIM_A5_DIRECTOR_TEXT: Record<string, string> = {
   'rim.q.m50.gauge': 'Heat: {seconds} s before the steam',
   'rim.q.m50.routed': 'The channel runs clear. The gate ahead lifts.',
   'rim.q.m51.scouts': 'Warhost scouts on the east terraces, in a shield line.',
+  'rim.q.m52.orders': 'The wave is broken. Wystan waits at the war post for your order.',
+  'rim.q.m52.guard': 'Black plumes on the stairs. Vey\'s household guard.',
   'escort.a5.r26': 'Oswin\'s convoy',
   ...beatStrings('rim.q.r29.beat', {
     start: 'Ansgar raises his hand. Strike when he counts, one stroke a beat.', lesson: 'Strike on the gold cells.', real: 'Strike the gong: the gold cells.',

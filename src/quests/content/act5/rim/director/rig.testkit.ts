@@ -27,6 +27,7 @@ import { installComplete, installDoneWhenRecheck } from './generic';
 import { RIM_A5_ARMS, RIM_A5_GROUPS } from './tables';
 import { installM47, installM48 } from './gate';
 import { installM49, installM51, installR29 } from './camp';
+import { installM52 } from './siege';
 import { installR26 } from './convoy';
 import { installM50 } from './hall';
 
@@ -151,6 +152,16 @@ export function makeRig(opts: { flags?: Record<string, boolean | number | string
   const lavaWheels: string[] = [];
   const lava = { vents: () => [] as { id: string }[], turnWheel: (id: string) => { lavaWheels.push(id); return 'opened'; } };
   services.provide('lava' as never, lava as never);
+  // N4's siege service, as M52 sees it: start, the current run, completed
+  const siege = {
+    starts: [] as string[], running: false, done: false, refuse: false,
+    start(id: string) { if (this.refuse || this.running || this.done) return false; this.starts.push(id); this.running = true; return true; },
+    get current() { return this.running ? { siegeId: 'm52', wave: 1, waves: 4, phase: 'running', gatePct: 100, breached: false, storm: false } : null; },
+    completed() { return this.done; },
+    finish() { this.running = false; this.done = true; },
+  };
+  services.provide('siege' as never, siege as never);
+  const actorTag = new Map<string, string>();
   const dialogueStarts: Array<[string, string]> = [];
   (dialogue as unknown as { start(d: string, n: string): boolean }).start = (d: string, n: string) => { dialogueStarts.push([d, n]); return true; };
   const interactables = new Map<string, { enabled(): boolean; onInteract(): void }>();
@@ -162,7 +173,7 @@ export function makeRig(opts: { flags?: Record<string, boolean | number | string
     strings: { t: (k: string) => k, register: () => () => {} },
     player, damage, interaction,
     actors: {
-      get: (id: string) => (actorAt.has(id) ? { id, worldPosition: (o: { x: number; y: number; z: number }) => Object.assign(o, { x: actorAt.get(id)!.x, y: 0, z: actorAt.get(id)!.z }) } : undefined),
+      get: (id: string) => (actorTag.has(id) ? { id, spawnTag: actorTag.get(id) } : actorAt.has(id) ? { id, worldPosition: (o: { x: number; y: number; z: number }) => Object.assign(o, { x: actorAt.get(id)!.x, y: 0, z: actorAt.get(id)!.z }) } : undefined),
       all: () => [],
     },
   } as unknown as GameContext;
@@ -176,12 +187,13 @@ export function makeRig(opts: { flags?: Record<string, boolean | number | string
   installGroupObjectives(kit, RIM_A5_GROUPS);
   installDoneWhenRecheck(kit);
   installM47(kit);
-  installM48(kit);
+  offs.push(installM48(kit));
   installM49(kit);
   offs.push(installR26(kit));
   offs.push(installR29(kit, () => clock));
   offs.push(installM50(kit));
   offs.push(installM51(kit));
+  offs.push(installM52(kit));
 
   const emit = (type: string, payload: unknown = {}): void => void events.emit(type as never, payload as never);
   const propById = new Map(RIM_A5_PROPS.map((p) => [p.interactableId, p]));
@@ -189,7 +201,7 @@ export function makeRig(opts: { flags?: Record<string, boolean | number | string
 
   const r = {
     events, state, manager, kit, tick, emit, dialogue, standing, enemyCalls, player, warn, toasts, trials, escorts, ctx, scenes, waves,
-    weather, bag, sounds, teleports, npcPos, actorAt, hits, lava, lavaWheels, dialogueStarts, interactables,
+    weather, bag, sounds, teleports, npcPos, actorAt, hits, lava, lavaWheels, dialogueStarts, interactables, siege, actorTag,
     step: (n = 1): void => { for (let i = 0; i < n; i++) tick(); },
     /** `s` seconds of fixed ticks. */
     secs: (s: number): void => r.step(Math.round(s * 60)),
