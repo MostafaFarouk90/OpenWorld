@@ -89,6 +89,13 @@ describe('PR 2 start rules (review: a talk cut short replays; nothing is offered
     expect(opens('npc-ansgar', { m49: 'completed' }, [])).toBe('a5r-r29-brief');
     expect(opens('npc-ansgar', { m49: 'completed', m54: 'active' }, [], { 'story.m54.started': true })).not.toBe('a5r-r29-brief');
   });
+  it('after M54 starts, Wulfhild and Tobb no longer pitch R28 or R30 (N12/N13: their older rows come back)', () => {
+    const st = { ...PHASE_J, m54: 'active', d09: 'completed', r27: 'completed' };
+    const down = { ...HOLDS, 'story.m54.started': true };
+    expect(opens('npc-tobb', PHASE_J, [], HOLDS)).toBe('a5f-r30-brief');
+    expect(opens('npc-tobb', st, [], down)).not.toMatch(/^a5f-r30-/);
+    expect(opens('npc-wulfhild', st, [], down)).not.toMatch(/^a5f-r28-/);
+  });
   it('Ulthred replays the parley when it was cut before its end', () => {
     expect(opens('npc-ulthred-spirit', { m55: 'active' }, [])).toBe('parley');
   });
