@@ -1,7 +1,7 @@
 import type { Condition, QuestDef } from '../../../types';
 import { reads, story } from '../../act2/helpers';
 import { R30_LINE, R30_TUNE, R30_VERSE, R30_VERSES } from './flags';
-import { phaseJOpen } from './phase';
+import { NOT_DESCENDED, phaseJOpen } from './phase';
 import { rewardOf } from './rewards';
 
 /** The ten allies who give Tobb a line (plan 2.2): nine at the Rim Camp, Ysmeryth on the terraces. */
@@ -29,7 +29,7 @@ export const r30: QuestDef = {
   titleKey: 'quest.r30.title',
   summaryKey: 'quest.r30.summary',
   sequential: false,
-  startWhen: phaseJOpen(),
+  startWhen: { all: [phaseJOpen(), NOT_DESCENDED] },
   objectives: [
     { id: 'brief', type: 'talk', target: 'tobb', textKey: 'quest.r30.brief' },
     story('lines', 'quest.r30.lines', R30_LINE_EVENT, {

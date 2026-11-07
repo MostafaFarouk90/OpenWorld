@@ -84,6 +84,23 @@ describe('Foundry Act 5 start rules (review: no optional offer may hide a needed
   });
 });
 
+describe('PR 2 start rules (review: a talk cut short replays; nothing is offered after the descent)', () => {
+  it('Ansgar stops offering R29 once M54 has started', () => {
+    expect(opens('npc-ansgar', { m49: 'completed' }, [])).toBe('a5r-r29-brief');
+    expect(opens('npc-ansgar', { m49: 'completed', m54: 'active' }, [], { 'story.m54.started': true })).not.toBe('a5r-r29-brief');
+  });
+  it('Ulthred replays the parley when it was cut before its end', () => {
+    expect(opens('npc-ulthred-spirit', { m55: 'active' }, [])).toBe('parley');
+  });
+  it('Alric replays the telling, and the aftermath of the branch written', () => {
+    const told = { m56: 'active', d10: 'completed' };
+    expect(opens('npc-alric', told, [])).toBe('a5f-m56-told');
+    const pre = ['told', 'ysmeryth', 'company', 'choice'].map((o) => `m56.${o}`);
+    expect(opens('npc-alric', told, pre, { 'story.m56.choice': 'rekindle' })).toBe('a5f-m56-after-rekindle');
+    expect(opens('npc-alric', told, pre, { 'story.m56.choice': 'let-it-die' })).toBe('a5f-m56-after-let-it-die');
+  });
+});
+
 describe('Foundry Act 5 dialogue', () => {
   it('every talk row resolves on a real tree', () => {
     for (const r of FOUNDRY_A5_TALKS) expect(() => rowNodes(r), `${r.tree} ${r.seg}`).not.toThrow();

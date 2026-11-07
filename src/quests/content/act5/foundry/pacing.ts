@@ -21,6 +21,7 @@ const foot = leg('foot');
 const door = leg('door');
 const T = (s: string): string => `caldera.int.tunnel.${s}`;
 const FD = (s: string): string => `caldera.int.foundry.${s}`;
+const H = (s: string): string => `caldera.int.hammer.${s}`;
 
 /** Where the Rim allies stand for Tobb's lines (N1's camp posts; Ysmeryth on the terraces). */
 const ALLY_POST: Record<(typeof R30_ALLIES)[number], string> = {
@@ -67,6 +68,31 @@ export const FOUNDRY_A5_PACE: readonly Act4PaceRow[] = [
       FD('map'), FD('wenna'), FD('guard.3'), FD('vat.patrol.1'), FD('ledger.1'), FD('ledger.2'), FD('ledger.3'), FD('checkpoint.3'), FA.d09Letters, FD('arena.entry'),
       FD('arena.vey'), FD('link.hammer'), FA.d09AlricFoot),
   ], N.d09, { killUnit: 14, interact: 3, search: 7, puzzle: 1, boss: 1, set: 1 }),
+  // M54: Alric at the camp, down through the Foundry's three floors to the link, the Hammer Hall's approach: the voice, the
+  // four murals, six thralls, Alric; sets: the voice, the murals light, the hall gate opens
+  build('m54', 45, 'npc-post.alric.rim', [
+    ...foot('caldera.door.foundry'),
+    ...door(FD('checkpoint.1')),
+    ...foot(FD('basin'), FD('checkpoint.2'), FD('checkpoint.3'), FD('link.hammer')),
+    ...door(H('entry')),
+    ...foot(H('checkpoint.1'), H('mural.1'), H('mural.2'), H('thrall.1'), H('thrall.2'), H('mural.3'), H('mural.4'), H('thrall.3'), H('thrall.4'), H('alric')),
+  ], N.m54, { killUnit: 6, search: 4, set: 3 }),
+  // M55: the hall: Ulthred's parley, the trial stone and its three rounds (one boss-length set piece), the verdict, Alric;
+  // sets: the trial's start and its end
+  build('m55', 40, H('alric'), [
+    ...foot(H('mouth'), H('ulthred'), FA.m55Trial, H('slam.1'), H('slam.4'), H('slam.8'), FA.m55Trial, H('ulthred'), H('mouth'), H('alric')),
+  ], N.m55, { boss: 1, interact: 1, set: 2 }),
+  // D10: Alric, the approach's adds, the four vents and the four marks, the hall and Ulthred's three phases (the floor drops
+  // onto the Anvil), Alric on the Anvil; sets: the door, the floor falls, the Heartshard blow
+  build('d10', 80, H('alric'), [
+    ...foot(FA.d10Add(1), FA.d10Add(2), FA.d10Vent(1), FA.d10Vent(2), FA.d10Add(3), FA.d10Add(4), FA.d10Vent(3), FA.d10Vent(4),
+      FA.d10Mark(1), FA.d10Mark(2), FA.d10Mark(3), FA.d10Mark(4), H('mouth'), H('ulthred'), H('slam.2'), H('slam.6')),
+    ...door(FA.m56Alric),
+  ], N.d10, { killUnit: 14, interact: 4, search: 4, boss: 3, set: 3 }),
+  // M56: on the Anvil: Alric, Ysmeryth at the lip, the company by the causeway, Alric for the choice
+  build('m56', 45, FA.m56Alric, [
+    ...foot(FA.m56Ysmeryth, FA.m56Company, FA.m56Alric),
+  ], N.m56, { interact: 2, set: 3 }),
 ];
 
 let byId: Map<string, { x: number; z: number }> | undefined;
