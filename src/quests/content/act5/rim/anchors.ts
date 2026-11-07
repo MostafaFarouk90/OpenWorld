@@ -113,6 +113,8 @@ export const QUEST_WORLD_ANCHORS: readonly WorldAnchor[] = [
   ...M48_CHANNELS.flatMap((n) => [
     at(`${STAIR}.chan.${n}`, stairPoint(M48_CHANNEL_S[n - 1]!, M48_LIP_M)),
     at(`${STAIR}.chan.${n}.near`, stairPoint(M48_CHANNEL_S[n - 1]!, -M48_LIP_M)),
+    // the crossing trigger's centre: 2 m past the far lip, so its 1.8 m sphere stays off the lava
+    at(`${STAIR}.chan.${n}.landed`, stairPoint(M48_CHANNEL_S[n - 1]!, M48_LIP_M + 2)),
   ]),
   ...M48_VENT_CHANNELS.map((n, i) => at(`${STAIR}.vent.${i + 1}`, stairPoint(M48_CHANNEL_S[n - 1]!, -M48_LIP_M - 1, OFF_EDGE))),
   ...M48_LEVER_CHANNELS.map((n, i) => at(`${STAIR}.lever.${i + 1}`, stairPoint(M48_CHANNEL_S[n - 1]!, -M48_LIP_M - 1, -OFF_EDGE))),

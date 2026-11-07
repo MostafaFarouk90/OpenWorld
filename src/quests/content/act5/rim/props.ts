@@ -24,7 +24,7 @@ export const RIM_A5_PROPS: QuestPropSpec[] = [
   p('winch', M47_WINCH, M47_WINCH_ANCHOR, ['m47', 'winch'], M47_RIM_GATE_OPEN),
   p('brazier', M47_BRAZIER, `${Q}.m47.brazier`, ['m47', 'brazier'], M47_BRAZIER_LIT, { look: 'brazier' }),
   p('lamp', M47_LAMP, `${Q}.m47.lamp`, ['m47', 'lamp'], M47_LAMP_LIT, { look: 'brazier', lookOnlyUsed: true }),
-  // M48: the four vent wheels (re-turnable: the vent recharges) and the two gantry levers
+  // M48: the four vent wheels (live on their step; the director offers a real vent's wheel again until its channel is crossed) and the two gantry levers
   ...[1, 2, 3, 4].map((v) => p('wheel', M48_WHEEL(v), M48_WHEEL_ANCHOR(v), ['m48', `vent${v}`], undefined, { look: 'stake' })),
   ...[1, 2].map((l) => p('lever', M48_LEVER(l), `${STAIR}.lever.${l}`, ['m48', `lever${l}`], M48_LEVER_PULLED(l), { look: 'stake' })),
   // M49: the signal fire, the banners (a won House each, the camp's own when none was won), the war table, the three posts

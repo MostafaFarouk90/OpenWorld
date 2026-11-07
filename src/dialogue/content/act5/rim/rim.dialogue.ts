@@ -117,7 +117,7 @@ const OR = voice('orsk');
 const HA = voice('hathren');
 const CA = voice(M51_CAPTAIN);
 
-export const M51_CALL_TREE = tree(M51_CALL_DIALOGUE, [{ when: offer('m51'), seg: 'm51-call' }], {
+export const M51_CALL_TREE = tree(M51_CALL_DIALOGUE, [{ when: offer('m51'), seg: 'm51-call' }, { when: at('m51', 'call'), seg: 'm51-call' }], {
   'm51-call': {
     lines: [
       C('The horn-stone is humming. A low note, under the noise of the camp.'),

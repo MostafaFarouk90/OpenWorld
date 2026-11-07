@@ -8,6 +8,6 @@ import { Q } from './ids';
  * own triggers are read, never added here. A channel's far lip is a small sphere (a crust walk or a Leap both land in it). */
 export const RIM_A5_TRIGGERS: Q13Trigger[] = [
   { id: M47_HAIRPIN_TRIGGER, anchorId: `${Q}.m47.hairpin`, radius: 14 },
-  ...M48_CHANNELS.map((n) => ({ id: M48_CHAN_TRIGGER(n), anchorId: M48_CHAN_ANCHOR(n), radius: 3.2 })),
+  ...M48_CHANNELS.map((n) => ({ id: M48_CHAN_TRIGGER(n), anchorId: `${M48_CHAN_ANCHOR(n)}.landed`, radius: 1.8 })),
   { id: R29_GONG_TRIGGER, anchorId: 'caldera.stokers.gong', radius: 5 },
 ];

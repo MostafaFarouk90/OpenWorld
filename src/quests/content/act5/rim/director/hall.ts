@@ -53,6 +53,8 @@ export class CoolingChannel {
   }
 }
 
+/** The gauge's HUD widget id (not PressureBar's own, which the Bellows bar holds). */
+export const M50_GAUGE_WIDGET = 'rim.m50.gauge';
 export const M50_FAILS = (c: M50Channel): string => `story.m50.fails.${c}`;
 const DT = 0.1;
 
@@ -105,7 +107,7 @@ export function installM50(k: Kit): Off {
   playWhenCurrent(k, { quest: 'm50', objective: 'cool', scene: M50_COOL_SCENE });
 
   // the gauge on the shipped PressureBar (its own instance, watching only the three channel ids)
-  const hud = (k.ctx as unknown as { hud?: { mount(slot: string, w: unknown, order?: number): () => void } }).hud;
+  const hud = (k.ctx as unknown as { hud?: { mount(slot: string, w: unknown): () => void } }).hud;
   if (!hud || typeof document === 'undefined') return () => {};
   try {
     const bar = new PressureBar(document as unknown as DocumentLike, {
@@ -116,7 +118,8 @@ export function installM50(k: Kit): Off {
       },
       t: (key, p) => k.ctx.strings.t(key === 'hud.pressure.label' ? 'rim.q.m50.gauge' : key, p),
     });
-    return hud.mount('top-center', bar, 3);
+    // PressureBar's id is fixed ('pressure-bar', the Bellows' own, always mounted), so the gauge goes up under its own id
+    return hud.mount('top-center', { id: M50_GAUGE_WIDGET, element: bar.element, order: 3, update: () => bar.update(), dispose: () => bar.dispose() });
   } catch (err) {
     k.warn(`${LOG} M50: the heat gauge did not mount: ${String(err)}`);
     return () => {};

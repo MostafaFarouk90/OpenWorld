@@ -15,7 +15,7 @@ export const R26_UNLOAD = 'use:r26-unload';
 export const R26_UNLOADED = 'story.r26.unloaded';
 /** The cart is out (Brand's R24 pattern): the master walks with it, his Rimfoot post is empty. */
 export const R26_CART_OUT = 'story.r26.cartOut';
-/** A guard walks with the cart (his post is empty); cleared when he is carried off wounded or the convoy is in. */
+/** A guard is away with the convoy (his post is empty; he is not an escort member); cleared when he is carried off wounded or the convoy is in. */
 export const R26_GUARD_OUT = (n: 1 | 2): string => `story.r26.guard${n}Out`;
 export const R26_ARRIVED = 'story.r26.arrived';
 /** Fast road: two ambushes, each followed by a guard carried off wounded (seen recovering at the camp's aid tent). */
