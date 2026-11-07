@@ -187,7 +187,7 @@ export const RIM_CAMP_PLATEAU = plateau('caldera-rim-camp', 10870, 11130, 6680, 
 export const STOKERS_PLATEAU = plateau('caldera-stokers', 11195, 11265, 6725, 6775, 305, 70);
 export const TUNNEL_APRON = plateau('caldera-tunnel-apron', 10530, 10570, 6940, 6970, 238, 90);
 export const INNER_GATE_HEAD = plateau('caldera-inner-gate-head', 10960, 11060, 7400, 7445, INNER_GATE_HEAD_HEIGHT, 40);
-export const COOLING_APRON = plateau('caldera-cooling-apron', 11125, 11175, 7390, 7418, 226, 40);
+export const COOLING_APRON = plateau('caldera-cooling-apron', 11125, 11175, 7390, 7430, 226, 40);
 export const WARHOST_PLATEAU = plateau('caldera-warhost', 11450, 11750, 5700, 5900, 72, 80);
 
 /** Inside the Caldera box. */
