@@ -28,6 +28,14 @@ declare module '../core/Services' {
       setBoss(on: boolean, bossId?: string): void;
       duck(reason: string, on: boolean): void;
       setRegionTrack(trackId: string): void;
+      /**
+       * Act 5 (N8): plays a cue track (an ending theme, the credits) in place of the region's, optionally under the boss-mix
+       * key `mixId` of that track, until `setCue(null)`. The mix starts once the handover has committed (a boss mix on the
+       * old track would block it). A load clears the cue. Optional so older fakes of the service stay valid.
+       */
+      setCue?(trackId: string | null, mixId?: string): void;
+      /** Steps the running cue to another of its track's mix keys (a no-op with no cue). */
+      setCueMix?(mixId: string): void;
       /** contracts/music-states.md section 6. Null while audio is locked or no track plays. */
       beat(): BeatInfo | null;
       onBeat(cb: (b: BeatInfo) => void): () => void;
@@ -122,6 +130,9 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   const failedUntil = new Map<string, number>(); // a track whose load failed is retried after a backoff or a region.entered
   let discoverAfterSwap = false;
 
+  // Act 5 cue (see `setCue` above): the wanted track and mix, and the mix the director is running for it.
+  let cue: { track: string; mix: string | null; running: string | null } | null = null;
+
   const director = new MusicDirector({
     track,
     driver: {
@@ -145,6 +156,26 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     toAudioTime: (ms) => performanceToAudioTime(audio.context, ms, performance.now(), musicConfig.beatInputOffsetSeconds),
     duck: (reason, on) => director.duck(reason, on),
     setRegionTrack: (trackId) => requestTrack(trackId),
+    setCue: (trackId, mixId) => {
+      if (trackId === null) {
+        endCue();
+        pollRegion();
+        return;
+      }
+      if (!TRACKS_BY_ID[trackId]) {
+        console.warn(`Music: unknown cue track "${trackId}"`);
+        return;
+      }
+      if (cue && cue.track !== trackId) endCue();
+      cue = cue ?? { track: trackId, mix: null, running: null };
+      cue.mix = mixId ?? null;
+      pollRegion();
+    },
+    setCueMix: (mixId) => {
+      if (!cue) return;
+      cue.mix = mixId;
+      applyCue();
+    },
   });
 
   // --- SFX ----------------------------------------------------------------------------------
@@ -203,6 +234,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   ev.on('cutscene.started', (e) => director.duck(`cutscene:${e.cutsceneId}`, true));
   ev.on('cutscene.ended', (e) => director.duck(`cutscene:${e.cutsceneId}`, false));
   ev.on('save.loaded', () => {
+    cue = null; // the director forgets its bosses below; a cue is never saved
     director.reset(gameTime);
     rederiveBosses();
     rederiveSneakAndChase();
@@ -478,7 +510,24 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   function pollRegion(): void {
     const info = regionAtPlayer();
     bed?.setRegion(info?.id ?? null);
-    if (info && TRACKS_BY_ID[info.track]) requestTrack(info.track);
+    const wanted = cue ? cue.track : info?.track;
+    if (wanted && TRACKS_BY_ID[wanted]) requestTrack(wanted);
+    applyCue();
+  }
+
+  /** Starts (or steps) the cue's mix once its track is the one playing; the old mix ends after the new one starts. */
+  function applyCue(): void {
+    if (!cue || committed || track.id !== cue.track || cue.mix === cue.running) return;
+    const previous = cue.running;
+    if (cue.mix) director.bossStarted(cue.mix, 1, gameTime);
+    if (previous) director.bossEnded(previous, gameTime);
+    cue.running = cue.mix;
+  }
+
+  /** Ends the cue: its mix goes quietly (no ending sting) and the region's track is wanted again. */
+  function endCue(): void {
+    if (cue?.running) director.bossEnded(cue.running, gameTime);
+    cue = null;
   }
 
   /** Preloads the neighbouring region's track when the player is within 400 m of its border. */

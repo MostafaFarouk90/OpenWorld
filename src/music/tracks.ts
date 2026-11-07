@@ -1,8 +1,9 @@
 import { ASH_ON_THE_PASTURE, HAMMERS_BELOW } from './act2Tracks';
 import { PEAT_AND_PITCH, WING_OVER_RIME } from './act3Tracks';
 import { DUST_CHANT, SEVEN_GATES_ASH } from './act4Tracks';
+import { CREDITS, ENDING_LET_IT_DIE, ENDING_REKINDLE, HEART_OF_THE_ANVIL } from './act5Tracks';
 
-export { ASH_ON_THE_PASTURE, DUST_CHANT, HAMMERS_BELOW, PEAT_AND_PITCH, SEVEN_GATES_ASH, WING_OVER_RIME };
+export { ASH_ON_THE_PASTURE, CREDITS, DUST_CHANT, ENDING_LET_IT_DIE, ENDING_REKINDLE, HAMMERS_BELOW, HEART_OF_THE_ANVIL, PEAT_AND_PITCH, SEVEN_GATES_ASH, WING_OVER_RIME };
 
 export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk' | 'stealth' | 'chase';
 
@@ -59,18 +60,27 @@ export interface TrackSynth {
    */
   trimDb?: number;
   voices: {
-    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim' | 'plip' | 'room-clap' | 'dry-slap';
-    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang' | 'bog-chant' | 'falsetto-choir' | 'throat-kh';
-    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl' | 'reed-whistle' | 'soar-whistle' | 'overtone-whistle';
-    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang' | 'gurgle-chant' | 'harsh-chant' | 'walker-chant' | 'engine-hammer';
+    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim' | 'plip' | 'room-clap' | 'dry-slap' | 'stomp-clap';
+    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang' | 'bog-chant' | 'falsetto-choir' | 'throat-kh' | 'crew-chant' | 'crew-hoh' | 'ballad-voice';
+    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl' | 'reed-whistle' | 'soar-whistle' | 'overtone-whistle' | 'rising-choir';
+    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang' | 'gurgle-chant' | 'harsh-chant' | 'walker-chant' | 'engine-hammer' | 'bitter-lead';
     /** Optional per-stem voices (Acts 2 to 4); absent means the Act 1 voice. */
-    kick?: 'boxy' | 'wet' | 'airy' | 'muffled';
-    hat?: 'steam' | 'bubble' | 'tick' | 'sand-hiss';
-    bass?: 'dum' | 'peat-hum' | 'chest-bass' | 'drone-bass';
+    kick?: 'boxy' | 'wet' | 'airy' | 'muffled' | 'anvil-kick' | 'anvil-strike';
+    hat?: 'steam' | 'bubble' | 'tick' | 'sand-hiss' | 'steam-hiss';
+    bass?: 'dum' | 'peat-hum' | 'chest-bass' | 'drone-bass' | 'anvil-bass';
     /** A stem with no Act 1 voice at all (Wing over Rime's trial chant). */
     chant?: 'cathedral-chant';
     /** Dust Chant's eighth stem, Eormen's hollow gong (Act 4). */
     toll?: 'hollow-gong';
+    /** Act 5 extra stems (N8): Ulthred's medley and heartbeat, and the credits ballad's accompaniment, refrain and four verses. */
+    medley?: 'medley';
+    heartbeat?: 'heartbeat';
+    pluck?: 'ballad-pluck';
+    crew?: 'refrain-crew';
+    'verse-gaut'?: 'verse-gaut';
+    'verse-keepers'?: 'verse-keepers';
+    'verse-houses'?: 'verse-houses';
+    'verse-walkers'?: 'verse-walkers';
   };
 }
 
@@ -216,8 +226,8 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
  * v0.8 item 19 reserved the two Act 4 ids (`dust-chant`, the Ashen Waste; `seven-gates-ash`, Harrowmark from
  * `story.gate.a4`); the Act 4 sound pass (L8) built and registered both, so it is empty again.
  */
-/** v0.9 item 17 reserves the Caldera's track (`heart-of-the-anvil`, 100 BPM); N8 builds and registers it, then empties this. */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [{ id: 'heart-of-the-anvil', bpm: 100 }];
+/** v0.9 item 17 reserved the Caldera's track (`heart-of-the-anvil`); the Act 5 sound pass (N8) built and registered it and the cue tracks, so it is empty again. */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
 export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
@@ -229,6 +239,10 @@ export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [WING_OVER_RIME.id]: WING_OVER_RIME,
   [DUST_CHANT.id]: DUST_CHANT,
   [SEVEN_GATES_ASH.id]: SEVEN_GATES_ASH,
+  [HEART_OF_THE_ANVIL.id]: HEART_OF_THE_ANVIL,
+  [ENDING_REKINDLE.id]: ENDING_REKINDLE,
+  [ENDING_LET_IT_DIE.id]: ENDING_LET_IT_DIE,
+  [CREDITS.id]: CREDITS,
 };
 
 /** The one canonical sample length of every stem: round(bars * 240 / bpm * sampleRate). */

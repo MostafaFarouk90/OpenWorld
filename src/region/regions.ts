@@ -75,7 +75,7 @@ export function phaseHolds(id: RegionId): readonly string[] {
 }
 
 /** Ambience bed ids a region can name (A14 built the Act 2 ones, K14 the Act 3 ones). */
-export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste';
+export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste' | 'caldera';
 
 /** v0.8: Harrowmark's Act 4 band (design 3, plan 3.1), from `story.gate.a4`; capped at spawn by ACT4_CAP_ABOVE_PLAYER. */
 export const HARROWMARK_ACT4_BAND = { min: 28, max: 33 } as const;
@@ -164,12 +164,12 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   // v0.9 (Act 5): engine x 9500..12500, z 6500..9500, inside the Waste's ring; `regionAt` answers it before the Waste.
   // Opens on `story.gate.a5` (M46 and D08 complete). Bands are capped at spawn (ACT5_CAP_ABOVE_PLAYER); the bowl's sub-bands
   // are named-only areas (areas.ts). No storm clock (the siege forces its own); the Ashmare is refused as in the Waste.
-  // The ambience bed stays null until N8 adds 'caldera' to RegionBedId with its samples.
+  // The ambience bed is N8's `caldera` (rumble, bubbling lava, ember crackle).
   caldera: {
     box: { x0: 10500, z0: 7500, x1: 13500, z1: 10500 },
     levelBand: { min: 35, max: 40 },
     track: 'heart-of-the-anvil',
-    bed: null,
+    bed: 'caldera',
     ground: 'caldera',
     // The Phase I hold (`PHASE_HOLDS.caldera`) holds the bowl floor's hole, not the region (act5Containment.ts).
     openWhen: { all: [ACT5_GATE_FLAG] },
