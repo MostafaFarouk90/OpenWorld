@@ -59,6 +59,8 @@ export function installR27(k: Kit): void {
     const s = siege();
     if (!s) return;
     if (s.completed('r27')) { k.set(R27_HELD); k.later(() => recheck(k)); return; }
+    // the line step done counts as the line set (its interacts are what the props' used flags record)
+    if (!k.flag(R27_LINE_READY) && k.objDone('r27', 'line')) k.set(R27_LINE_READY);
     if (s.current || !k.flag(R27_LINE_READY) || interiors()?.current !== STOKERS_TUNNEL_ID) return;
     if (!s.start('r27')) k.warn(`${LOG} the tunnel siege would not start`);
   });

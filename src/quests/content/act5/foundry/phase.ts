@@ -8,7 +8,7 @@ export function phaseJHold(holds: readonly string[] = phaseHolds('caldera')): Co
   return holds.map((flag) => ({ flag, equals: true }));
 }
 
-/** M52 done and the hold open. */
+/** M52 done (its `story.m52.complete`, which the Rim block and the act jump both write) and the hold open. */
 export function phaseJOpen(holds?: readonly string[]): Condition {
-  return { all: [{ quest: 'm52', state: 'completed' }, ...phaseJHold(holds)] };
+  return { all: [{ flag: 'story.m52.complete', equals: true }, ...phaseJHold(holds)] };
 }

@@ -39,6 +39,7 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   for (const [k, v] of Object.entries(flags)) state.setFlag(k, v);
   manager.start('m52');
   manager.complete('m52');
+  state.setFlag('story.m52.complete', true);
 
   const standing = new Map<string, string[]>();
   services.provide('groupStanding' as never, { standing: (id: string) => standing.get(id) ?? [], onMemberLeft: () => () => {} } as never);
