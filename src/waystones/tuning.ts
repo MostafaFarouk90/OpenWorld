@@ -37,6 +37,8 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   'last-anvil': 'shrine.last-anvil.open',
   // Act 3 (K9 PR 2): the Wyrm's Hearth stone opens with M34 (active or completed), `story.m34.complete`, or an already lit shrine.
   'wyrms-hearth': 'shrine.wyrms-hearth.open',
+  // Act 5 (N1): the Inner Gate's stone stands outside the gate and lights only once the gate is open (M53).
+  'inner-gate': 'story.m53.complete',
 };
 
 /**
