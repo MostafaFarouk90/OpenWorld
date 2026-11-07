@@ -9,6 +9,7 @@ import { HROLF_STRINGS_EN } from './strings.hrolf.en';
 import { AELFREDA_STRINGS_EN } from './strings.aelfreda.en';
 import { TOBB } from './tobb';
 import { BarkGate } from './barkGate';
+import { barksHeldForActEnding } from './actEndingHold';
 import { Trials } from './trials';
 import { Escort } from './escort/escort';
 import { createExtras, type Extras } from './extras';
@@ -208,7 +209,8 @@ export default {
             // Act 4 L11: a joined quest guest follows and fights while its flag is set, without a seat (the party list is unchanged)
             isActive: () => (service?.isActive(def.id) ?? true) || isQuestGuest(ctx, controllers, def.id),
             trialRunning: () => tr.state() !== null,
-            claimBark: (id) => barks.claim(id),
+            // L13 PR 2 (L4): held between an act's end and its camp scene; the shared gate is not claimed while held
+            claimBark: (id) => !barksHeldForActEnding((k) => ctx.state.getFlag(k)) && barks.claim(id),
           }),
       );
       const list = controllers;
