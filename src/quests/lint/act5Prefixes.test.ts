@@ -24,8 +24,16 @@ const triggerIds = [
 ];
 
 /** Act 5 sub-prefixes a thread owns and ships. N0: the Anvil shrine's placeholder anchor and the fog faces' anchors. */
-const OWNED_SUB_PREFIXES: readonly string[] = ['caldera.anvil.shrine', 'caldera.fog.'];
-const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [];
+const OWNED_SUB_PREFIXES: readonly string[] = [
+  'caldera.anvil.shrine',
+  'caldera.fog.',
+  // N2: the Act 5 interiors
+  'caldera.int.',
+];
+const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
+  // N2: the Act 5 interiors
+  'trg.caldera.int.',
+];
 
 describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {
   it('lists the 17 quests, split into Phase I and Phase J, none shared with Acts 3 and 4', () => {
