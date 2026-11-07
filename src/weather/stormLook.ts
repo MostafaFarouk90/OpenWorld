@@ -9,14 +9,14 @@
 // outside the Waste's (z 4350). Retuning either fade so they overlap would make them rebase on each other.
 import * as THREE from 'three';
 import type { GameContext as CoreContext } from '../core/Game';
-import { engineBox, REGION_IDS, REGION_INFO } from '../region/regions';
+import { engineBox, REGION_IDS, REGION_INFO, type RegionId } from '../region/regions';
 import { heightAt } from '../terrain/heightfield';
 import type { QualityStep } from '../vfx/tuning';
 import { AshLayer } from './ashLayer';
 import { FieldBlender, closeTo, toward } from './fieldBlend';
 import { AshParticles } from './particles';
 import { ASH_MASK, STORM_COLOR, STORM_LOOK, type StormLook } from './tuning';
-import { edgeFade, insideDepth, phaseWeight, ramp, type Box } from './weight';
+import { edgeFade, insideDepth, phaseWeight, ramp, stormBoxes, stormHoleFactor, type Box } from './weight';
 import type { WeatherKind } from './types';
 
 export const STORM_LOOK_SYSTEM_ID = 'weather.look';
@@ -35,11 +35,12 @@ export function lookAt(step: QualityStep, weight: number, mask: boolean): { fogN
 }
 
 /** The look's target weight for the region's weather at a camera position (0 indoors). */
-export function targetWeight(kind: WeatherKind, boxes: readonly Box[], x: number, z: number, indoors: boolean): number {
+export function targetWeight(kind: WeatherKind, boxes: readonly Box[], x: number, z: number, indoors: boolean, holes: readonly Box[] = []): number {
   if (indoors) return 0;
   let fade = 0;
   for (const b of boxes) fade = Math.max(fade, edgeFade(insideDepth(b, x, z)));
-  return phaseWeight(kind) * fade;
+  // v0.9 (Act 5 N1): no storm look deep in a nested region with none of its own (the Caldera).
+  return phaseWeight(kind) * fade * stormHoleFactor(holes, x, z);
 }
 
 export function maskActive(ctx: Pick<CoreContext, 'state' | 'services'>): boolean {
@@ -57,7 +58,7 @@ const BEACON_RANGE = 600;
 export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; currentShelter: string | null; shelterPoints(): readonly { id: string; x: number; z: number }[] }): () => void {
   const camera = ctx.camera;
   if (!camera) return () => {};
-  const boxes = REGION_IDS.filter((id) => REGION_INFO[id].weather === 'ash-storm').map(engineBox);
+  const { boxes, holes } = stormBoxes(REGION_IDS, (id) => REGION_INFO[id as RegionId], (id) => engineBox(id as RegionId));
   const stepNow = (): QualityStep => (ctx.services.get('quality')?.step ?? 'medium') as QualityStep;
   const target = { near: 12, far: 140 };
   const stormColor = new THREE.Color(STORM_COLOR);
@@ -115,7 +116,7 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
       const cam = camera.position;
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
-      const goal = targetWeight(rt.lookKind, boxes, cam.x, cam.z, indoors);
+      const goal = targetWeight(rt.lookKind, boxes, cam.x, cam.z, indoors, holes);
       // Indoors the weight holds (the interior's camera is elsewhere, and nothing outdoors shows): the door back out
       // finds the look where it was, with no fade in. A load's snap waits for the first outdoor frame.
       if (!indoors) {
