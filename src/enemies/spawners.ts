@@ -40,6 +40,8 @@ export interface SpawnRequest {
   area?: AreaId;
   /** v0.9: the spawner's role (`SpawnerDef.role`, the warhost's shield, pike or torch), carried as `actor.data.spawn.role`. */
   role?: string;
+  /** N5: the shield-line id, carried as `actor.data.spawn.line`. */
+  line?: string;
 }
 
 export interface SpawnerRegistryDeps {
@@ -187,7 +189,8 @@ export class SpawnerRegistry {
         ...(def.skin ? { skin: def.skin } : {}),
         ...(area ? { area } : {}),
         ...(def.role ? { role: def.role } : {}),
-        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
+        ...(def.line ? { line: def.line } : {}),
+        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard ?? (def.role ? def.role === 'shield' : undefined), ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
       if (actorId === null) continue;
