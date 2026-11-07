@@ -90,6 +90,20 @@ describe('act5-hud plugin', () => {
     expect(textOf(vent.element)).toContain('Vent open: 4 s');
   }, PLUGIN_TEST_TIMEOUT);
 
+  it('Vey\'s Spare window shows the line and a countdown, and closes with the event', async () => {
+    const t = await boot();
+    const w = t.widget('spare-cue');
+    w.update?.(0);
+    expect(w.element.style.display).toBe('none');
+    t.emit('boss.releaseWindow', { bossId: 'vey', open: true });
+    w.update?.(1);
+    expect(textOf(w.element)).toContain('Spare him');
+    expect(textOf(w.element)).toContain('5 s');
+    t.emit('boss.releaseWindow', { bossId: 'vey', open: false });
+    w.update?.(0.1);
+    expect(w.element.style.display).toBe('none');
+  }, PLUGIN_TEST_TIMEOUT);
+
   it('the screens service shows a phase card and resolves when dismissed headless', async () => {
     const t = await boot();
     const screens = t.ctx.services.require('act5Screens');

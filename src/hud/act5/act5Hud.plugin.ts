@@ -8,6 +8,7 @@ import { LavaFlash } from './lavaCue';
 import { M52_COMPLETE_FLAG } from './ports';
 import { rimHoldsLines } from './phaseCard';
 import { SiegeHud } from './SiegeHud';
+import { SpareCue } from './spareCue';
 import { SiegeModel } from './siegeModel';
 import { ventCue, type VentReading } from './ventCue';
 import { ACT5_CREDITS_STRINGS_EN, ACT5_HUD_STRINGS_EN } from './strings.en';
@@ -37,6 +38,8 @@ export const ACT5_HUD_CSS = `
 .owg-siege-line{color:#cfe8c0;min-height:1em}
 .owg-vent{margin-top:4px;pointer-events:none;font:12px system-ui,sans-serif;color:#f0c890;text-shadow:0 1px 2px #000}
 .owg-vent-arrow{display:inline-block;width:14px;text-align:center}
+.owg-spare{pointer-events:none;text-align:center;font:600 20px/1.3 system-ui,sans-serif;color:#f0d890;text-shadow:0 2px 4px #000;margin-top:140px}
+.owg-spare-count{font-size:28px;color:#fff}
 .owg-lava-flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(220,70,20,.55) 100%);opacity:0}
 .owg-act5-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,6,4,.92);color:#f3ead8;font:18px/1.5 Georgia,serif;text-align:center;z-index:50}
 .owg-act5-body{max-width:640px;padding:0 16px}
@@ -158,6 +161,27 @@ const act5Hud: GamePlugin = {
       dispose: () => flashEl.remove(),
     });
 
+    // Vey's Spare window (asked by N6): a centred line and a countdown while `boss.releaseWindow` is open.
+    const spare = new SpareCue();
+    const spareEl = makeEl(doc, 'div', 'owg-spare');
+    const spareLine = makeEl(doc, 'div', 'owg-spare-line', spareEl);
+    const spareCount = makeEl(doc, 'div', 'owg-spare-count', spareEl);
+    setShown(spareEl, false);
+    ctx.hud.mount('center', {
+      id: 'spare-cue',
+      element: asHtml(spareEl),
+      order: 9,
+      update: (dt) => {
+        spare.tick(dt);
+        const s = spare.seconds;
+        setShown(spareEl, s !== null);
+        if (s === null) return;
+        spareLine.textContent = t('hud.spare.line');
+        spareCount.textContent = t('hud.spare.count', { s });
+      },
+      dispose: () => spareEl.remove(),
+    });
+
     // Screens.
     const keys: KeySource2 | null = typeof document !== 'undefined' ? (document as unknown as KeySource2) : null;
     const screens = new Act5Screens(doc, {
@@ -195,6 +219,8 @@ const act5Hud: GamePlugin = {
         if (typeof max === 'number' && max > 0) model.ram(e.id, e.health / max, 0);
       }),
       on('structure.destroyed', (e: { id: string }) => model.ramGone(e.id)),
+      on('boss.releaseWindow', (e) => spare.window(e)),
+      ...(['boss.defeated', 'boss.released', 'boss.ended'] as const).map((n) => on(n, () => spare.reset())),
       on('lava.entered', () => {
         if (flash.entered(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) ctx.events.emit('hud.toast', { textKey: 'hud.lava.entered' });
       }),
@@ -203,6 +229,7 @@ const act5Hud: GamePlugin = {
       on('siege.completed', (e: { siegeId?: string }) => model.end(e?.siegeId)),
       on('save.loaded', () => {
         model.reset();
+        spare.reset();
         // Seed from the siege service so the view is right whichever handler runs first; the restarted wave re-emits too.
         model.seed(siegeSvc()?.current);
         flash.reset();
