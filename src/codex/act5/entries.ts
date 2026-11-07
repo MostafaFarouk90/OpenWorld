@@ -1,0 +1,50 @@
+// Act 5 codex entries that N9 owns (plans/act5-N9.md section 8): the two bosses, the Caldera's places, the people of the act,
+// the first king, and four how-tos. The creature rows are N5's data (`CALDERA_CODEX_ROWS`, see rows.ts).
+import { codexEntry, type CodexEntryDef } from '../entries';
+
+export const ACT5_CODEX_IDS = {
+  vey: 'vey',
+  ulthred: 'ulthred',
+  caldera: 'lore.place.caldera',
+  rimGate: 'lore.place.rim-gate',
+  rimCamp: 'lore.place.rim-camp',
+  lavaStair: 'lore.place.lava-stair',
+  coolingHall: 'lore.place.cooling-hall',
+  wyrmTerraces: 'lore.place.wyrm-terraces',
+  foundry: 'lore.place.foundry',
+  hammerHall: 'lore.place.hammer-hall',
+  anvilOfAges: 'lore.place.anvil-of-ages',
+  alric: 'lore.person.alric',
+  edric: 'lore.person.edric',
+  rook: 'lore.person.rook',
+  ulthredPerson: 'lore.person.ulthred',
+  firstKing: 'lore.first-king',
+  lava: 'howto.lava-vents',
+  siege: 'howto.siege-orders',
+  sunforged: 'howto.sunforged',
+  heartshard: 'howto.heartshard',
+} as const;
+const ID = ACT5_CODEX_IDS;
+
+export const ACT5_CODEX_ENTRIES: readonly CodexEntryDef[] = [
+  codexEntry('bestiary', ID.vey, 'vey-regent'),
+  codexEntry('bestiary', ID.ulthred, 'ulthred'),
+  codexEntry('lore', ID.caldera, 'place-caldera'),
+  codexEntry('lore', ID.rimGate, 'place-rim-gate'),
+  codexEntry('lore', ID.rimCamp, 'place-rim-camp'),
+  codexEntry('lore', ID.lavaStair, 'place-lava-stair'),
+  codexEntry('lore', ID.coolingHall, 'place-cooling-hall'),
+  codexEntry('lore', ID.wyrmTerraces, 'place-wyrm-terraces'),
+  codexEntry('lore', ID.foundry, 'place-foundry'),
+  codexEntry('lore', ID.hammerHall, 'place-hammer-hall'),
+  codexEntry('lore', ID.anvilOfAges, 'place-anvil-of-ages'),
+  codexEntry('lore', ID.alric, 'person-alric'),
+  codexEntry('lore', ID.edric, 'person-edric'),
+  codexEntry('lore', ID.rook, 'person-rook'),
+  codexEntry('lore', ID.ulthredPerson, 'person-ulthred'),
+  codexEntry('lore', ID.firstKing, 'first-king'),
+  codexEntry('howto', ID.lava, 'lava-vents'),
+  codexEntry('howto', ID.siege, 'siege-orders'),
+  codexEntry('howto', ID.sunforged, 'sunforged'),
+  codexEntry('howto', ID.heartshard, 'heartshard', 'interact'),
+];
