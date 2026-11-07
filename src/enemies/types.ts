@@ -342,6 +342,8 @@ export interface SpawnerDef {
   skin?: EnemySkinId;
   /** v0.9 item 11: the members' role (the warhost's `WarhostRole`), passed to the spawn and set on `actor.data.spawn.role`. */
   role?: WarhostRole;
+  /** N5: the shield-line id of a Warhost member, `actor.data.spawn.line`; the line is `line ?? tag` (the waves kit keeps `tag` for kill objectives). */
+  line?: string;
   /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).

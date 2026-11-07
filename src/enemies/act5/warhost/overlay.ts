@@ -39,7 +39,8 @@ function buildProp(role: WarhostRole): THREE.Object3D | null {
 export function makeWarhostOverlay(ctx: BehaviourContext): BehaviourOverlay {
   const actor = ctx.host.actors.get(ctx.actorId);
   const role = roleOf(spawnDataOf(actor?.data)?.role);
-  const lineId = actor?.spawnTag ?? ctx.spawnerId ?? ctx.actorId;
+  const sd = spawnDataOf(actor?.data);
+  const lineId = sd?.line ?? actor?.spawnTag ?? ctx.spawnerId ?? ctx.actorId;
   const moves = WARHOST_ROLE_MOVES[role];
   let clock = 0;
 
