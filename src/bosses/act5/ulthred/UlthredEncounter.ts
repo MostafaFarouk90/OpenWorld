@@ -185,8 +185,11 @@ export class UlthredEncounter implements UlthredHooks {
     const player = () => ctx.player.actor.id;
     this.offs.push(
       ctx.events.on('boss.break', (p) => {
-        if (!mine(p)) return;
+                if (!mine(p)) return;
         this.bars++;
+        // The bar is counted; his guard is whole again for the next one (an early stagger there does not count).
+        this.actor.restorePoise();
+        this.poiseIdle = 0;
         this.model?.setEmbers(this.bars / 9);
         if (this.bars >= 9) this.kneelStart();
         else this.brain.onBreak();
