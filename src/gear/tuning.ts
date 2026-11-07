@@ -11,7 +11,7 @@ export const GEAR_TUNING = {
   /** K10: tier 3 to tier 4 (rime-iron plus shed scales or sloughed hide, by class). */
   forgeTier4: { rimeIron: 2, scales: 3, goldWeapon: 300, goldArmour: 240 },
   /** N7: tier 4 to tier 5 at Alric's rim anvil: forge-heart fragments plus gold (weapon, armour, Aegis). */
-  forgeTier5: { goldWeapon: 500, goldArmour: 400, goldOffhand: 300, fragmentsPiece: 2, fragmentsOffhand: 1 },
+  forgeTier5: { goldWeapon: 300, goldArmour: 250, goldOffhand: 300, fragmentsPiece: 2, fragmentsOffhand: 1 },
   rhythm: {
     bpm: 94,
     /** The 16-step bar: four steps to a beat. */
