@@ -14,12 +14,13 @@ import { rimShop, RIM_MOVING_VENDORS } from '../economy/rimCamp.act5';
 import { DEFAULT_KITS, trainerPlacement, trainerId } from '../classes/kits';
 import { POST_RULES } from '../quests/posts';
 import { regionChips } from '../map/regionLayer';
-import { bandForRegion } from '../enemies/level';
+import { act5Level, ACT5_CAP_ABOVE_PLAYER, bandForRegion } from '../enemies/level';
 import { REGION_IDS } from '../region/regions';
-import { ashfallScale, afterEnding, caelDied, endingChoice, AFTER_ENDING_FLAG, CAEL_LIVES_FLAG, M56_CHOICE_FLAG } from './flags';
+import { stormDarkMix, WASTE_STORM_DARK, ashfallScale, afterEnding, caelDied, endingChoice, AFTER_ENDING_FLAG, CAEL_LIVES_FLAG, M56_CHOICE_FLAG } from './flags';
 import { HOME_AFTER_ENDING, KNIGHT_DESK_AFTER, liftsAfterEnding, ROOK_POST_AFTER } from './posts';
 import { AfterEnding, WAKE_POINT, WAKE_YAW, wakeLines, type WakeHost } from './wake';
-import { AFTER_FLIGHTS, AfterEndingLook, flightLoop, FLIGHT_POINTS, REKINDLE_GRADE, rekindleWeight } from './look';
+import { AFTER_FLIGHTS, AfterEndingLook, flightLoop, FLIGHT_POINTS, REKINDLE_GRADE, rekindleWeight, stormRegionBoxes } from './look';
+import { STORM_EDGE } from '../weather/tuning';
 import { engineBox } from '../region/regions';
 import { RIM_CAMP } from '../caldera/calderaSites';
 import { AFTER_ENDING_STRINGS_EN } from './strings.en';
@@ -152,6 +153,13 @@ describe('no enemy rescales after the ending', () => {
   it('every region band is the same with and without the after-ending flags', () => {
     for (const id of REGION_IDS) expect(bandForRegion(id, map(AFTER('let-it-die'))), id).toEqual(bandForRegion(id, map(LATE)));
   });
+  it('no Act 5 enemy rescales: the Caldera band and the P + 3 cap read no after-ending flag', () => {
+    const band = bandForRegion('caldera', map(AFTER('rekindle')));
+    expect(band).toEqual(bandForRegion('caldera', map(LATE)));
+    expect(ACT5_CAP_ABOVE_PLAYER).toBe(3);
+    // a level 36 Cael after the ending meets the Caldera's band rolled and capped exactly as before it
+    for (const roll of [0, 0.5, 1]) expect(act5Level(band!, roll, 36)).toBeLessThanOrEqual(39);
+  });
 });
 
 function host(flags: Record<string, unknown>, teleport: WakeHost['teleport'] = async () => ({ ok: true })) {
@@ -196,6 +204,23 @@ describe('the waking', () => {
     expect(calls.feet).toHaveLength(1);
     expect(calls.tint).toEqual(['rekindle']);
     expect(calls.warns.some((w) => w.includes('refused'))).toBe(true);
+  });
+  it('a load resets the waking (a replayed ending wakes again); a throwing step never rejects (failure)', async () => {
+    const { h, calls } = host(AFTER('rekindle'));
+    const s = new AfterEnding(h);
+    await s.wake();
+    s.reset();
+    expect(s.woken).toBe(false);
+    await s.wake();
+    expect(calls.feet).toHaveLength(2);
+    const bad = host(AFTER('rekindle'));
+    bad.h.setTint = () => {
+      throw new Error('no tint');
+    };
+    const t = new AfterEnding(bad.h);
+    await expect(t.wake()).resolves.toBeUndefined();
+    expect(t.woken).toBe(true);
+    expect(bad.calls.warns.some((w) => w.includes('no tint'))).toBe(true);
   });
   it('woken before the flags were set: warns and wakes without a tint (edge)', async () => {
     const { h, calls } = host(LATE);
@@ -265,9 +290,16 @@ describe('the look', () => {
     inside = false;
     look.step(1 / 60);
     expect(sun.intensity).toBeGreaterThan(1);
-    const c = engineBox('caldera');
-    expect(rekindleWeight(c, (c.x0 + c.x1) / 2, (c.z0 + c.z1) / 2)).toBe(0);
-    expect(rekindleWeight(c, cam.x, cam.z)).toBe(1);
+    const storms = stormRegionBoxes();
+    expect(storms.length, "the Waste (the Caldera sits inside it)").toBeGreaterThanOrEqual(1);
+    for (const id of ['caldera', 'ashen-waste'] as const) {
+      const b = engineBox(id);
+      expect(rekindleWeight(storms, (b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2), id).toBe(0);
+    }
+    const w = engineBox('ashen-waste');
+    // just outside the Waste, inside the storm look's outside band: still off (no two blenders on the fog at once)
+    expect(rekindleWeight(storms, w.x0 - STORM_EDGE.outside / 2, (w.z0 + w.z1) / 2)).toBe(0);
+    expect(rekindleWeight(storms, cam.x, cam.z)).toBe(1);
   });
   it('Let It Die flies three dragons (not actors) on closed loops; they land when the tint goes', () => {
     const { scene } = lookScene();
@@ -288,5 +320,19 @@ describe('the look', () => {
     const loop = flightLoop(f, (x) => x / 100);
     expect(loop).toHaveLength(FLIGHT_POINTS);
     for (const p of loop) expect(p.y).toBeCloseTo(p.x / 100 + f.altitude, 6);
+  });
+});
+
+describe('the Waste storm under Let It Die (N13, T6)', () => {
+  it('the storm target darkens 30% only under Let It Die after the ending', () => {
+    const st = new WorldState(new GameEvents(), () => {});
+    expect(stormDarkMix(st)).toBe(0);
+    st.setFlag(M56_CHOICE_FLAG, 'let-it-die');
+    expect(stormDarkMix(st), 'the choice alone, before the ending').toBe(0);
+    st.setFlag(AFTER_ENDING_FLAG, true);
+    expect(stormDarkMix(st)).toBe(0.3);
+    st.setFlag(M56_CHOICE_FLAG, 'rekindle');
+    expect(stormDarkMix(st)).toBe(0);
+    expect(WASTE_STORM_DARK).toBe(0x4a4642);
   });
 });

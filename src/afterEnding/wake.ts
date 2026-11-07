@@ -56,7 +56,24 @@ export class AfterEnding implements AfterEndingService {
     return this.running;
   }
 
+  /** A load ends this session's waking: a replayed ending (a load before the choice) wakes again. */
+  reset(): void {
+    this.running = null;
+    this.woken = false;
+    this.lines = [];
+  }
+
+  /** Never rejects: every step only warns. */
   private async run(): Promise<void> {
+    try {
+      await this.steps();
+    } catch (err) {
+      this.host.warn(`afterEnding.wake failed: ${String(err)}`);
+    }
+    this.woken = true;
+  }
+
+  private async steps(): Promise<void> {
     const h = this.host;
     const choice = endingChoice(h.flags);
     if (!choice) h.warn('afterEnding.wake: world.afterEnding or story.m56.choice is not set; waking without a tint');
@@ -69,6 +86,5 @@ export class AfterEnding implements AfterEndingService {
     h.setTint(choice);
     this.lines = wakeLines(h.flags);
     for (const key of this.lines) h.show(key);
-    this.woken = true;
   }
 }

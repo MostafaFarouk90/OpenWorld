@@ -7,6 +7,7 @@
 // The Harrowmark ash-fall (rendering/ashfall.ts) blends the same fog colour and sky with its own blender. The two are
 // kept apart by distance: the ash-fall is 0 at 300 m outside Harrowmark's box (z 4300), the storm's band starts 150 m
 // outside the Waste's (z 4350). Retuning either fade so they overlap would make them rebase on each other.
+import { stormDarkMix, WASTE_STORM_DARK } from '../afterEnding/flags';
 import * as THREE from 'three';
 import type { GameContext as CoreContext } from '../core/Game';
 import { engineBox, REGION_IDS, REGION_INFO, type RegionId } from '../region/regions';
@@ -62,6 +63,7 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
   const stepNow = (): QualityStep => (ctx.services.get('quality')?.step ?? 'medium') as QualityStep;
   const target = { near: 12, far: 140 };
   const stormColor = new THREE.Color(STORM_COLOR);
+  const wildDark = new THREE.Color(WASTE_STORM_DARK);
   const fog = (): THREE.Fog | null => (ctx.scene.fog instanceof THREE.Fog ? ctx.scene.fog : null);
   const blender = new FieldBlender()
     .addNumber({ get: () => fog()?.near ?? 0, set: (v) => fog() && (fog()!.near = v), mix: (b, w) => toward(target.near)(b, w) })
@@ -123,6 +125,9 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
         weight = snap ? goal : ramp(weight, goal, frameTime);
         snap = false;
       }
+      // Act 5 (N13): under Let It Die the Waste's storms read darker in the world after the ending (the target only, so
+      // no second blender writes these fields).
+      stormColor.set(STORM_COLOR).lerp(wildDark, stormDarkMix(ctx.state));
       const mask = maskActive(ctx);
       const look = lookAt(step, weight, mask);
       target.near = look.fogNear;

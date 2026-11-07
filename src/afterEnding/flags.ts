@@ -15,7 +15,8 @@ export interface FlagReader {
 
 /** The world after the ending holds. */
 export function afterEnding(flags: FlagReader): boolean {
-  return Boolean(flags.getFlag(AFTER_ENDING_FLAG));
+  // Render modules pass their whole state, and some of their test stand-ins carry only `getBool`: no reader, no ending.
+  return typeof flags.getFlag === 'function' && Boolean(flags.getFlag(AFTER_ENDING_FLAG));
 }
 
 /** The final choice, or null before the ending (or with a value that is not one of the two). */
@@ -34,4 +35,10 @@ export function caelDied(flags: FlagReader): boolean {
 export function ashfallScale(flags: FlagReader): number {
   const c = endingChoice(flags);
   return c === 'rekindle' ? 0 : c === 'let-it-die' ? 0.5 : 1;
+}
+
+/** Let It Die's "wilder weather in the Waste" (taste call T6): the storm look's colour, this far toward WASTE_STORM_DARK. */
+export const WASTE_STORM_DARK = 0x4a4642;
+export function stormDarkMix(flags: FlagReader): number {
+  return endingChoice(flags) === 'let-it-die' ? 0.3 : 0;
 }

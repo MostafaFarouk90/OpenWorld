@@ -49,6 +49,14 @@ function city() {
     ash: !!c.scene.getObjectByName('harrowmark-ash-state')?.parent,
     fountain: !!c.scene.getObjectByName('harrowmark-world-change-a3')?.parent,
     closedStalls: !!c.scene.getObjectByName('harrowmark-closed-stalls')?.parent,
+    // the city's four gate shutters (cityBuild names each 'portcullis'; a shut one is shown)
+    shutShutters: (() => {
+      let n = 0;
+      c.scene.getObjectByName('harrowmark-city')?.traverse((o) => {
+        if (o.name === 'portcullis' && o.visible) n++;
+      });
+      return n;
+    })(),
     wystan: vendorAnchor('wystan', c.state),
     knight: trainerPlacement(DEFAULT_KITS.knight, c.state).deskAnchor,
     tint: c.services.get('worldTint')?.current ?? null,
@@ -69,6 +77,7 @@ describe('the occupation lifts on world.afterEnding (N13)', () => {
       ash: true,
       fountain: false,
       closedStalls: true,
+      shutShutters: 4,
       wystan: 'ashgate.refuge.shop.wystan',
       knight: 'ashgate.refuge.trainer.rook',
       tint: null,
@@ -83,13 +92,14 @@ describe('the occupation lifts on world.afterEnding (N13)', () => {
       ash: false,
       fountain: true,
       closedStalls: false,
+      shutShutters: 0,
       wystan: 'shop.wystan',
       knight: 'harrowmark.bastion.trainer.gaut',
       tint: 'let-it-die',
     });
     // the dragons fly under Let It Die (not actors: no actor kind names one)
     expect(afterEndingParts()?.look?.flights.length).toBe(3);
-    expect([...h.ctx.actors.all()].some((a) => String(a.kind).includes('dragon-after'))).toBe(false);
+    expect([...h.ctx.actors.all()].some((a) => String(a.kind).includes('after-dragon'))).toBe(false);
     // a load never wakes: the player stays where the save put them
     expect(afterEndingParts()?.service.woken).toBe(false);
 
