@@ -114,13 +114,16 @@ const act5Hud: GamePlugin = {
     });
     ctx.hud.mount('top-center', { id: siege.id, element: asHtml(siege.element), order: 5, update: (dt) => siege.update(dt), dispose: () => siege.dispose() });
     // The siege HUD draws the gate and the rams, so the shared structure bar skips rams while a siege is live.
-    (svc.get('structureBar') as { suppress(p: ((id: string) => boolean) | null): void } | undefined)?.suppress((id) => {
-      const v = model.view();
-      if (!v) return false;
-      const listed = siegeSvc()?.structures?.(v.siegeId);
+    const barSvc = (): { suppress(p: ((id: string) => boolean) | null): void } | undefined => svc.get('structureBar') as { suppress(p: ((id: string) => boolean) | null): void } | undefined;
+    const suppressPred = (id: string): boolean => {
+      // The director announces the gate (structure.damaged) before siege.wave.started, so the siege id also comes from the service.
+      const sid = model.view()?.siegeId ?? siegeSvc()?.current?.siegeId;
+      if (!sid) return false;
+      const listed = siegeSvc()?.structures?.(sid);
       // The gate and the rams only: brazier carts keep the shared bar (N4's list holds the gate and every cart).
       return listed ? listed.includes(id) && (!id.includes('.cart.') || isRam(id)) : isRam(id) || /gate/.test(id);
-    });
+    };
+    barSvc()?.suppress(suppressPred);
 
     // Vent cue and lava flash.
     const ventEl = makeEl(doc, 'div', 'owg-vent');
@@ -205,7 +208,11 @@ const act5Hud: GamePlugin = {
     svc.provide?.('act5Screens', screens);
 
     const offs = [
-      on('siege.wave.started', (e) => model.waveStarted(e)),
+      // Re-applying the predicate drops a row the bar made before the siege was known.
+      on('siege.wave.started', (e) => {
+        model.waveStarted(e);
+        barSvc()?.suppress(suppressPred);
+      }),
       on('siege.wave.cleared', (e) => model.waveCleared(e)),
       on('siege.gate.damaged', (e) => model.gateDamaged(e)),
       on('siege.gate.breached', (e) => model.gateBreached(e)),
