@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { ArenaPiece } from '../../arena';
 import { bossOutcomeFlag } from '../../../actors/BossRegistry';
-import { BreakingFloor, TurningPlatforms, kitSystem } from '../../../caldera/arenaKit';
+import { BreakingFloor, TurningPlatforms, kitSystem, type KitPiece } from '../../../caldera/arenaKit';
 import { HAMMER_HALL_DOOR_ID } from '../../../caldera/interiors/sites';
 import type { GameContext } from '../../../core/Game';
 import { showToast } from '../../../waystones/toast';
@@ -42,7 +42,7 @@ export class UlthredDirector {
   private readonly offs: (() => void)[] = [];
   private anvil: AnvilArena | null = null;
   private floorPiece: BreakingFloor | null = null;
-  private ringPiece: TurningPlatforms | null = null;
+  private ringPiece: (ArenaPiece & KitPiece & { dispose(): void }) | null = null;
   private warnedPlaces = false;
   private outside = 0;
   /** The fight was on the Anvil when the last load landed (tests). */
@@ -205,8 +205,26 @@ export class UlthredDirector {
     const plats = this.ctx.services.get('platforms');
     if (plats && this.anvil && this.anvil.platforms.length > 0) {
       const c = this.anvil.centre;
-      this.ringPiece = new TurningPlatforms({ platforms: plats, pivot: { x: c.x, y: c.y, z: c.z }, degPerS: RING_DEG_PER_S, items: this.anvil.platforms, start: 'still', warn: this.warn });
-      this.offs.push(() => this.ringPiece?.dispose());
+      const anvil = this.anvil;
+      // Built at the drop and dropped at the reset: the platforms service saves every registered platform's phase, so a ring
+      // registered at load would write itself into every save (Act 4's fixtures included).
+      let inner: TurningPlatforms | null = null;
+      const ring = {
+        apply: (state: string) => {
+          inner ??= new TurningPlatforms({ platforms: plats, pivot: { x: c.x, y: c.y, z: c.z }, degPerS: RING_DEG_PER_S, items: anvil.platforms, start: 'still', warn: this.warn });
+          inner.apply(state);
+        },
+        reset: () => {
+          inner?.reset();
+          inner?.dispose();
+          inner = null;
+        },
+        update: (dt: number) => (inner as KitPiece | null)?.update?.(dt),
+        render: (alpha: number) => (inner as KitPiece | null)?.render?.(alpha),
+        dispose: () => ring.reset(),
+      };
+      this.ringPiece = ring;
+      this.offs.push(() => ring.dispose());
     }
     const anvils: ArenaPiece = {
       apply: () => {},
