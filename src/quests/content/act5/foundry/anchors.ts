@@ -75,7 +75,7 @@ export const NEAR_ANCHORS: readonly NearAnchor[] = [
   near(FA.d09Plate, `${FD}.sluice.1`, 4, 5),
   // D09: the stokers' shift board by the lift head; Edric's mother's letters on the last stair, before the arena
   near(FA.d09Shift, `${FD}.basin`, 5, -2),
-  near(FA.d09Letters, `${FD}.checkpoint.3`, 4, -2),
+  near(FA.d09Letters, `${FD}.checkpoint.3`, 2, -2),
   // D09: Alric comes down to the foot once Vey's fight is over (beside the link to the Hammer Hall)
   near(FA.d09AlricFoot, `${FD}.link.hammer`, 2, -3),
 ];

@@ -32,9 +32,8 @@ export const r27: QuestDef = {
     { id: 'brief', type: 'talk', target: 'wenna', textKey: 'quest.r27.brief' },
     story('enter', 'quest.r27.enter', 'interior.entered', { match: { interiorId: STOKERS_TUNNEL_ID }, doneWhen: { flag: R27_ENTERED, equals: true } }),
     { id: 'captain', type: 'talk', target: R27_CAPTAIN, textKey: 'quest.r27.captain' },
-    interacts('props', 'quest.r27.props', R27_PROPS.map(R27_USE.prop)),
-    interacts('lamps', 'quest.r27.lamps', R27_LAMPS.map(R27_USE.lamp)),
-    interacts('charges', 'quest.r27.charges', R27_CHARGES.map(R27_USE.charge)),
+    // the line in any order: the three props, the four lamps and the three charges are one step
+    interacts('line', 'quest.r27.line', [...R27_PROPS.map(R27_USE.prop), ...R27_LAMPS.map(R27_USE.lamp), ...R27_CHARGES.map(R27_USE.charge)]),
     reads('signs', 'quest.r27.signs', [R27_NOTES.tally, R27_NOTES.door, R27_NOTES.roster], { optional: false }),
     { id: 'ready', type: 'talk', target: R27_CAPTAIN, textKey: 'quest.r27.ready' },
     story('hold', 'quest.r27.hold', R27_HELD, { doneWhen: { flag: R27_HELD, equals: true } }),

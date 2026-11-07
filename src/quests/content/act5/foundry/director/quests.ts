@@ -185,12 +185,14 @@ export function installD09(k: Kit): void {
     // the sluice anchor is local (-18, 12): the interior's origin follows from it (N2's world = origin + local)
     const ox = a.position.x + 18;
     const oz = a.position.z - 12;
-    const lip = { x: a.position.x + 1.5, y: a.position.y, z: a.position.z };
+    // dry floor clear of every runnel (local (-12, 16), (12, 16), (0, 26)): the nearest one takes a thrown player
+    const y = a.position.y;
+    const lips = [{ x: ox - 12, y, z: oz + 16 }, { x: ox + 12, y, z: oz + 16 }, { x: ox, y, z: oz + 26 }];
     const undo = FOUNDRY_RUNNELS.map((r, i) => {
       try {
         return lava.add({
           id: `caldera.q.f.d09.flood.${i + 1}`, shape: { kind: 'box', x0: ox + r.x0, z0: oz + r.z0, x1: ox + r.x1, z1: oz + r.z1 },
-          surfaceY: a.position.y - 0.05, damagePctPerS: 15, safeLips: [lip], depth: 2,
+          surfaceY: a.position.y - 0.05, damagePctPerS: 15, safeLips: lips, depth: 2,
         });
       } catch (err) {
         k.warn(`${LOG} flood ${i + 1}: ${String(err)}`);
@@ -211,12 +213,12 @@ export function installD09(k: Kit): void {
       k.set(D09_SLAG_FAILS, fails);
       flood();
       toast(k, 'quest.d09.slagFlood');
-      if (fails >= D09_LESSON_AFTER) toast(k, 'quest.d09.slagLesson');
+      if (fails >= D09_LESSON_AFTER) toast(k, `quest.d09.slagNext.${nextSluice(0)}`);
       return;
     }
     k.set(D09_SLUICE(n));
     if (done() < D09_SLUICE_ORDER.length) {
-      toast(k, k.num(D09_SLAG_FAILS) >= D09_LESSON_AFTER ? 'quest.d09.slagLesson' : 'quest.d09.sluiceRight');
+      toast(k, k.num(D09_SLAG_FAILS) >= D09_LESSON_AFTER ? `quest.d09.slagNext.${nextSluice(done())}` : 'quest.d09.sluiceRight');
       return;
     }
     k.set(D09_SLAG);

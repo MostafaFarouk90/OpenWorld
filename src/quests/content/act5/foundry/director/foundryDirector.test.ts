@@ -268,7 +268,7 @@ describe('D09', () => {
     expect(r.lava.live.size).toBe(0);
     r.use(D09_SLUICE_USE(3));
     expect(r.state.getFlag(D09_SLAG_FAILS)).toBe(2);
-    expect(r.toasts).toContain('quest.d09.slagLesson');
+    expect(r.toasts).toContain('quest.d09.slagNext.1');
     r.step(8 * 60 + 2);
     for (const n of [1, 3, 2]) r.use(D09_SLUICE_USE(n));
     expect(r.state.getFlag(D09_SLAG)).toBe(true);

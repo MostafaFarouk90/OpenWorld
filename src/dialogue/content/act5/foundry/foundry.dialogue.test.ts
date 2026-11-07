@@ -1,4 +1,4 @@
-// The Foundry trees: every talk row opens where the quests expect, the walk of each shorter-branch talk matches the pacing
+// The Foundry trees: the start rules open the needed talk first (below), the walk of each shorter-branch talk matches the pacing
 // rows' node counts, the R30 lines are one per ally, Vey's three questions offer exactly two answers in every band.
 import { describe, expect, it } from 'vitest';
 import type { Condition, DialogueDef, DialogueNode } from '../../../../quests/types';
@@ -40,6 +40,41 @@ const rowNodes = (r: TalkRow): number => {
   if (!d) throw new Error(`no tree ${r.tree}`);
   return walk(d, r.seg, r.flags ?? {}, r.favour);
 };
+
+/** The segment the first matching start rule opens, in a world of quest states, done objectives and flags. */
+function opens(tree: string, states: Record<string, string>, done: string[], flags: Record<string, unknown> = {}): string {
+  const d = defs.get(tree)!;
+  const env = {
+    state: { getFlag: (k: string) => flags[k], favour: () => 10, favourBand: () => 'cold' },
+    quests: { state: (q: string) => states[q] ?? 'inactive', objectiveDone: (q: string, o: string) => done.includes(`${q}.${o}`) },
+  } as never;
+  const rule = (d.start as { when: Condition; node: string }[]).find((r) => evalCondition(r.when, env));
+  return rule?.node ?? '';
+}
+const PHASE_J = { m52: 'completed' };
+const HOLDS = { 'story.phase.foundryOpen': true };
+
+describe('Foundry Act 5 start rules (review: no optional offer may hide a needed talk)', () => {
+  it('Wenna in the vat gallery (Spy) turns the guards even while R27 is still on offer', () => {
+    const done = ['d09.brief', 'd09.enter', 'd09.patrol', 'd09.stoker', 'd09.plate', 'd09.slag'];
+    expect(opens('npc-wenna', { ...PHASE_J, m53: 'completed', d09: 'active' }, done, { ...HOLDS, 'story.m21.choice': 'spy' })).toBe('a5f-d09-wenna');
+  });
+  it('Wulfhild and Wenna give their R30 lines while R28 and R27 are on offer', () => {
+    const st = { ...PHASE_J, r30: 'active' };
+    expect(opens('npc-wulfhild', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-wulfhild');
+    expect(opens('npc-wenna', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-wenna');
+  });
+  it('a current hand-in comes before an R30 line', () => {
+    const st = { ...PHASE_J, r30: 'active', r27: 'active' };
+    const r27Done = ['brief', 'enter', 'captain', 'line', 'signs', 'ready', 'hold', 'choose'].map((o) => `r27.${o}`);
+    expect(opens('npc-wenna', st, ['r30.brief', ...r27Done], HOLDS)).toBe('a5f-r27-report');
+  });
+  it('the offers still open when nothing else is due', () => {
+    expect(opens('npc-wenna', PHASE_J, [], HOLDS)).toBe('a5f-r27-brief');
+    expect(opens('npc-wulfhild', PHASE_J, [], HOLDS)).toBe('a5f-r28-brief');
+    expect(opens('npc-tobb', PHASE_J, [], HOLDS)).toBe('a5f-r30-brief');
+  });
+});
 
 describe('Foundry Act 5 dialogue', () => {
   it('every talk row resolves on a real tree', () => {
