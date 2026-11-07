@@ -92,7 +92,11 @@
           "eormen",
           "lore.place.rimfoot",
           "lore.place.caldera",
-          "lore.place.rim-gate"
+          "lore.person.alric",
+          "lore.place.rim-gate",
+          "skin.grisel-loyalist",
+          "skin.stoker-wraith",
+          "skin.forge-thrall"
         ]
       },
       "version": 1
@@ -105,16 +109,16 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 11001.9423,
-            "y": 295,
-            "yaw": 2.1369,
-            "z": 6748.7658
+            "x": 11003.9458,
+            "y": 295.0005,
+            "yaw": -0.7323,
+            "z": 6810.4448
           },
           "hrolf": {
-            "x": 10999.1375,
-            "y": 295,
-            "yaw": -2.8616,
-            "z": 6747
+            "x": 11007.1223,
+            "y": 295.001,
+            "yaw": 0.5524,
+            "z": 6811.3907
           },
           "tobb": {
             "x": 9690,
@@ -1680,6 +1684,7 @@
           "slag-core": 1,
           "spike-shield": 1,
           "squires-arming-sword": 1,
+          "stokers-gloves": 1,
           "tobbs-lucky-whistle": 1,
           "training-weights": 1,
           "union-badge": 1,
@@ -1695,7 +1700,7 @@
     },
     "map": {
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AMsSgAcAPXwAPcAPAD38AD3ABwA9OAD2CQwAPeAfAD3/fwA88P8PADvA//8DADrg/v9/ADv///8HADrw//l/ADv/h/8HADrw//gfADv/D/8AO/D/gw8AO///cAA78P8fADy//x8AO/Dh/wcAPPz/AwA7gP//AwA7/v//AwA64P///wA7/v//HwA64P///wEAOUD+//4fADr//wf+AQAbIAAd8P9/AAEGABuADwAcgP//DwAd+AEAHPj//wAdgB8AHf//DwAd+AEAHPD/fwAdgA8AHYQ/AwAdYAAe8AEAPQ4AsgTwAQA8gD8APfgHADyAfwA9+AMAPIA/AD3wAQCnCOABAD0/AD3wBwA9fwA94AcAPTwAPIAHAD38AD3wDwA8gP8APfgHADzAPwA9/wA98AcAPT8APfABAD0fADyAAwA9fAA94AcAPX4AAwQAOfAH4AfwAQA4gD/A/wABPwA5/8H/D/gDADj4n///AAE/ADiA////B/ABAAXwADL4//8/AAFkAAWAHwAxgP//PwABgA8ABfgBADDg//8/AAL4AQAEgD8AMf//fwACwB8ABfgBAC+A////AAP4AAYPADD+//8AA4B/ADbg//8BAAPADwA2/v8DAAT8ADbg/w8ABMAPADb8fwAF/AMAPIB/AD3wBwA9fgA94AcAPTwA9gI8AD3gBwA9fgA94AcAPX4APcADAJ8HwAEAPT4APfADAD0/AA7AAwAt8AMADn4ALh4ADuAHAD1+AD3gBwAueAAOfgAuwA8ADeADAC78AA4YAC7AHwA9/AEAPMAfAD34AQA9DwDyAzwAPeAHAD1+AD3gDwA9fAA9gAcAmAk8AD3gBwA8PP4APODnHwA8fv4BADvw9x8APH//AQA74PMPADwcPwA98AMAPIA/ADx8+AEAO8CfHwA8/v8BADvA/x8APPz/AQA7wP8PADz+/wA84P8PADz8/wA8wP8PADz+/wA84P8PADz+/wA8wN8PADz4/QA8gM8PADxgfgA94AcAPX8APfAHABbAAwAkgD8AF34AJID/AwAW4AcAJPwfABd+ACTA/wEAFuAHACT8DwAXPMADACLA/wAZfgAh4AAB+AcAGOAHACCAH8B/ABn+ACH4A/4DABjgDwAgwD/gPwAZfgAh/AP+AQAY8AcAIIAf8AcAGT8AIfABfwAZ+AMAIQbgBwAFPAASgB8AI34ABfAHABL4AQAigAMABX8AEoAfACnwBwAS8AAqfwA94AMAUb0DADz8fwA84P8HADz/fwA88P8HADz+PwA8wAEAdsADAD1+AD3gDwA9/gEAPOAfAAMDADn+AQACeAA5wB8AAvAPADn4AAKA/wA9/A8APMD/AD34BwA9PwB/PAA5DwAD4AcAOPgBAAP+AQA3gB8AA+B/ADj4AQAD/v8AHDgAGoAfAAPA/x8AG8AHABrwAATw/wMAG34AIP4/ABvgBwAfgP8DABt8AAc8ABj8PwAbwAMABuAHABfg/wEAI34AGP8PACPgBwAX+A8AHw8ABH4AF8B/AB/4AQADwAMAF/wDAB6AHwAcwB8AH/hhABz8AB+Anw8AAQ8AGYAHAB/w+AHwAQA6gB+AHwA7+AH4AQA64A8AAR8AO34AAeAAGIADACHgBwAafAAifgAa4AcAIeAHABp+ACJ8ABrABwAiAQAXAQACPAA6fAA94A8APf8APfAPAD3/AD3wDwA9/wA98A8APX4APcAAAzwAPfADADyAfwA9/AcAPMD/AD34DwA9/wA94AcAPT8AAfgPADrwAcD//w8AOIA/AAH8//8PADjwH8D///8DADj/A/z//38AOOB/gP///w8AOPgHAAH4//8AOIA/AAPgBwA4+AMAA34AOMAPAAPABwA4/AAEGAA4gA8APXgAhQY="
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AMsSgAcAPXwAPcAPAD38AD3ABwA9OAD2CQwAPeAfAD3/fwA88P8PADvA//8DADrg/v9/ADv///8HADrw//l/ADv/h/8HADrw//gfADv/D/8AO/D/gw8AO///cAA78P8fADy//x8AO/Dh/wcAPPz/AwA7gP//AwA7/v//AwA64P///wA7/v//HwA64P///wEAOUD+//4fADr//wf+AQAbIAAd8P9/AAEGABuADwAcgP//DwAd+AEAHPj//wAdgB8AHf//DwAd+AEAHPD/fwAdgA8AHYQ/AwAdYAAe8AEAPQ4AsgTwAQA8gD8APfgHADyAfwA9+AMAPIA/AD3wAQCnCOABAD0/AD3wBwA9fwA94AcAPTwAPIAHAD38AD3wDwA8gP8APfgHADzAPwA9/wA98AcAPT8APfABAD0fADyAAwA9fAA94AcAPX4AAwQAOfAH4AfwAQA4gD/A/wABPwA5/8H/D/gDADj4n///AAE/ADiA////B/ABAAXwADL4//8/AAFkAAWAHwAxgP//PwABgA8ABfgBADDg//8/AAL4AQAEgD8AMf//fwACwB8ABfgBAC+A////AAP4AAYPADD+//8AA4B/ADbg//8BAAPADwA2/v8DAAT8ADbg/w8ABMAPADb8fwAF/AMAPIB/AD3wBwA9fgA94AcAPTwAtAOAAQA9fAA94AcAPX4APeAHAD08AOEGwAEAPT4APfADAD0/AA7AAwAt8AMADn4ALh4ADuAHAD1+AD3gBwAueAAOfgAuwA8ADeADAC78AA4YAC7AHwA9/AEAPMAfAD34AQA9DwDyAzwAPeAHAD1+AD3gDwA9fAA9gAcAmAk8AD3gBwA8PP4APODnHwA8fv4BADvw9x8APH//AQA74PMPADwcPwA98AMAPIA/ADx8+AEAO8CfHwA8/v8BADvA/x8APPz/AQA7wP8PADz+/wA84P8PADz8/wA8wP8PADz+/wA84P8PADz+/wA8wN8PADz4/QA8gM8PADxgfgA94AcAPX8APfAHABbAAwAkgD8AF34AJID/AwAW4AcAJPwfABd+ACTA/wEAFuAHACT8DwAXPMADACLA/wAZfgAh4AAB+AcAGOAHACCAH8B/ABn+ACH4A/4DABjgDwAgwD/gPwAZfgAh/AP+AQAY8AcAIIAf8AcAGT8AIfABfwAZ+AMAIQbgBwAFPAASgB8AI34ABfAHABL4AQAigAMABX8AEoAfACnwBwAS8AAqfwA94AMAUb0DADz8fwA84P8HADz/fwA88P8HADz+PwA8wAEAdsADAD1+AD3gDwA9/gEAPOAfAAMDADn+AQACeAA5wB8AAvAPADn4AAKA/wA9/A8APMD/AD34BwA9PwB/PAA5DwAD4AcAOPgBAAP+AQA3gB8AA+B/ADj4AQAD/v8AHDgAGoAfAAPA/x8AG8AHABrwAATw/wMAG34AIP4/ABvgBwAfgP8DABt8AAc8ABj8PwAbwAMABuAHABfg/wEAI34AGP8PACPgBwAX+A8AHw8ABH4AF8B/AB/4AQADwAMAF/wDAB6AHwAcwB8AH/hhABz8AB+Anw8AAQ8AGYAHAB/w+AHwAQA6gB+AHwA7+AH4AQA64A8AAR8AO34AAeAAGIADACHgBwAafAAifgAa4AcAIeAHABp+ACJ8ABrABwAiAQAXAQACPAA6fAA94A8APf8APfAPAD3/AD3wDwA9/wA98A8APX4APcAAAzwAPfADADyAfwA9/AcAPMD/AD34DwA9/wA94AcAPT8AAfgPADrwAcD//w8AOIA/AAH8//8PADjwH8D///8DADj/A/z//38AOOB/gP///w8AOPgHAAH4//8AOIA/AAPgBwA4+AMAA34AOMAPAAPABwA4/AAEGAA4gA8APXgAhQY="
       },
       "version": 2
     },
@@ -1726,10 +1731,10 @@
     },
     "player-position": {
       "data": {
-        "x": 11000,
+        "x": 11005.4844,
         "y": 295.0101,
-        "yaw": 3.1416,
-        "z": 6750
+        "yaw": -6.0107,
+        "z": 6808.7334
       },
       "version": 1
     },
@@ -2339,6 +2344,10 @@
               "wave2": 1,
               "wave3": 1
             },
+            "state": "completed"
+          },
+          "m47": {
+            "objectives": {},
             "state": "completed"
           },
           "r01": {
@@ -3338,6 +3347,7 @@
           "story.m46.started": true,
           "story.m47.complete": true,
           "story.m47.rimGateOpen": true,
+          "story.m47.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
