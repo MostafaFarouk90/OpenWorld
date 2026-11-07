@@ -62,6 +62,10 @@ export const DUST_CHANT: TrackDef = {
       phases: [mix(1, 1, 1, 1, 1, 0.7, 1, 0), mix(1, 1, 1, 1, 1, 0.85, 1, 0.6), mix(1, 1, 1, 1, 1, 1, 1, 1)],
       hush: mix(0, 0, 0.3, 0.8, 0.6, 0.5, 0.7, 1),
     },
+    // Act 5 (N8): a siege that starts before the Caldera's own track is playing (the Rim Gate sits on the Waste's side)
+    // finds its keys here, so the Waste's track carries the siege and its lull and the handover is not left on a missing mix.
+    siege: { phases: [mix(1, 1, 1, 1, 1, 0.5, 0.5, 0)] },
+    'siege.lull': { phases: [mix(0, 0, 0.3, 0.8, 0.8, 0.6, 0, 0)] },
   },
   synth: {
     pattern: [
