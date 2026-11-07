@@ -55,6 +55,7 @@ function doM42(): void {
   r.read(M42_NOTES.knot);
   r.enter(M42_CAMP_TRIGGER);
   r.step(20);
+  r.talk(M43_MASTER.walk); // Osgar takes the clip off
   r.talk('wulfhild');
 }
 
@@ -114,6 +115,9 @@ describe('M42 Gate of Ash', () => {
     r.enter(M42_CAMP_TRIGGER);
     r.step(16);
     expect(r.weather.storms.size).toBe(0);
+    r.talk('wulfhild'); // too early: Osgar has not taken the clip off
+    expect(r.current('m42', 'unclip')).toBe(true);
+    r.talk(M43_MASTER.walk);
     r.talk('wulfhild');
     expect(r.qs('m42')).toBe('completed');
     expect(r.flag('story.m42.complete')).toBe(true);
@@ -192,6 +196,25 @@ describe('M43 What the Walkers Know', () => {
     expect(r.num('story.m43.pyreCount')).toBe(1);
   }, T);
 
+  it('takes Hrodna\'s first "Now." while her talk is still open and starts the bout once it closes (L13 M2)', () => {
+    phaseG(); doM42();
+    r.begin('m43', 'wulfhild');
+    expect(r.current('m43', 'danceTalk')).toBe(true);
+    r.dialogue.active = true; // her tree is open: the choice raises the ask before the talk step completes
+    r.emit(M43_DANCE_ASKED); r.step(13);
+    expect(r.trials.running).toBeNull();
+    r.dialogue.active = false;
+    r.talk(M43_MASTER.dance); // the talk ends: danceTalk completes
+    r.step(13);
+    expect(r.trials.running?.id).toBe(M43_DANCE_TRIAL);
+  }, T);
+
+  it('drops an ask from another quest state (M43 not running)', () => {
+    phaseG();
+    r.emit(M43_DANCE_ASKED); r.step(13);
+    expect(r.trials.running).toBeNull();
+  }, T);
+
   it('lets Hrodna win and dances again on the next ask', () => {
     phaseG(); doM42();
     r.begin('m43', 'wulfhild'); r.talk(M43_MASTER.dance);
@@ -219,6 +242,7 @@ function doM44(): void {
   r.reads([M44_NOTES.sampler, M44_NOTES.ledger]);
   r.use(M44_BOX);
   r.read(M44_NOTES.graves);
+  r.talk(CHAPEL_KEEPER);
   r.talk(EBBA);
 }
 
@@ -256,6 +280,7 @@ describe('M44 and R25: the chapel', () => {
     r.step(21);
     expect(r.flag(R25_NO_CANDLE)).toBe(false); // every hearth lit: nothing is owed
     r.reads([R25_REGISTER, R25_LETTER]);
+    r.talk(CHAPEL_KEEPER);
     r.talk(EBBA);
     expect(r.qs('r25')).toBe('completed');
   }, T);
@@ -273,10 +298,13 @@ describe('M44 and R25: the chapel', () => {
 
 function cartHome(r: Rig): void {
   for (const n of [1, 2] as const) {
+    r.step(16);
+    expect(r.weather.clears.has('quest:r24.road'), `the road before shelter ${n} is held clear`).toBe(true);
     r.escorts.st = { id: R24_ESCORT, reason: 'junction', junction: R24_SHELTER_NODES[n - 1]!, arrived: false };
     r.emit('escort.junction', { escortId: R24_ESCORT, junction: R24_SHELTER_NODES[n - 1]! });
     r.step(16);
     expect(r.weather.storms.has(`quest:r24.shelter.${n}`)).toBe(true);
+    expect(r.weather.clears.has('quest:r24.road'), 'the road hold yields to the shelter storm').toBe(false);
     r.secs(R24_STORM_S + 1);
     expect(r.flag(R24_WAITED(n))).toBe(false); // the brake is not set yet
     expect(r.use(R24_BRAKE(n))).toBe(true);
@@ -286,7 +314,8 @@ function cartHome(r: Rig): void {
     expect(r.weather.storms.has(`quest:r24.shelter.${n}`)).toBe(false);
   }
   r.emit('escort.arrived', { escortId: R24_ESCORT });
-  r.step(2);
+  r.step(16);
+  expect(r.weather.clears.has('quest:r24.road'), 'released at the gate').toBe(false);
 }
 
 describe('R24 Ashwalker Water-Debt', () => {
@@ -310,6 +339,7 @@ describe('R24 Ashwalker Water-Debt', () => {
       expect(r.qs('r24')).toBe('completed');
       r.step(16);
       expect(r.flag(R24_CART_OUT)).toBe(false);
+      expect(r.weather.storms.size + r.weather.clears.size).toBe(0);
     }, T);
   }
 

@@ -195,11 +195,13 @@ describe('item 11: the Act 5 kinds and skins', () => {
     const { ACT5_ENEMY_KINDS, WARHOST_ROLES } = await import('./types');
     const { ENEMY_SKINS } = await import('./skins');
     const { ENEMY_DEFS } = await import('./defs');
-    expect(ACT5_ENEMY_KINDS).toEqual(['warhost-soldier']);
+    // N5 adds kinds (warhost-guard) and their defs; the row only ever holds warhost kinds, soldier first.
+    expect(ACT5_ENEMY_KINDS[0]).toBe('warhost-soldier');
+    expect(new Set(ACT5_ENEMY_KINDS).size).toBe(ACT5_ENEMY_KINDS.length);
+    for (const k of ACT5_ENEMY_KINDS) expect(k.startsWith('warhost-'), k).toBe(true);
     expect(WARHOST_ROLES).toEqual(['shield', 'pike', 'torch']);
-    expect((ENEMY_DEFS as Record<string, unknown>)['warhost-soldier']).toBeUndefined();
     for (const [id, kind] of [['footman-grisel', 'blighted-soldier'], ['wraith-stoker', 'ash-wraith'], ['golem-lava', 'cinder-golem']] as const) {
-      expect(ENEMY_SKINS[id]).toEqual({ kind });
+      expect(ENEMY_SKINS[id]).toMatchObject({ kind }); // N5 adds the overrides
       expect(ENEMY_DEFS[kind], id).toBeTruthy();
     }
   });
