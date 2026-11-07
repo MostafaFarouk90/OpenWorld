@@ -5,7 +5,7 @@
 import type { GamePlugin } from '../core/plugins';
 import { finalEnding } from './actEndings';
 import { FinalEndingDirector } from './act5EndingDirector';
-import { ACT5_ENDING_DATA, ACT5_ENDING_STRINGS_EN } from './act5EndingData';
+import { ACT5_ENDING_DATA } from './act5EndingData';
 import { playCredits, stepCredits, stopCue } from '../music/act5Cues';
 
 declare module '../core/Services' {
@@ -23,8 +23,6 @@ const plugin: GamePlugin = {
   id: 'act5-ending',
   dependsOn: ['core'],
   setup(ctx) {
-    // stand-in strings until N11 PR 2 registers its own (act5EndingData.ts)
-    ctx.strings.register('en', ACT5_ENDING_STRINGS_EN);
     const t = (k: string) => ctx.strings.t(k);
     const screens = () => ctx.services.get('act5Screens');
     const music = () => ctx.services.get('music') as never;

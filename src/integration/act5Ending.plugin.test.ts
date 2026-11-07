@@ -50,7 +50,6 @@ describe('plugin act5-ending', () => {
     const { ctx, calls } = await boot();
     const d = ctx.services.get('act5Ending')!;
     expect(d).toBeDefined();
-    expect(ctx.strings.t('hud.ending.a5.longDawn')).toBe('The Long Dawn');
     const ended: unknown[] = [];
     ctx.events.on('act.ended', (e) => ended.push(e));
     // N11 at the confirm
@@ -66,7 +65,7 @@ describe('plugin act5-ending', () => {
     expect(calls).toEqual([
       `suspend ${ACT5_SAVE_HOLD}`,
       'scene scene-ending-let-it-die',
-      `card ${ACT5_TITLE_CARD_ID} hud.ending.a5.longDawn `,
+      `card ${ACT5_TITLE_CARD_ID} scene.ending.title.longDawn `,
       'epilogue',
       'credits',
       'wake true',
