@@ -62,7 +62,9 @@ describe('act5-sfx plugin', () => {
     f.emit('vent.closing', { ventId: 'v1', inS: 1.5 });
     f.emit('siege.ram.hit', { siegeId: 'm52' });
     f.emit('enemies.shieldLine.broken', { lineId: 'l1', members: [] });
-    expect(f.played).toEqual(['sfx.vent.crack', 'sfx.ram.hit', 'sfx.siege.lineBreak']);
+    f.emit('siege.dragon.breath', { siegeId: 'm52', dragonId: 'd1', at: { x: 0, y: 0, z: 0 } });
+    f.emit('siege.gong', { siegeId: 'm52', by: 'cael' });
+    expect(f.played).toEqual(['sfx.vent.crack', 'sfx.ram.hit', 'sfx.siege.lineBreak', 'sfx.dragon.breath', 'sfx.gong.rim']);
   });
 
   it('listens for the beat on Ulthred\'s phase 3 and for no other boss, and re-derives the siege mix after a load', () => {
