@@ -14,12 +14,15 @@
     "d09"
   ],
   "questDefs": [
+    "d09",
     "m47",
     "m48",
     "m49",
     "m50",
     "m51",
-    "r26"
+    "m53",
+    "r26",
+    "r27"
   ],
   "base": {
     "fixture": "act5-carried-chain-a.json",
