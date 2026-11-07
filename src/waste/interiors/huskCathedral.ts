@@ -50,10 +50,11 @@ export const HUSK_CATHEDRAL_DEF: InteriorDef = {
   // Two rows of nave columns, clear of the aisles' ash piles and of the arena's middle.
   pillars: [14, 22, 30, 38].flatMap((z) => [rect(-13.5, z - 0.6, -12.3, z + 0.6), rect(12.3, z - 0.6, 13.5, z + 0.6)]),
   props: [
-    { id: 'altar', rect: rect(-2, 46.6, 2, 48), height: 1.1 },
-    { id: 'gong-frame', rect: rect(HUSK_CATHEDRAL_GONG.x - 1.6, 47.2, HUSK_CATHEDRAL_GONG.x + 1.6, 47.9), height: 3.2 },
+    // The altar and the gong's frame stand against the apse wall: no slot behind them to be pinned in (L6's playtest).
+    { id: 'altar', rect: rect(-2, 46.6, 2, 48.5), height: 1.1 },
+    { id: 'gong-frame', rect: rect(HUSK_CATHEDRAL_GONG.x - 1.6, 47.2, HUSK_CATHEDRAL_GONG.x + 1.6, 48.5), height: 3.2 },
     // The narthex's bone heap (L11's search) against the west wall.
-    { id: 'bones', rect: rect(-6.8, 3, -5.2, 5), height: 0.6 },
+    { id: 'bones', rect: rect(-7, 3, -5.2, 5), height: 0.6 },
     // The crypt: three tombs and the reward niche.
     { id: 'tomb.1', rect: rect(12, 3, 14, 6.5), height: 0.9 },
     { id: 'tomb.2', rect: rect(15, 3, 17, 6.5), height: 0.9 },

@@ -200,6 +200,19 @@ describe("the Waste's interiors", () => {
     expect(crypt.z1 <= a.z0 || crypt.x0 >= a.x1).toBe(true);
   });
 
+  it('leaves no slot under 1 m between a solid prop and a wall (a player could be pinned in it)', () => {
+    for (const def of [HUSK_CATHEDRAL_DEF, CINDER_CHAPEL_DEF]) {
+      for (const p of def.props ?? []) {
+        if (p.walkable) continue;
+        const room = def.rooms.find((r) => p.rect.x0 >= r.x0 && p.rect.x1 <= r.x1 && p.rect.z0 >= r.z0 && p.rect.z1 <= r.z1);
+        expect(room, `${def.id} ${p.id} sits in one room`).toBeDefined();
+        for (const gap of [p.rect.x0 - room!.x0, room!.x1 - p.rect.x1, p.rect.z0 - room!.z0, room!.z1 - p.rect.z1]) {
+          expect(gap === 0 || gap >= 1, `${def.id} ${p.id} gap ${gap}`).toBe(true);
+        }
+      }
+    }
+  });
+
   it('has a door prompt in and out of both interiors', async () => {
     const { INTERIOR_STRINGS_EN } = await import('../interiors/strings.en');
     for (const id of ['husk-cathedral', 'cinder-chapel']) for (const way of ['enter', 'exit']) expect(INTERIOR_STRINGS_EN[`interior.${way}.${id}`]).toMatch(/^\{key\} /);
