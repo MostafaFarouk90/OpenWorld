@@ -78,7 +78,7 @@ export const HEART_OF_THE_ANVIL: TrackDef = {
   },
   bossMixes: {
     // Vey (D09): four poise breaks, no phases, so one mix; the hush is his mercy window (drums out, the lead alone).
-    vey: { phases: [VEY], hush: heart({ hat: 0.3, bass: 0.8, vocal: 0.3, boss: 0.4 }) },
+    vey: { phases: [VEY], hush: heart({ bass: 0.8, vocal: 0.3, boss: 0.4 }) },
     // Ulthred (D10), three phases from boss.phase; the same mixes are also reachable by id.
     ulthred: { phases: [ULTHRED_1, ULTHRED_2, ULTHRED_3] },
     'ulthred.1': { phases: [ULTHRED_1] },

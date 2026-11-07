@@ -16,7 +16,7 @@ if (!outArg) {
   process.exit(2);
 }
 const outDir = resolve(outArg);
-const rel = relative(process.cwd(), outDir);
+const rel = relative(process.cwd(), outDir); // the repo is the cwd (run from the repo root)
 if (!rel.startsWith('..') && !isAbsolute(rel)) {
   console.error(`refusing to write previews inside the repo (${outDir})`);
   process.exit(2);
@@ -41,7 +41,7 @@ const result = await page.evaluate(
     const { TRACKS_BY_ID } = await import('/src/music/tracks.ts');
     const { MusicReverb } = await import('/src/audio/MusicReverb.ts');
     const { ACT5_SFX_KEYS, act5SfxSamples } = await import('/src/audio/act5/act5Sfx.ts');
-    const { CALDERA_BED_SECONDS, fillCalderaBed } = await import('/src/audio/act5/ambienceAct5.ts');
+    const { makeBedSamples } = await import('/src/audio/AmbienceBed.ts');
     const { PLACEHOLDER_SAMPLE_RATE } = await import('/src/audio/proceduralSounds.ts');
 
     const stemCache = new Map();
@@ -65,8 +65,10 @@ const result = await page.evaluate(
         src.loop = true;
         const gain = ctx.createGain();
         gain.gain.setValueAtTime(steps[0].mix[id] ?? 0, 0);
+        let prev = steps[0].mix;
         for (const s of steps.slice(1)) {
-          gain.gain.setValueAtTime(gain.gain.value, s.at);
+          gain.gain.setValueAtTime(prev[id] ?? 0, s.at);
+          prev = s.mix;
           gain.gain.linearRampToValueAtTime(s.mix[id] ?? 0, s.at + 0.4);
         }
         src.connect(gain);
@@ -125,10 +127,8 @@ const result = await page.evaluate(
     for (const [name, track, mix, opts] of jobs) files.push({ name, samples: await render(track, mix, opts) });
 
     // The Caldera bed, two loops.
-    const bedLen = CALDERA_BED_SECONDS * RATE;
-    const bedRaw = new Float32Array(bedLen + RATE);
-    fillCalderaBed(bedRaw, bedLen, RATE, 0x61d3a7);
-    const bed = bedRaw.subarray(0, bedLen);
+    const bed = makeBedSamples('caldera', RATE);
+    const bedLen = bed.length;
     let bp = 0;
     for (const v of bed) bp = Math.max(bp, Math.abs(v));
     for (let i = 0; i < bed.length; i++) bed[i] *= 0.35 / bp;

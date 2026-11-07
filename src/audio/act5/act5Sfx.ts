@@ -168,7 +168,7 @@ function raw(key: Act5SfxKey): Float32Array<ArrayBuffer> {
     case 'sfx.vent.idle': {
       const rnd = noise(607);
       const band = bandpass(1200, 6000);
-      return loopRender(4, (t) => band(rnd(), 2600 + 700 * Math.sin(TAU * 0.4 * t)) * 2.2 * (0.7 + 0.3 * Math.sin(TAU * 0.75 * t)), 0.5);
+      return loopRender(4, (t) => band(rnd(), 2600 + 700 * Math.sin(TAU * 0.5 * t)) * 2.2 * (0.7 + 0.3 * Math.sin(TAU * 0.75 * t)), 0.5);
     }
     case 'sfx.vent.crack': {
       // The crust about to melt: three sharp stony cracks.
@@ -277,7 +277,7 @@ function raw(key: Act5SfxKey): Float32Array<ArrayBuffer> {
     }
     case 'sfx.anvil.hum': {
       // The Anvil's steady tone in its room.
-      return loopRender(4, (t) => (Math.sin(TAU * 55 * t) * 0.8 + Math.sin(TAU * 110.7 * t) * 0.45 + Math.sin(TAU * 165 * t) * 0.18) * (0.85 + 0.15 * Math.sin(TAU * 0.5 * t)), 0.5);
+      return loopRender(4, (t) => (Math.sin(TAU * 55 * t) * 0.8 + Math.sin(TAU * 110.5 * t) * 0.45 + Math.sin(TAU * 165 * t) * 0.18) * (0.85 + 0.15 * Math.sin(TAU * 0.5 * t)), 0.5);
     }
     case 'sfx.anvil.pulse': {
       // A soft heartbeat pulse of the Anvil.

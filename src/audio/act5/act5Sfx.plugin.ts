@@ -122,6 +122,7 @@ const plugin: GamePlugin = {
       onBeat: (cb) => ctx.services.get('music')?.onBeat(cb) ?? (() => {}),
     });
 
+    let recheck = false;
     const ev = ctx.events;
     const named = ev.on as unknown as Named;
     offs.push(
@@ -153,9 +154,14 @@ const plugin: GamePlugin = {
       ev.on('boss.defeated', (e) => music.bossOver(e.bossId)),
       ev.on('boss.released', (e) => music.bossOver(e.bossId)),
       ev.on('boss.ended', (e) => music.bossOver(e.bossId)),
+      // The music plugin resets its director on a load or respawn, and plugins set up in id order, so the siege mix is
+      // re-derived on the next tick, after that reset (not synchronously here).
       ev.on('save.loaded', () => {
         router.saveLoaded();
-        music.saveLoaded(false);
+        recheck = true;
+      }),
+      ev.on('actor.revived', (e) => {
+        if (e.reason === 'respawn' && e.actorId === ctx.player.actor.id) recheck = true;
       }),
       () => {
         router.stopAll();
@@ -166,6 +172,16 @@ const plugin: GamePlugin = {
         fixedPhase: 'late',
         order: 902,
         fixedUpdate: (dt) => {
+          if (recheck) {
+            recheck = false;
+            let siege = false;
+            try {
+              siege = (ctx.services as unknown as { get(n: string): { current?: string } | undefined }).get('movementMode')?.current === 'siege';
+            } catch {
+              siege = false;
+            }
+            music.saveLoaded(siege);
+          }
           router.tick(dt);
           music.tick(dt);
         },
