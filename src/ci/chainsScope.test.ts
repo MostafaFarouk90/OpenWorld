@@ -21,17 +21,18 @@ const { decideChains, CHAIN_PATHS, TITLE_MARKER } = scope;
 describe('the chains scope rule', () => {
   it('runs on a change to what the chains play, their own directory, the CI or the group', () => {
     for (const f of ['src/quests/act4/x.ts', 'src/integration/phaseGDriver.ts', 'src/dialogue/a.ts', 'src/scenes/s.ts', 'src/save/x.ts',
-      'src/waystones/w.ts', '.github/workflows/ci.yml', '.github/scripts/chains-scope.mjs', 'vitest.chains.ts', 'vitest.config.ts']) {
+      'src/waystones/w.ts', 'src/waste/w.ts', 'src/enemies/defs.ts', 'src/bosses/act4/eormen/e.ts', 'src/region/regions.ts',
+      '.github/workflows/ci.yml', '.github/scripts/chains-scope.mjs', 'vitest.chains.ts', 'vitest.config.ts']) {
       expect(decideChains({ event: 'pull_request', files: ['src/hud/a.ts', f] }).chains, f).toBe('run');
     }
   });
   it('skips a change outside the scope, on a PR and on main alike', () => {
-    const files = ['src/hud/Hud.ts', 'src/enemies/defs.ts', 'public/assets/env/tree.glb', 'README.md'];
+    const files = ['src/hud/Hud.ts', 'src/companions/c.ts', 'public/assets/env/tree.glb', 'README.md'];
     expect(decideChains({ event: 'pull_request', files })).toMatchObject({ chains: 'skip' });
     expect(decideChains({ event: 'push', files })).toMatchObject({ chains: 'skip' });
   });
   it('a prefix needs its slash: src/quests-notes.md is not src/quests/', () => {
-    expect(decideChains({ event: 'push', files: ['src/quests-notes.md', 'src/savegame.ts'] }).chains).toBe('skip');
+    expect(decideChains({ event: 'push', files: ['src/quests-notes.md', 'src/savegame.ts', 'src/regions.ts', 'src/wasteland.ts'] }).chains).toBe('skip');
   });
   it('runs by hand, or on a PR whose title carries the marker (only on a PR)', () => {
     expect(decideChains({ event: 'workflow_dispatch', files: ['src/hud/a.ts'] }).chains).toBe('run');
@@ -105,8 +106,8 @@ describe('the CLI on a real git diff', () => {
 describe('the chains group', () => {
   const chainName = /^phase[A-Z]\.run[AB]\.e2e\.test\.ts$/;
   const files = readdirSync(resolve(proc.cwd(), 'src/integration')).filter((f) => chainName.test(f));
-  it('is exactly the whole-phase chains, runs A and B of Phases C to G (ten files)', () => {
-    expect(files.sort()).toEqual(['C', 'D', 'E', 'F', 'G'].flatMap((p) => [`phase${p}.runA.e2e.test.ts`, `phase${p}.runB.e2e.test.ts`]));
+  it('is exactly the whole-phase chains, runs A and B of Phases C to H (twelve files)', () => {
+    expect(files.sort()).toEqual(['C', 'D', 'E', 'F', 'G', 'H'].flatMap((p) => [`phase${p}.runA.e2e.test.ts`, `phase${p}.runB.e2e.test.ts`]));
     expect(CHAIN_FILES).toEqual(['src/integration/phase*.run[AB].e2e.test.ts']);
   });
   it('is left out of the default run and is all the chains config runs', async () => {
