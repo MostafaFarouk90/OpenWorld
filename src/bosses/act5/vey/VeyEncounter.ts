@@ -201,6 +201,11 @@ export class VeyEncounter implements VeyHooks {
     return this.windowOpen;
   }
 
+  /** The window is open and past its strike grace: a hit from Cael now strikes him down (tests and drivers wait for it). */
+  get strikeReady(): boolean {
+    return this.windowOpen && this.windowT >= VEY.strikeGrace;
+  }
+
   register(): boolean {
     if (this.registered || this.ended) return false;
     try {

@@ -69,9 +69,9 @@ export function winVeyForTest(h: WinHarness, outcome: 'spared' | 'defeated', opt
     if (hold?.onInteract) hold.onInteract();
     else ctx.bosses.release(VEY_BOSS_ID);
   } else {
-    for (let i = 0; i < Math.ceil(VEY.strikeGrace / TICK) + 1; i++) tick();
-    // A blow inside the grace is held at 1 HP (the window can open a tick after releaseOpen reads true): strike again each tick
-    // until one lands, for up to 2 s.
+    // Wait for the encounter's own clock to pass the grace (the window can open a tick or more after releaseOpen reads true,
+    // and a blow inside the grace is held at 1 HP), then strike; strike again each tick until one lands, for up to 2 s.
+    until('the strike grace to pass', () => veyDirector()!.current?.strikeReady === true, 3);
     for (let i = 0; i < Math.ceil(2 / TICK) && ctx.state.getFlag(`boss.${VEY_BOSS_ID}.outcome`) !== outcome; i++) {
       hit(1, 0);
       tick();

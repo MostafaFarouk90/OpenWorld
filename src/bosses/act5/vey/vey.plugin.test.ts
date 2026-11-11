@@ -420,6 +420,21 @@ describe('Morcant Vey on the real core', () => {
     t.teardown();
   });
 
+  it('edge: winVeyForTest never strikes inside the grace, even when the window opens late', async () => {
+    const t = await setup();
+    t.enter();
+    // A late window (a real save's queued events): every tick in which the window is open but inside the grace is watched.
+    let early = 0;
+    t.ctx.events.on('damage.dealt', (r) => {
+      const e = veyDirector()?.current;
+      if (r.attackerId === t.ctx.player.actor.id && e?.spareOpen && !e.strikeReady) early++;
+    });
+    winVeyForTest({ ctx: t.ctx, step: () => t.game.fixedUpdate() }, 'defeated');
+    expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBe('defeated');
+    expect(early).toBe(0);
+    t.teardown();
+  });
+
   it('winVeyForTest reaches both outcomes on the real rules', async () => {
     for (const outcome of ['spared', 'defeated'] as const) {
       const t = await setup();
