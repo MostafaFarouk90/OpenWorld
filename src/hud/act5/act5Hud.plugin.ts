@@ -41,7 +41,7 @@ export const ACT5_HUD_CSS = `
 .owg-spare{pointer-events:none;text-align:center;font:600 20px/1.3 system-ui,sans-serif;color:#f0d890;text-shadow:0 2px 4px #000;margin-top:140px}
 .owg-spare-count{font-size:28px;color:#fff}
 .owg-lava-flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 45%,rgba(220,70,20,.55) 100%);opacity:0}
-.owg-act5-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,6,4,.92);color:#f3ead8;font:18px/1.5 Georgia,serif;text-align:center;z-index:50}
+.owg-act5-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0604;color:#f3ead8;font:18px/1.5 Georgia,serif;text-align:center;z-index:50}
 .owg-act5-body{max-width:640px;padding:0 16px}
 .owg-act5-title{margin:0 0 16px;color:#f0d890;font-size:30px}
 .owg-act5-line{margin:6px 0}

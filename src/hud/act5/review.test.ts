@@ -111,3 +111,12 @@ describe('lastChanceNote only lists quests that can be started', () => {
     expect(lastChanceNote(ports({ r28: ['zz'], r30: ['zz'] }, { d09: 'completed', r27: 'completed', r29: 'completed' }))).toBeNull();
   });
 });
+
+describe('ending screens cover the HUD', () => {
+  it('the screen backdrop is fully opaque', async () => {
+    const { ACT5_HUD_CSS } = await import('./act5Hud.plugin');
+    const rule = /\.owg-act5-screen\{[^}]*\}/.exec(ACT5_HUD_CSS)![0];
+    expect(rule).toMatch(/background:#[0-9a-f]{6}[;}]/i);
+    expect(rule).not.toMatch(/rgba/);
+  });
+});
