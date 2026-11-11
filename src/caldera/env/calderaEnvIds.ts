@@ -11,8 +11,8 @@ export type CalderaEnvUse =
   | 'row'
   /** A PR 1 layout structure (caldera.layout.ts) drawn by the file once it is in the manifest; greybox (with its collider) until then. */
   | 'structure'
-  /** Not placed by the env pass: a piece another thread's code draws (named in `where`), listed so the art is asked for once. */
-  | 'other';
+  /** Placed by code, not by the tile (the Anvil island's set dressed onto N6's D10 arena, the Lava Stair's gantries); a scripted stand-in until the file arrives. */
+  | 'piece';
 
 export interface CalderaEnvId {
   id: string;
@@ -237,43 +237,54 @@ export const CALDERA_ENV_IDS: readonly CalderaEnvId[] = [
     where: 'the Inner Gate (2; structures caldera.inner-gate.pillar.1/2)',
   },
 
-  // ---- other threads' pieces (asked for once here; their code swaps them in)
+  // ---- the code-placed pieces (PR 3: env/anvilArenaArt.ts on N6's arena, env/lavaStair.ts on the Lava Stair)
   {
     id: 'anvil-of-ages-a',
-    use: 'other',
+    use: 'piece',
     w: 3,
     d: 6,
     h: 2.6,
     prompt: 'the Anvil of Ages: an enormous ancient anvil of dark bronze-black metal on a stepped basalt plinth, the face cracked with glowing ember veins (emissive material named Glow), old runes worn round the base',
-    where: 'the island\'s centre (1; N6\'s D10 arena, src/bosses/act5/ulthred/anvilArena.ts)',
+    where: 'the island, north-east of the centre at 40 m, facing it (1; a landmark with a collider, outside N6\'s fight pieces)',
   },
   {
     id: 'arena-platform-a',
-    use: 'other',
+    use: 'piece',
     w: 6,
     d: 8,
     h: 0.35,
     prompt: 'a turning platform slab of riveted iron plates over basalt, ember light leaking from the seams (emissive material named Glow), worn smooth in the middle',
-    where: 'the island (4; N6\'s turning platforms)',
+    where: 'the island (4; N6\'s turning platforms, src/bosses/act5/ulthred/anvilArena.ts)',
   },
   {
     id: 'crack-anvil-a',
-    use: 'other',
+    use: 'piece',
     w: 1.2,
     d: 2,
     h: 1,
-    prompt: 'a small anvil block of black iron on a stone stump, a deep crack across its face; a second version with the crack glowing ember-orange',
+    prompt: 'a small anvil block of black iron on a stone stump, a deep crack across its face, the crack a separate emissive material named Glow (the game lights it when the anvil cracks)',
     where: 'the island (3; N6\'s crack-anvils)',
   },
   {
     id: 'spirit-flame-post-a',
-    use: 'other',
+    use: 'piece',
     w: 0.6,
     d: 0.6,
     h: 2.2,
     prompt: 'a slim bronze post with a shallow dish on top for a pale spirit flame, verdigris at the foot',
     where: 'the island (10; N6\'s spirit-flame posts)',
   },
+  {
+    id: 'lava-gantry-a',
+    use: 'piece',
+    w: 2.4,
+    d: 6.6,
+    h: 1.2,
+    prompt: 'a heavy drawbridge gantry: a plank deck on two riveted iron girders with low chain rails, a hinge bar across the near end (-Z), the landing end toward +Z; built to lie flat over a lava channel',
+    where: 'the Lava Stair\'s second and fifth channels (2; lowered by M48\'s gantry levers)',
+  },
 ];
 
 export const CALDERA_ROW_IDS = CALDERA_ENV_IDS.filter((e) => e.use === 'row').map((e) => e.id);
+/** Every id with a scripted stand-in (the tile's rows and the code-placed pieces). */
+export const CALDERA_STANDIN_ENV_IDS = CALDERA_ENV_IDS.filter((e) => e.use !== 'structure').map((e) => e.id);

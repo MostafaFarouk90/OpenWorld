@@ -11,6 +11,8 @@ import type { PlatformItem } from '../../../caldera/arenaKit';
 import type { GameContext } from '../../../core/Game';
 import { heightAt } from '../../../terrain/heightfield';
 import { DROP_ANCHOR, LOOK } from './tuning';
+import { envModelLibraryFor } from '../../../env/envStructureArt';
+import { dressAnvilArena } from '../../../caldera/env/anvilArenaArt';
 
 export const ANVIL_ARENA_LAYOUT = {
   dropR: 6,
@@ -82,6 +84,7 @@ export function buildAnvilArena(ctx: GameContext, warn: (m: string) => void = ()
 
   // Platforms: kinematic bodies at the pivot, each collider offset to its slab (N3's devRig pattern).
   const platforms: PlatformItem[] = [];
+  const slabs: THREE.Mesh[] = [];
   const physics = (ctx as Partial<GameContext>).physics;
   for (let k = 0; k < L.platformCount; k++) {
     const deg = 45 + (360 / L.platformCount) * k;
@@ -95,6 +98,7 @@ export function buildAnvilArena(ctx: GameContext, warn: (m: string) => void = ()
     slab.position.set(ox, top - centre.y - L.platformSize.y / 2, oz);
     slab.rotation.y = -a;
     mesh.add(slab);
+    slabs.push(slab);
     mesh.position.copy(centre);
     group.add(mesh);
     offs.push(() => slab.geometry.dispose());
@@ -152,6 +156,7 @@ export function buildAnvilArena(ctx: GameContext, warn: (m: string) => void = ()
   // Flame posts.
   const flamePosts: THREE.Vector3[] = [];
   const flames: THREE.Mesh[] = [];
+  const posts: THREE.Mesh[] = [];
   const postGeo = new THREE.CylinderGeometry(0.18, 0.24, 1.6, 8);
   const flameGeo = new THREE.ConeGeometry(0.35, 0.9, 8);
   offs.push(() => {
@@ -168,8 +173,13 @@ export function buildAnvilArena(ctx: GameContext, warn: (m: string) => void = ()
     flame.position.set(x, y + 2.05, z);
     flame.visible = false;
     group.add(post, flame);
+    posts.push(post);
     flames.push(flame);
   }
+
+  // N1 PR 3: the env pieces over these primitives (src/caldera/env/anvilArenaArt.ts); positions, bodies and colliders stay as built here.
+  const art = dressAnvilArena(envModelLibraryFor((ctx as Partial<GameContext>).assets), { slabs, anvils: anvilMeshes, posts, flames });
+  offs.push(() => art.dispose());
 
   return {
     centre,
@@ -180,6 +190,7 @@ export function buildAnvilArena(ctx: GameContext, warn: (m: string) => void = ()
     setAnvilCracked(index, isCracked) {
       const m = anvilMeshes[index];
       if (m) m.material = isCracked ? cracked : iron;
+      art.setCracked(index, isCracked);
     },
     setFlames(n) {
       flames.forEach((f, i) => (f.visible = i < n));

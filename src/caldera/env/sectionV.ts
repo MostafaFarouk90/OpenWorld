@@ -6,7 +6,7 @@ export const SECTION_V_HEADING = '## V. Act 5 the Sunforge Caldera (added 2026-1
 
 const fmt = (n: number): string => String(n);
 const standIn = (e: CalderaEnvId): string =>
-  e.use === 'row' ? 'scripted stand-in `public/assets/env-standin/' + e.id + '.glb`' : e.use === 'structure' ? 'greybox box with its collider (`caldera.layout.ts`)' : 'the owning thread\'s primitives';
+  e.use === 'structure' ? 'greybox box with its collider (`caldera.layout.ts`)' : 'scripted stand-in `public/assets/env-standin/' + e.id + '.glb`';
 const line = (e: CalderaEnvId): string => `| ${e.id} | ${e.prompt.replace(/\|/g, '/')} | ${e.where.replace(/\|/g, '/')} | ${standIn(e)} | ${fmt(e.w)} x ${fmt(e.d)} x ${fmt(e.h)} |`;
 
 export function renderSectionV(): string {
@@ -27,11 +27,11 @@ export function renderSectionV(): string {
     '| --- | --- | --- | --- | --- |',
     ...part('structure'),
     '',
-    '### V3. The Anvil island (asked for once here; N6\'s arena code swaps them in)',
+    '### V3. The Anvil island and the Lava Stair (placed by code, as scripted stand-ins)',
     '',
     '| id | prompt | where (count) | now | size (m, W x D x H) |',
     '| --- | --- | --- | --- | --- |',
-    ...part('other'),
+    ...part('piece'),
     '',
   ].join('\n');
 }

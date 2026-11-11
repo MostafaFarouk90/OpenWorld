@@ -176,6 +176,12 @@ export const STANDINS: ReadonlySet<string> = new Set([
   'wyrm-skull-a',
   'scorched-nest-a',
   'warhost-tent-a',
+  // Act 5 N1 PR 3: the code-placed pieces (the Anvil island's set, the Lava Stair's gantries).
+  'anvil-of-ages-a',
+  'arena-platform-a',
+  'crack-anvil-a',
+  'spirit-flame-post-a',
+  'lava-gantry-a',
 ]);
 export const STANDIN_PREFIX = 'env-standin/';
 

@@ -237,6 +237,67 @@ function warTent(seed = 5116): Built {
   return { builder: b, mats: { Canvas: WHITE, Stripe: WHITE, Dark: WHITE, Pole: WHITE } };
 }
 
+// ---- Act 5 N1 PR 3: the code-placed pieces (the Anvil island's set for N6's D10 arena, the Lava Stair's gantries)
+
+function anvilOfAges(seed = 5117): Built {
+  const b = new MeshBuilder();
+  const r = rng(seed);
+  // A stepped basalt plinth, the anvil on top: waist, a long face with a horn toward +Z, the face's cracks a Glow material.
+  b.add('Stone', BOX, M(0, 0.3, 0, 0, 0, 0, 3.0, 0.6, 6.0), BASALT, 0.12, r);
+  b.add('Stone', BOX, M(0, 0.8, 0, 0, 0, 0, 2.4, 0.4, 4.8), BASALT_LIGHT, 0.12, r);
+  b.add('Metal', BOX, M(0, 1.45, 0, 0, 0, 0, 1.2, 0.9, 2.2), 0x3b2e24, 0.1, r);
+  b.add('Metal', BOX, M(0, 2.2, -0.3, 0, 0, 0, 2.0, 0.6, 3.6), 0x45352a, 0.1, r);
+  b.add('Metal', cone(8), M(0, 2.2, 2.2, Math.PI / 2, 0, 0, 0.6, 1.4, 0.6), 0x45352a, 0.1, r);
+  for (const [x, z, a] of [[-0.4, -0.8, 0.5], [0.3, 0.2, -0.7], [0, -1.6, 1.2]] as const) b.add('Glow', BOX, M(x, 2.51, z, 0, a, 0, 1.1, 0.04, 0.1), EMBER, 0.1, r);
+  for (const s of [-1, 1]) b.add('Stone', BOX, M(s * 1.3, 0.62, 0, 0, 0, 0, 0.12, 0.04, 5.6), 0x6a5a48, 0.06, r);
+  return { builder: b, mats: { Stone: WHITE, Metal: WHITE, Glow: GLOW } };
+}
+
+function arenaPlatform(seed = 5118): Built {
+  const b = new MeshBuilder();
+  const r = rng(seed);
+  b.add('Stone', BOX, M(0, 0.1, 0, 0, 0, 0, 6, 0.2, 8), BASALT, 0.1, r);
+  for (const [x, z] of [[-1.5, -2], [1.5, -2], [-1.5, 2], [1.5, 2]] as const) b.add('Iron', BOX, M(x, 0.27, z, 0, 0, 0, 2.9, 0.14, 3.9), IRON, 0.08, r);
+  b.add('Glow', BOX, M(0, 0.22, 0, 0, 0, 0, 0.1, 0.12, 7.8), EMBER, 0.1, r);
+  b.add('Glow', BOX, M(0, 0.22, 0, 0, 0, 0, 5.8, 0.12, 0.1), EMBER, 0.1, r);
+  return { builder: b, mats: { Stone: WHITE, Iron: WHITE, Glow: GLOW } };
+}
+
+function crackAnvil(seed = 5119): Built {
+  const b = new MeshBuilder();
+  const r = rng(seed);
+  b.add('Stone', cyl(8), M(0, 0.25, 0, 0, 0, 0, 1.1, 0.5, 1.1), BASALT_LIGHT, 0.12, r);
+  b.add('Iron', BOX, M(0, 0.62, 0, 0, 0, 0, 0.6, 0.25, 1.2), IRON, 0.08, r);
+  b.add('Iron', BOX, M(0, 0.86, -0.1, 0, 0, 0, 1.0, 0.24, 1.7), IRON, 0.08, r);
+  b.add('Iron', cone(6), M(0, 0.86, 0.95, Math.PI / 2, 0, 0, 0.3, 0.4, 0.3), IRON, 0.08, r);
+  // The crack: dark until N6 cracks it (the arena dresser lights this material per anvil).
+  b.add('Glow', BOX, M(0, 0.985, -0.1, 0, 0.4, 0, 0.9, 0.02, 0.08), EMBER, 0.1, r);
+  return { builder: b, mats: { Stone: WHITE, Iron: WHITE, Glow: GLOW } };
+}
+
+function spiritFlamePost(seed = 5120): Built {
+  const b = new MeshBuilder();
+  const r = rng(seed);
+  b.add('Bronze', cyl(8), M(0, 0.1, 0, 0, 0, 0, 0.6, 0.2, 0.6), 0x4c6b5a, 0.1, r);
+  b.add('Bronze', cyl(8), M(0, 1.1, 0, 0, 0, 0, 0.16, 2.0, 0.16), BRONZE, 0.1, r);
+  b.add('Bronze', cyl(10), M(0, 2.12, 0, 0, 0, 0, 0.55, 0.16, 0.55), BRONZE, 0.1, r);
+  return { builder: b, mats: { Bronze: WHITE } };
+}
+
+function lavaGantry(seed = 5121): Built {
+  const b = new MeshBuilder();
+  const r = rng(seed);
+  // Two riveted girders, a plank deck, low chain rails; hinged at the near end (-Z), the landing end at +Z.
+  for (const s of [-1, 1]) {
+    b.add('Iron', BOX, M(s * 1.05, 0.15, 0, 0, 0, 0, 0.18, 0.3, 6.6), IRON, 0.08, r);
+    for (const z of [-3, -1, 1, 3]) b.add('Iron', BOX, M(s * 1.1, 0.65, z, 0, 0, 0, 0.08, 1.0, 0.08), IRON, 0.05, r);
+    b.add('Iron', BOX, M(s * 1.1, 1.12, 0, 0, 0, 0, 0.05, 0.05, 6.1), SOOT, 0.05, r);
+  }
+  for (let i = 0; i < 11; i++) b.add('Timber', BOX, M(0, 0.33, -3 + i * 0.6, 0, 0, 0, 2.3, 0.08, 0.55), TIMBER, 0.15, r);
+  b.add('Iron', cyl(8), M(0, 0.15, -3.2, 0, 0, Math.PI / 2, 0.2, 2.4, 0.2), IRON, 0.05, r);
+  return { builder: b, mats: { Iron: WHITE, Timber: WHITE } };
+}
+
 export const CALDERA_STANDIN_BUILDERS: Readonly<Record<string, () => Built>> = {
   'caldera-lantern-post-a': () => lanternPost(),
   'basalt-boulder-a': () => basaltBoulder(),
@@ -254,6 +315,11 @@ export const CALDERA_STANDIN_BUILDERS: Readonly<Record<string, () => Built>> = {
   'wyrm-skull-a': () => skull(),
   'scorched-nest-a': () => nest(),
   'warhost-tent-a': () => warTent(),
+  'anvil-of-ages-a': () => anvilOfAges(),
+  'arena-platform-a': () => arenaPlatform(),
+  'crack-anvil-a': () => crackAnvil(),
+  'spirit-flame-post-a': () => spiritFlamePost(),
+  'lava-gantry-a': () => lavaGantry(),
 };
 
 export const CALDERA_STANDIN_IDS = Object.keys(CALDERA_STANDIN_BUILDERS);

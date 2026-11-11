@@ -28,7 +28,7 @@ import {
   rowRadius,
   SIEGE_COURT,
 } from './calderaEnv';
-import { CALDERA_ENV_IDS, CALDERA_ROW_IDS } from './calderaEnvIds';
+import { CALDERA_ENV_IDS, CALDERA_ROW_IDS, CALDERA_STANDIN_ENV_IDS } from './calderaEnvIds';
 import { renderSectionV, SECTION_V_HEADING } from './sectionV';
 
 const fsModule = 'node:fs';
@@ -72,9 +72,10 @@ describe('the catalogue (section V)', () => {
     for (const e of CALDERA_ENV_IDS) expect(TARGETS[e.id], e.id).toEqual({ w: e.w, d: e.d, h: e.h });
   });
 
-  it('has a scripted stand-in for every dressing id and for nothing else', () => {
-    expect([...CALDERA_STANDIN_IDS].sort()).toEqual([...CALDERA_ROW_IDS].sort());
-    for (const id of CALDERA_ROW_IDS) expect(STANDINS.has(id), id).toBe(true);
+  it('has a scripted stand-in for every dressing id and code-placed piece, and for nothing else', () => {
+    expect([...CALDERA_STANDIN_IDS].sort()).toEqual([...CALDERA_STANDIN_ENV_IDS].sort());
+    for (const id of CALDERA_STANDIN_ENV_IDS) expect(STANDINS.has(id), id).toBe(true);
+    for (const id of CALDERA_ROW_IDS) expect(CALDERA_STANDIN_ENV_IDS, id).toContain(id);
   });
 
   it('is section V of docs/env/environment-needs-prompts.md, word for word, after W', () => {
