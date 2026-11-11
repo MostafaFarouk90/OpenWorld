@@ -15,7 +15,7 @@ import {
   bootPhaseG, capOffenders, measurePhaseG, PHASE_G_END_LEVEL, PHASE_G_EXPECTED, PHASE_G_ORDER, PHASE_G_RUN_A, PHASE_G_RUN_B,
   type CapActor, type PhaseGChoices,
 } from './phaseG';
-import { newWatch, playPhaseGQuest, wantedFlags, watchDialogueRunner, type PhaseGRun } from './phaseGDriver';
+import { newWatch, playPhaseGQuest, pressAt, wantedFlags, watchDialogueRunner, type PhaseGRun } from './phaseGDriver';
 import { REFUGE_STONE, servicesAfterM41, unreachable, type ServicePorts } from './act4Services';
 import { WAYSTONE_TUNING } from '../waystones/tuning';
 import { saveFixture, seedFixtureRandom } from './fixtureDeterminism';
@@ -102,8 +102,8 @@ export async function runPhaseG(
     const ws0 = h.ctx.services.require('waystones');
     const refuge: string[] = [];
     const travel: unknown[] = [];
-    await h.approach(h.anchor(`waystone.${REFUGE_STONE}`), 1.5);
-    h.hold('KeyF', WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
+    // the use point is the stone itself, 2.6 m north of the anchor (WAYSTONE_STONE_OFFSET): walk up to it from any side
+    await pressAt(h, `waystone:${REFUGE_STONE}`, WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
     await h.runAsync(30);
     refuge.push(`rekindled ${REFUGE_STONE}: ${ws0.isLit(REFUGE_STONE)}`);
     const other = ws0.litIds().find((id) => id !== REFUGE_STONE && !ws0.isDark(id));
