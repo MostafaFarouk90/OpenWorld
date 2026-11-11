@@ -21,6 +21,8 @@ const EXPECT: Record<string, { boxes: [number, number]; dropped: number }> = {
   h2: { boxes: [130, 280], dropped: 0 },
   h3: { boxes: [250, 480], dropped: 0 },
   h4: { boxes: [250, 480], dropped: 3 },
+  // Act 5 N1 PR 2: the Caldera (generated rows that keep clear of every anchor and trigger themselves, so nothing is dropped).
+  c1: { boxes: [80, 120], dropped: 0 },
 };
 
 describe('colliders of the built tiles', () => {

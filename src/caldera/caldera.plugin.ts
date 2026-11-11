@@ -11,6 +11,8 @@ import { BuildingLookup } from '../region/buildingLookup';
 import { buildFogWallDef, registerFogWall, type FogWallDef } from '../region/fogWall';
 import { resolveLayout } from '../region/resolveLayout';
 import { buildStructures, coreFactories } from '../region/StructureBuilder';
+import { envModelLibraryFor } from '../env/envStructureArt';
+import { createCalderaArt } from './env/calderaArt';
 import { validateLayout } from '../region/validateLayout';
 import { heightAt } from '../terrain/heightfield';
 import { showToast } from '../waystones/toast';
@@ -75,7 +77,8 @@ export function createCalderaPlugin(opts: CalderaPluginOptions = {}): GamePlugin
         const wall = buildFogWallDef({ ...ctx, rapier: ctx.physics.rapier }, INNER_GATE_WALL, { x: face.x, y: face.y, z: face.z }, height);
         cleanups.push(() => wall.dispose());
 
-        const structures = buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, CALDERA_LAYOUT, height, new BuildingLookup());
+        // The structures are greybox until their env glbs land (env/calderaArt.ts swaps each by its layout id).
+        const structures = buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, CALDERA_LAYOUT, height, new BuildingLookup(undefined, undefined, createCalderaArt(envModelLibraryFor(ctx.assets))));
         cleanups.push(() => structures.dispose());
         void structures.upgrade();
 

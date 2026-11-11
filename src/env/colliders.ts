@@ -93,6 +93,14 @@ export const SHAPES: Readonly<Record<string, Shape>> = {
   // Table front only: the full width, a 0.45 m band against the front; the awning area behind it stays walkable.
   'market-stall-a': { kind: 'box', w: 3, d: 2.4, h: 1.0, front: 0.45 },
   'market-stall-b': { kind: 'box', w: 3, d: 2.4, h: 1.0, front: 0.45 },
+  // The Caldera (Act 5 N1 PR 2, tile c1): the gates' wall modules run, the big pieces are boxes. Lanterns, banners, racks, shards, nests,
+  // ribs, the Lava Stair's basalt columns (B4's shrine shares the id and has none) and the door portals do not collide.
+  'rim-wall-a': run(6, 1.6, 4),
+  'foundry-wall-a': run(6, 2, 5),
+  'basalt-boulder-a': box(3.2, 2.6, 2, 0.8),
+  'warhost-tent-a': box(5, 6, 3.2, 0.9),
+  'wyrm-skull-a': box(4, 5.5, 2.6, 0.8),
+  'forge-gong-frame-a': box(4.2, 1.2, 4.6, 0.9, 0.6),
 };
 
 /** Ids that look solid but deliberately do not collide (rulings): listed so a test can pin them. */

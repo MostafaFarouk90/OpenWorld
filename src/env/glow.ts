@@ -91,6 +91,15 @@ export const GLOW: Readonly<Record<string, GlowKind>> = {
   },
   // The slag stand-in's cracks flicker slowly; they cast no light. coal-heap-a is deliberately absent: unlit coal stays dark.
   'slag-heap': { materials: { Glow: 'ember' } },
+  // The Caldera (Act 5 N1 PR 2): the lantern posts are small lights at eye level (the pool still holds 3/2/0); the glass shards' roots,
+  // the foundry wall's vents and the stair-head's arch glow without a light.
+  'caldera-lantern-post-a': {
+    light: { color: 0xff8a30, peak: 3, distance: 8, height: 2.2, profile: 'fire' },
+    materials: { Fire: 'fire' },
+  },
+  'lava-glass-shard-a': { materials: { Glow: 'ember' } },
+  'foundry-wall-a': { materials: { Glow: 'ember' } },
+  'foundry-stairhead-a': { materials: { Glow: 'ember' } },
   // Not an env row: the 21 Keep-road braziers of "Smoke Over Harrowmark" register themselves under this kind (their flames are their own meshes).
   'keep-brazier': { light: { color: 0xff8a30, peak: 5, distance: 11, height: 0, profile: 'fire' }, materials: {} },
 };

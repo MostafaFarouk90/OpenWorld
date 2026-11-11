@@ -909,6 +909,141 @@
    "w": 4,
    "d": 2,
    "h": 3
+  },
+  "caldera-lantern-post-a": {
+   "w": 0.6,
+   "d": 0.6,
+   "h": 2.6
+  },
+  "basalt-boulder-a": {
+   "w": 3.2,
+   "d": 2.6,
+   "h": 2
+  },
+  "lava-glass-shard-a": {
+   "w": 1.2,
+   "d": 1,
+   "h": 1.1
+  },
+  "rim-wall-a": {
+   "w": 6,
+   "d": 1.6,
+   "h": 4
+  },
+  "foundry-wall-a": {
+   "w": 6,
+   "d": 2,
+   "h": 5
+  },
+  "rim-banner-a": {
+   "w": 1.2,
+   "d": 0.2,
+   "h": 6
+  },
+  "warhost-banner-a": {
+   "w": 1.2,
+   "d": 0.2,
+   "h": 6
+  },
+  "weapon-rack-a": {
+   "w": 2.2,
+   "d": 0.7,
+   "h": 1.9
+  },
+  "forge-gong-frame-a": {
+   "w": 4.2,
+   "d": 1.2,
+   "h": 4.6
+  },
+  "cooling-hall-portal-a": {
+   "w": 8,
+   "d": 2.5,
+   "h": 6.5
+  },
+  "tunnel-portal-a": {
+   "w": 6,
+   "d": 2,
+   "h": 4.5
+  },
+  "foundry-stairhead-a": {
+   "w": 7,
+   "d": 7,
+   "h": 4.5
+  },
+  "wyrm-rib-a": {
+   "w": 1.4,
+   "d": 1.4,
+   "h": 5.5
+  },
+  "wyrm-skull-a": {
+   "w": 4,
+   "d": 5.5,
+   "h": 2.6
+  },
+  "scorched-nest-a": {
+   "w": 6,
+   "d": 6,
+   "h": 1.2
+  },
+  "warhost-tent-a": {
+   "w": 5,
+   "d": 6,
+   "h": 3.2
+  },
+  "rim-gate-tower-a": {
+   "w": 5,
+   "d": 5,
+   "h": 12
+  },
+  "gate-winch-a": {
+   "w": 1.2,
+   "d": 1.2,
+   "h": 1
+  },
+  "rim-camp-tent-a": {
+   "w": 6,
+   "d": 5,
+   "h": 3
+  },
+  "war-table-a": {
+   "w": 3,
+   "d": 1.6,
+   "h": 1
+  },
+  "rim-stall-a": {
+   "w": 2.6,
+   "d": 1.4,
+   "h": 1.1
+  },
+  "stokers-hut-a": {
+   "w": 5,
+   "d": 4,
+   "h": 2.6
+  },
+  "inner-gate-pillar-a": {
+   "w": 2,
+   "d": 2,
+   "h": 9
+  },
+  "anvil-of-ages-a": {
+   "w": 3,
+   "d": 6,
+   "h": 2.6
+  },
+  "arena-platform-a": {
+   "w": 6,
+   "d": 8,
+   "h": 0.35
+  },
+  "crack-anvil-a": {
+   "w": 1.2,
+   "d": 2,
+   "h": 1
+  },
+  "spirit-flame-post-a": {
+   "w": 0.6,
+   "d": 0.6,
+   "h": 2.2
   }
  },
  "grip": {
