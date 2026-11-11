@@ -46,8 +46,12 @@ import { estimateTiming, estimateTimingFor, OPENING_PLAN, PHASE_B_PLAN, timingMa
 /**
  * Explicit budgets (F7). These tests boot every plugin and play a chain headless: alone a chain takes 25 to 55 s, and under
  * the whole suite's load it can take twice that, so each budget is about 3x the slowest measured run and never the 5 s default.
+ * The budget is wall time, so it only guards against a hang: the Phase A chains are CPU-bound play (about 5,700 fixed ticks
+ * for "Prior released", 18 s of it R01's Surges), and a starved worker slows them without anything being wrong. Measured
+ * on the December dry-run head (4 cores): 55 s alone, 60 s in the full suite, 166 s with six busy loops beside the suite's
+ * workers, which is 92% of the old 180 s budget (it timed out at 120 s in CI before). 360 s keeps 2x over the worst seen.
  */
-const CHAIN_TIMEOUT = 180_000;
+const CHAIN_TIMEOUT = 360_000;
 const ACT_TIMEOUT = 300_000;
 const SHORT_TIMEOUT = 90_000;
 
