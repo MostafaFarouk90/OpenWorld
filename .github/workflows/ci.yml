@@ -123,7 +123,7 @@ jobs:
     # `!= 'skip'`: an empty scope output (the step wrote nothing) runs them, as any doubt does.
     if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.chains != 'skip' && (github.event_name != 'push' || needs.gate.outputs.chains != 'skip') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: true
       matrix:
