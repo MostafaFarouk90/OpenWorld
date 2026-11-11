@@ -18,6 +18,7 @@ const VE = voice(M53_VEY);
 const AL = voice('alric');
 const TA = voice(D09_STOKER);
 const WE = voice('wenna');
+const confrontF1 = flagIs('story.m21.choice', 'confront');
 const r10 = (v: string): Condition => flagIs('story.r10.choice', v);
 const leaders = flagIs('story.r21.choice', 'leaders');
 
@@ -293,12 +294,15 @@ export const WENNA_D09_SEGMENT: Record<string, { lines: Line[] }> = {
   'a5f-d09-wenna': {
     lines: [
       WE('Down here. Quietly. Those are my family\'s guards at the vats, and I have been talking to them for an hour.'),
-      { s: 'wenna', t: 'All four will stand down. They knew my mother. They are tired of guarding hearts.', when: flagIs(D09_TURNED, 4) },
-      { s: 'wenna', t: 'Two of them will stand down. The other two have Vey\'s gold in their teeth. I could not reach them.', when: not(flagIs(D09_TURNED, 4)) },
+      { s: 'wenna', t: 'All four will stand down. They knew my mother. They are tired of guarding hearts.', when: all(not(confrontF1), flagIs(D09_TURNED, 4)) },
+      { s: 'wenna', t: 'Two of them will stand down. The other two have Vey\'s gold in their teeth. I could not reach them.', when: all(not(confrontF1), not(flagIs(D09_TURNED, 4))) },
+      // the pacing pass: F1 Confront meets her here too; the guards will not hear her, so all four fight (her talk arms them)
+      { s: 'wenna', t: 'None of them will stand down. They were in my father\'s hall the day you laid the proof in front of him. They remember whose side I took.', when: confrontF1 },
       C('And you? Vey\'s household is below.'),
       WE('I am a Grisel. We are very good at not being where the fighting is. My mother taught me that, and you taught me when to stop.'),
-      WE('Go on. I will take the ones who listened up the stair.', [{ setFlag: D09_WENNA_MET, value: true }]),
+      { s: 'wenna', t: 'Go on. I will take the ones who listened up the stair.', when: not(confrontF1), fx: [{ setFlag: D09_WENNA_MET, value: true }] },
+      { s: 'wenna', t: 'Go on, then. I will hold the stair behind you, so nobody comes down it after you.', when: confrontF1, fx: [{ setFlag: D09_WENNA_MET, value: true }] },
     ],
   },
 };
-export const WENNA_D09_RULE = { when: all(at('d09', 'guards'), not(flagIs('story.m21.choice', 'confront')), not(flagIs(D09_WENNA_MET))), seg: 'a5f-d09-wenna' };
+export const WENNA_D09_RULE = { when: all(at('d09', 'guards'), not(flagIs(D09_WENNA_MET))), seg: 'a5f-d09-wenna' };

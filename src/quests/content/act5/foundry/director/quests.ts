@@ -172,11 +172,12 @@ export function installD09(k: Kit): void {
   };
   k.on('interior.entered', (e) => { if (e.interiorId === FOUNDRY_DESCENT_ID) enter(); });
 
-  // the guards: Confront arms both pairs as the step comes up; Spy waits for Wenna's talk and arms the pairs she did not turn
+  // the guards wait for Wenna's talk in the vat gallery, then the pairs she did not turn are armed (Confront: both; she meets
+  // Cael on both F1 roads since the Act 5 pacing pass)
   const guards = (): void => {
     if (!k.active('d09') || !k.objCurrent('d09', 'guards') || k.flag(D09_GUARDS_ARM)) return;
     const confront = f1(k.ctx.state) === 'confront';
-    if (!confront && !k.flag(D09_WENNA_MET)) return;
+    if (!k.flag(D09_WENNA_MET)) return;
     for (const i of pairsToArm(confront ? 0 : k.num(D09_TURNED))) k.set(D09_GUARD_PAIR_ARM(i));
     k.set(D09_GUARDS_ARM);
   };

@@ -294,9 +294,12 @@ describe('D09', () => {
     r.step(2);
     expect(r.manager.isObjectiveCurrent('d09', 'guards')).toBe(true);
   };
-  it('Confront arms both guard pairs as the step comes up', () => {
+  it('Confront waits for Wenna too (the pacing pass), then arms both guard pairs', () => {
     const r = make({ 'story.m21.choice': 'confront' });
     toGuards(r);
+    expect(r.state.getFlag(D09_GUARDS_ARM)).toBeUndefined();
+    r.state.setFlag(D09_WENNA_MET, true);
+    r.step(2);
     expect(r.state.getFlag(D09_GUARDS_ARM)).toBe(true);
     expect(r.state.getFlag(D09_GUARD_PAIR_ARM(0))).toBe(true);
     expect(r.state.getFlag(D09_GUARD_PAIR_ARM(1))).toBe(true);

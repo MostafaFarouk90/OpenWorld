@@ -41,6 +41,8 @@ export const FA = {
   d09Shift: `${F}.d09.shift-board`,
   d09Letters: `${F}.d09.letters`,
   d09Guard: (n: number) => `${F}.d09.guard.${n}`,
+  /** the pacing pass: Vey's two household men in the vat gallery's east aisle */
+  d09Household: (n: number) => `${F}.d09.household.${n}`,
   m54Thrall: (n: number) => `${F}.m54.thrall.${n}`,
   m55Trial: `${F}.m55.trial`,
   d10Add: (n: number) => `${F}.d10.add.${n}`,
@@ -91,14 +93,22 @@ export const NEAR_ANCHORS: readonly NearAnchor[] = [
   near(FA.d09Letters, `${FD}.checkpoint.3`, 2, -2),
   // D09: Alric comes down to the foot once Vey's fight is over (beside the link to the Hammer Hall)
   near(FA.d09AlricFoot, `${FD}.link.hammer`, 2, -3),
+  // D09 (the Act 5 pacing pass): Vey's household pair in the gallery's east aisle, between the vats (z 72, 84, 96 at x 14..18)
+  near(FA.d09Household(1), `${FD}.checkpoint.2`, 20.5, 12),
+  near(FA.d09Household(2), `${FD}.checkpoint.2`, 20.5, 24),
   // M54: two more thralls either side of the hall gate
   near(FA.m54Thrall(5), `${H}.alric`, -5, -4),
   near(FA.m54Thrall(6), `${H}.alric`, 5, -4),
+  // M54 (the Act 5 pacing pass): two more mid-approach, between N2's pairs and clear of the murals
+  near(FA.m54Thrall(7), `${H}.alric`, -2.5, -9),
+  near(FA.m54Thrall(8), `${H}.alric`, 2.5, -9),
   // M55: the trial's stone in the hall, beside the parley spot; D10's adds wake in the approach (before the hall's last door)
   near(FA.m55Trial, `${H}.parley`, -3, 2),
   // D10: eight thralls beside N2's thrall spots and six forge-fire hounds up the approach's middle
   ...[1, 2, 3, 4].flatMap((n) => [near(FA.d10Add(n), `${H}.thrall.${n}`, 0, 3), near(FA.d10Add(n + 4), `${H}.thrall.${n}`, 0, -3)]),
   ...[0, 1, 2, 3, 4, 5].map((i) => near(FA.d10Add(9 + i), `${H}.checkpoint.1`, i % 2 === 0 ? -3 : 3, 6 + i * 2.5)),
+  // D10 (the Act 5 pacing pass): three more hounds down the approach's centre line, between the zigzag's pairs
+  ...[0, 1, 2].map((i) => near(FA.d10Add(15 + i), `${H}.checkpoint.1`, 0, 4.5 + i * 5.5)),
   // D10: the four forge vents in the approach walls, and the stokers' marks either side of the last door
   // vents on the side walls, clear of N2's murals (z 8 and 20): z 14 and 26; marks past Alric, 2.5 m apart, clear of the adds
   ...[1, 2, 3, 4].map((n) => near(FA.d10Vent(n), `${H}.checkpoint.1`, n % 2 === 0 ? 6.5 : -6.5, n <= 2 ? 9 : 21)),

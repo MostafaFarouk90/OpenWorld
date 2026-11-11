@@ -226,11 +226,11 @@ const vents: Handler = async (r, q, o) => {
   await waitFor(r, done(r, q, o.id), `${q}.${o.id}`, 20);
 };
 
-/** D09's guards: on the Spy road (F1 not Confront) they are armed only after Wenna's word in the Foundry; then the pairs she
- * did not turn and the vat patrol are fought as a group step (none at all when she turned all four). */
+/** D09's guards: they are armed only after Wenna's word in the Foundry (both F1 roads since the Act 5 pacing pass); then the
+ * pairs she did not turn and the vat patrol are fought as a group step (none at all when she turned all four). */
 const guards: Handler = async (r, q, o) => {
   const { h } = r;
-  if (h.ctx.state.getString('story.m21.choice') !== 'confront' && !flag(h, D09_WENNA_MET)) await talkTo(r, 'wenna');
+  if (!flag(h, D09_WENNA_MET)) await talkTo(r, 'wenna');
   const g = FOUNDRY_A5_GROUPS.find((x) => x.quest === q && x.objective === o.id)!;
   await fightGroups(r, g.groups, done(r, q, o.id), `${q}.${o.id}`, () => flag(h, g.seen));
 };

@@ -32,6 +32,8 @@ export const D09_GUARD_PAIR_ARM = (i: 0 | 1): string => `${D09_GUARDS_ARM}.${i =
 /** The floor 1 and vat gallery patrols: a line of two shields and a pike, and a torch-bearer pair, each. */
 export const D09_PATROL_IDS = [`${D09_GROUPS.patrol}.shield`, `${D09_GROUPS.patrol}.pike`, `${D09_GROUPS.patrol}.torch`] as const;
 export const D09_VAT_IDS = [`${D09_GROUPS.vatPatrol}.shield`, `${D09_GROUPS.vatPatrol}.pike`, `${D09_GROUPS.vatPatrol}.torch`] as const;
+/** The Act 5 pacing pass: Vey's household, two shields in the gallery's east aisle, armed with the guards on every road. */
+export const D09_HOUSEHOLD = 'd09.household';
 /** M53's pickets: a two-shield line (Spy); the loyalists (Confront) are six Footmen in Grisel green. */
 export const M53_PICKET_IDS = [`${M53_GROUPS.pickets}.shield`] as const;
 
@@ -55,9 +57,12 @@ export const FOUNDRY_A5_Q_SPAWNERS: readonly SpawnerDef[] = [
   group(D09_VAT_IDS[2], WARHOST, [FD('vat.patrol.5'), FD('vat.patrol.6')], D09_GUARDS_ARM, 'd09', 'caldera-foundry', { role: 'torch', line: D09_GROUPS.vatPatrol }),
   group(D09_GUARD_PAIRS[0], SOLDIER, [FD('guard.1'), FD('guard.2')], D09_GUARD_PAIR_ARM(0), 'd09', 'caldera-foundry', { skin: 'footman-grisel' }),
   group(D09_GUARD_PAIRS[1], SOLDIER, [FD('guard.3'), FD('guard.4')], D09_GUARD_PAIR_ARM(1), 'd09', 'caldera-foundry', { skin: 'footman-grisel' }),
-  // M54: six forge-thralls wake along the approach (N2's four thrall spots and two of mine by the hall gate)
-  group(M54_THRALLS, GOLEM, [...[1, 2, 3, 4].map((n) => H(`thrall.${n}`)), FA.m54Thrall(5), FA.m54Thrall(6)], M54_THRALLS_ARM, 'm54', 'caldera-foundry', { skin: 'golem-lava' }),
-  // D10: before the hall's last door, eight thralls and six forge-fire hounds
+  // the Act 5 pacing pass: Vey's household pair (a line of two shields), armed with the guards whatever Wenna turned
+  group(`${D09_HOUSEHOLD}.shield`, WARHOST, [FA.d09Household(1), FA.d09Household(2)], D09_GUARDS_ARM, 'd09', 'caldera-foundry', { role: 'shield', line: D09_HOUSEHOLD }),
+  // M54: eight forge-thralls wake along the approach (N2's four thrall spots, two of mine by the hall gate, two mid-approach
+  // since the Act 5 pacing pass)
+  group(M54_THRALLS, GOLEM, [...[1, 2, 3, 4].map((n) => H(`thrall.${n}`)), ...[5, 6, 7, 8].map(FA.m54Thrall)], M54_THRALLS_ARM, 'm54', 'caldera-foundry', { skin: 'golem-lava' }),
+  // D10: before the hall's last door, eight thralls and nine forge-fire hounds (six until the Act 5 pacing pass)
   group(D10_ADDS.thralls, GOLEM, [1, 2, 3, 4, 5, 6, 7, 8].map(FA.d10Add), D10_ADDS_ARM, 'd10', 'caldera-foundry', { skin: 'golem-lava' }),
-  group(D10_ADDS.fire, HOUND, [9, 10, 11, 12, 13, 14].map(FA.d10Add), D10_ADDS_ARM, 'd10', 'caldera-foundry'),
+  group(D10_ADDS.fire, HOUND, [9, 10, 11, 12, 13, 14, 15, 16, 17].map(FA.d10Add), D10_ADDS_ARM, 'd10', 'caldera-foundry'),
 ];

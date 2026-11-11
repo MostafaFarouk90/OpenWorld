@@ -57,14 +57,14 @@ const flag = (key: string, equals: unknown = true): Condition => ({ flag: key, e
 /**
  * The posts the Foundry quests move (first matching row wins; rows go in front of each NPC's shipped and Rim rows):
  * Edric at the Inner Gate from M53's walk to its end; Wulfhild at the court while R28 runs; Wenna at the vat gallery while
- * D09 is before its guards with F1 Spy; Alric outside the Foundry door from D09's offer until Cael goes in.
+ * D09 is before its guards (both F1 roads since the pacing pass: on Confront she cannot turn them); Alric outside the Foundry door from D09's offer until Cael goes in.
  */
 export const FOUNDRY_A5_POST_ROWS: readonly PostRule[] = [
   { npcId: 'edric', home: 'npc-post.edric.rim', posts: [{ when: { all: [active('m53'), obj('m53', 'rook', true)] }, anchorId: FA.m53Edric }] },
   { npcId: 'wulfhild', home: 'npc-post.wulfhild.rim', posts: [{ when: { all: [active('r28'), obj('r28', 'brief', true)] }, anchorId: FA.r28Wulfhild }] },
   {
     npcId: 'wenna', home: 'npc-post.wenna.rim',
-    posts: [{ when: { all: [active('d09'), { not: flag('story.m21.choice', 'confront') }, { not: flag(D09_GUARDS_DOWN) }] }, anchorId: 'caldera.int.foundry.wenna' }],
+    posts: [{ when: { all: [active('d09'), { not: flag(D09_GUARDS_DOWN) }] }, anchorId: 'caldera.int.foundry.wenna' }],
   },
   {
     npcId: 'alric', home: 'npc-post.alric.rim', posts: [

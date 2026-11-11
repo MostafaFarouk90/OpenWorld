@@ -17,4 +17,7 @@ describe('Foundry pacing', () => {
     console.log(rows.map((r) => `${r.quest} travel ${Math.round(r.travelM)} m counted ${(r.countedTravelS / 60).toFixed(1)} talk+beats ${((r.talkS + r.beatS) / 60).toFixed(1)} est ${r.estimateMin.toFixed(1)} ${(r.share * 100).toFixed(1)}%`).join('\n'));
     for (const r of rows) expect(r.share, r.quest).toBeGreaterThanOrEqual(ACT5_ROW_LINE);
   });
+  it('the Act 5 pacing pass keeps the watch points (D09, M54, D10) at 54% or more', () => {
+    for (const q of ['d09', 'm54', 'd10']) expect(rows.find((r) => r.quest === q)!.share, q).toBeGreaterThanOrEqual(0.54);
+  });
 });

@@ -10,7 +10,7 @@ import { M54_THRALLS } from '../m54.quest';
 import { D10_ADDS } from '../d10.quest';
 import { M53_GROUPS } from '../m53.quest';
 import { R28_GROUP, R28_RISERS } from '../r28.quest';
-import { D09_GUARD_PAIRS, D09_PATROL_IDS, D09_VAT_IDS, M53_PICKET_IDS } from '../spawners';
+import { D09_GUARD_PAIRS, D09_HOUSEHOLD, D09_PATROL_IDS, D09_VAT_IDS, M53_PICKET_IDS } from '../spawners';
 
 export const M53_PICKETS_ARM = `${M53_BROKEN_ARM}.pickets`;
 
@@ -31,7 +31,7 @@ export const FOUNDRY_A5_GROUPS: readonly GroupObjective[] = [
   row('m53', 'broken', M53_PICKET_IDS, M53_PICKETS_ARM, M53_BROKEN_DOWN),
   row('d09', 'patrol', D09_PATROL_IDS, D09_PATROL_ARM, D09_PATROL_DOWN),
   // the vat patrol and the guard pairs Wenna did not turn (a turned pair is never armed, so it stands at zero)
-  row('d09', 'guards', [...D09_VAT_IDS, ...D09_GUARD_PAIRS], D09_GUARDS_ARM, D09_GUARDS_DOWN),
+  row('d09', 'guards', [...D09_VAT_IDS, ...D09_GUARD_PAIRS, `${D09_HOUSEHOLD}.shield`], D09_GUARDS_ARM, D09_GUARDS_DOWN),
   row('m54', 'thralls', [M54_THRALLS], M54_THRALLS_ARM, M54_THRALLS_DOWN),
   row('d10', 'adds', [D10_ADDS.thralls, D10_ADDS.fire], D10_ADDS_ARM, D10_ADDS_DOWN),
 ];

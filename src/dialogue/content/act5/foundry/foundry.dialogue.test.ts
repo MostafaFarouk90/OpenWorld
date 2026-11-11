@@ -59,6 +59,22 @@ describe('Foundry Act 5 start rules (review: no optional offer may hide a needed
     const done = ['d09.brief', 'd09.enter', 'd09.patrol', 'd09.stoker', 'd09.plate', 'd09.slag'];
     expect(opens('npc-wenna', { ...PHASE_J, m53: 'completed', d09: 'active' }, done, { ...HOLDS, 'story.m21.choice': 'spy' })).toBe('a5f-d09-wenna');
   });
+  it('the Act 5 pacing pass: on the Confront road Wenna meets Cael in the gallery too, as long a talk as the Spy road, and her last line arms the guards', () => {
+    const done = ['d09.brief', 'd09.enter', 'd09.patrol', 'd09.stoker', 'd09.plate', 'd09.slag'];
+    expect(opens('npc-wenna', { ...PHASE_J, m53: 'completed', d09: 'active' }, done, { ...HOLDS, 'story.m21.choice': 'confront' })).toBe('a5f-d09-wenna');
+    const d = defs.get('npc-wenna')!;
+    const confront = { 'story.m21.choice': 'confront', 'story.d09.turned': 0 };
+    expect(walk(d, 'a5f-d09-wenna', confront)).toBe(5);
+    expect(walk(d, 'a5f-d09-wenna', { 'story.m21.choice': 'spy', 'story.d09.turned': 2 })).toBe(5);
+    expect(walk(d, 'a5f-d09-wenna', { 'story.m21.choice': 'spy', 'story.d09.turned': 4 })).toBe(5);
+    // every road reads exactly one closing line, and it writes the flag the director waits on
+    const env = (f: Record<string, unknown>) => envOf(f);
+    const closers = d.nodes.filter((n) => n.id.startsWith('a5f-d09-wenna') && (n.effects ?? []).length > 0);
+    expect(closers.length).toBe(2);
+    for (const f of [confront, { 'story.m21.choice': 'spy', 'story.d09.turned': 2 }]) {
+      expect(closers.filter((n) => evalCondition(n.when, env(f))).length).toBe(1);
+    }
+  });
   it('Wulfhild and Wenna give their R30 lines while R28 and R27 are on offer', () => {
     const st = { ...PHASE_J, r30: 'active' };
     expect(opens('npc-wulfhild', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-wulfhild');
