@@ -8,6 +8,8 @@ import { WAYSTONE_STONE_OFFSET, WAYSTONE_TUNING } from './tuning';
 describe('waystone use point on the stone (L14)', () => {
   const { layout: build } = buildDragonspine();
   const R = WAYSTONE_TUNING.interactRadius;
+  // the table's Dragonspine rows (Ashgate's, the Waste's and the Caldera's are checked in stoneOffset.review.test.ts)
+  const DS = Object.keys(WAYSTONE_STONE_OFFSET).filter((id) => build.anchors.some((a) => a.id === `waystone.${id}`));
   it('covers every Dragonspine stone that stands off its anchor', () => {
     const off = build.anchors
       .filter((a) => a.id.startsWith('waystone.'))
@@ -16,10 +18,10 @@ describe('waystone use point on the stone (L14)', () => {
         return s && Math.hypot(s.x - a.x, s.z - a.z) > 0.5;
       })
       .map((a) => a.id.replace('waystone.', ''));
-    expect(off.sort()).toEqual(Object.keys(WAYSTONE_STONE_OFFSET).sort());
+    expect(off.sort()).toEqual(DS.sort());
   });
 
-  for (const id of Object.keys(WAYSTONE_STONE_OFFSET)) {
+  for (const id of DS) {
     it(`${id}: the use point is the stone's centre and in reach from all four sides`, () => {
       const anchor = build.anchors.find((a) => a.id === `waystone.${id}`)!;
       expect(anchor, id).toBeDefined();

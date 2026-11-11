@@ -35,6 +35,15 @@ export const WAYSTONE_STONE_OFFSET: Readonly<Record<string, { x: number; z: numb
   'last-anvil': { x: 0, z: 1.8 },
   'wyrms-hearth': { x: 0, z: 1.8 },
   'frostfang-aerie': { x: 0, z: 1.8 },
+  // Review (December final tree): Ashgate's, the Waste's (L1 PR 2) and the Caldera's (N1) stones stand 2.6 m north of
+  // their anchors (ASHGATE_ / WASTE_ / CALDERA_WAYSTONE_STONE_OFFSET), so on the anchor only its own face was in reach.
+  ashgate: { x: 0, z: 2.6 },
+  'walker-camp': { x: 0, z: 2.6 },
+  'cinder-chapel': { x: 0, z: 2.6 },
+  glasslands: { x: 0, z: 2.6 },
+  'rim-camp': { x: 0, z: 2.6 },
+  'wyrm-terraces': { x: 0, z: 2.6 },
+  'inner-gate': { x: 0, z: 2.6 },
 };
 
 /**
