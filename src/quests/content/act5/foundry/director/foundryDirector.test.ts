@@ -31,14 +31,11 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   const state = new WorldState(events, () => {});
   const services = new Services();
   const manager = new QuestManager({ bus: events as never, state: state as never, playerId: () => 'player', warn: () => {} });
-  manager.register({ id: 'm52', titleKey: 'x', summaryKey: 'x', sequential: true, objectives: [{ id: 'x', type: 'event', target: 'test.m52', textKey: 'x' }] });
   for (const q of ACT5_QUEST_DEFS) manager.register(q);
   const flagsOff = installObjectiveFlags(ACT5_OBJECTIVE_FLAGS, events as never, state as never, manager);
   services.provide('quests' as never, manager as never);
   for (const h of phaseHolds('caldera')) state.setFlag(h, true);
   for (const [k, v] of Object.entries(flags)) state.setFlag(k, v);
-  manager.start('m52');
-  manager.complete('m52');
   state.setFlag('story.m52.complete', true);
 
   const standing = new Map<string, string[]>();
