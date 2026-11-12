@@ -83,6 +83,7 @@ export class GamepadInput {
   private readonly heldAs = new Map<number, { token?: string; interceptor?: PadInterceptor; wheel?: boolean }>();
   private readonly toggled = new Map<Action, string>();
   private readonly interceptors: PadInterceptor[] = [];
+  private readonly captures: { cb: (chord: { button: number; layer: 'base' | 'lb' }) => void }[] = [];
   private readonly deviceListeners = new Set<(pad: boolean) => void>();
   private readonly unsupportedListeners = new Set<(id: string) => void>();
   private readonly warnedUnsupported = new Set<string>();
@@ -170,6 +171,20 @@ export class GamepadInput {
       const k = this.interceptors.indexOf(i);
       if (k >= 0) this.interceptors.splice(k, 1);
       for (const [button, h] of this.heldAs) if (h.interceptor === i) this.heldAs.delete(button);
+    };
+  }
+
+  /**
+   * The next button press goes to `cb` instead of the game (the Controls tab rebinding a chord). LB is the layer
+   * modifier: it is never captured itself, and a press while it is held is captured on the LB layer. Start is not
+   * captured either; it ends the capture and goes on to the menu (which backs out). Returns a cancel.
+   */
+  listenNext(cb: (chord: { button: number; layer: 'base' | 'lb' }) => void): () => void {
+    const entry = { cb };
+    this.captures.push(entry);
+    return () => {
+      const i = this.captures.indexOf(entry);
+      if (i >= 0) this.captures.splice(i, 1);
     };
   }
 
@@ -286,6 +301,15 @@ export class GamepadInput {
   }
 
   private press(button: number, now: number): void {
+    if (this.captures.length && button !== PAD.LB) {
+      const all = this.captures.splice(0);
+      if (button !== PAD.START) {
+        const chord = { button, layer: this.prev[PAD.LB] ? ('lb' as const) : ('base' as const) };
+        this.heldAs.set(button, {});
+        for (const c of all) c.cb(chord);
+        return;
+      }
+    }
     for (let k = this.interceptors.length - 1; k >= 0; k--) {
       const i = this.interceptors[k];
       if (i.onButton(button, true, this)) {

@@ -5,6 +5,8 @@ import type { DocumentLike, ElementLike } from '../hud/dom';
 import { makeEl, type Translate } from '../hud/widget';
 import type { Action, Binding } from '../input/actions';
 import { glyphOf, type RebindResult } from '../input/InputBindings';
+import { PAD_NAMES, type PadChord } from '../input/gamepad/padLayout';
+import type { PadRebindResult } from '../input/gamepad/PadBindings';
 import type { QualityStep } from '../vfx/tuning';
 import { controlRows, CONTROL_GROUPS } from './controls';
 import { VOLUME_STEP, type Settings } from './SettingsStore';
@@ -29,6 +31,19 @@ export interface PauseBindings {
   resetToDefaults(): void;
 }
 
+/** G2: the Controller column (controller chords, kept apart from the two key slots). */
+export interface PauseMenuPad {
+  bindings: {
+    get(action: Action): PadChord | null;
+    rebindable(action: Action): boolean;
+    rebind(action: Action, chord: PadChord, opts?: { swap?: boolean }): PadRebindResult;
+    resetToDefaults(): void;
+    glyph(action: Action): string;
+  };
+  /** Waits for the next controller button (LB held picks the LB layer) and calls `cb` once. Returns a cancel. */
+  listen(cb: (chord: PadChord) => void): () => void;
+}
+
 export interface PauseMenuPorts {
   t: Translate;
   settings: { get(): Readonly<Settings>; set(patch: Partial<Settings>): void };
@@ -44,6 +59,8 @@ export interface PauseMenuPorts {
   listen(cb: (b: Binding) => void): () => void;
   /** Extra items whose condition holds right now, in the order they were added. */
   items?(): readonly PauseItem[];
+  /** G2: absent without a gamepad service; the Controls tab then shows no Controller column. */
+  pad?: PauseMenuPad | null;
   canSave(): boolean;
   save(): Promise<SaveResult>;
   resume(): void;
@@ -63,6 +80,8 @@ export class PauseMenu {
   private saving = false;
   private capture: { action: Action; slot: 0 | 1; cancel: () => void } | null = null;
   private pending: { action: Action; slot: 0 | 1; binding: Binding } | null = null;
+  private padCapture: { action: Action; cancel: () => void } | null = null;
+  private padPending: { action: Action; chord: PadChord } | null = null;
   private confirming: PauseItem | null = null;
   private sig = '';
   private disposed = false;
@@ -91,9 +110,14 @@ export class PauseMenu {
     return this.status;
   }
 
+  /** The action waiting for a controller button, or null (G2). */
+  get padCapturing(): Action | null {
+    return this.padCapture?.action ?? null;
+  }
+
   /** Esc: cancels a key capture, else steps back a page, else resumes the game. */
   back(): void {
-    if (this.capture) {
+    if (this.capture || this.padCapture) {
       this.stopCapture();
       this.status = null;
     } else if (this._page !== 'main') {
@@ -144,6 +168,42 @@ export class PauseMenu {
     this.render();
   }
 
+  /** G2: waits for the next controller button for `action`. */
+  startPadCapture(action: Action): void {
+    const pad = this.ports.pad;
+    if (!pad || !pad.bindings.rebindable(action)) return;
+    this.stopCapture();
+    this.padPending = null;
+    this.padCapture = { action, cancel: pad.listen((c) => this.onPadCaptured(c)) };
+    this.status = this.t('settings.controls.pressPad');
+    this.render();
+  }
+
+  private onPadCaptured(chord: PadChord): void {
+    const cap = this.padCapture;
+    const pad = this.ports.pad;
+    if (!cap || !pad) return;
+    const { action } = cap;
+    const swap = !!this.padPending && this.padPending.action === action && this.padPending.chord.button === chord.button && this.padPending.chord.layer === chord.layer;
+    const r = pad.bindings.rebind(action, chord, { swap });
+    this.padCapture = null;
+    this.padPending = null;
+    const key = pad.bindings.glyph(action);
+    if (r.ok) {
+      this.status = r.swappedWith
+        ? this.t('settings.controls.swapped', { key, other: this.actionName(r.swappedWith), action: this.actionName(action) })
+        : this.t('settings.controls.changed', { action: this.actionName(action), key });
+    } else if (r.reason === 'conflict') {
+      const shown = chord.layer === 'lb' ? `LB+${padName(chord.button)}` : padName(chord.button);
+      this.padPending = { action, chord };
+      this.padCapture = { action, cancel: pad.listen((c) => this.onPadCaptured(c)) };
+      this.status = this.t('settings.controls.conflict', { key: shown, other: this.actionName(r.conflictWith) });
+    } else {
+      this.status = this.t('settings.controls.reserved', { key: padName(chord.button) });
+    }
+    this.render();
+  }
+
   clearBinding(action: Action, slot: 0 | 1): void {
     this.stopCapture();
     this.ports.bindings.clear(action, slot);
@@ -154,6 +214,7 @@ export class PauseMenu {
   resetControls(): void {
     this.stopCapture();
     this.ports.bindings.resetToDefaults();
+    this.ports.pad?.bindings.resetToDefaults();
     this.status = this.t('settings.controls.resetDone');
     this.render();
   }
@@ -216,6 +277,15 @@ export class PauseMenu {
   }
 
   private stopCapture(): void {
+    if (this.padCapture) {
+      try {
+        this.padCapture.cancel();
+      } catch {
+        // as below
+      }
+      this.padCapture = null;
+      this.padPending = null;
+    }
     if (!this.capture) return;
     try {
       this.capture.cancel();
@@ -236,7 +306,8 @@ export class PauseMenu {
     const binds = this._page === 'controls' ? controlRows().map((r) => this.ports.bindings.get(r.action).map((b) => (b ? glyphOf(b) : '')).join('/')) : [];
     return JSON.stringify([
       this._page, this.status, this.confirming?.id ?? null, this.items().map((i) => i.id), this.saving, this.capturing, s, this.ports.quality?.get() ?? null, this.ports.hints?.get() ?? null,
-      this.ports.canSave(), binds,
+      this.ports.canSave(), binds, this.padCapturing,
+      this._page === 'controls' && this.ports.pad ? controlRows().map((r) => this.ports.pad!.bindings.glyph(r.action)) : [],
     ]);
   }
 
@@ -375,6 +446,16 @@ export class PauseMenu {
           this.button(c, label, () => this.startCapture(r.action, slot), { id: `bind-${r.action}-${slot}`, on: waiting });
         }
         this.button(c, 'settings.controls.clear', () => this.clearBinding(r.action, 1), { id: `clear-${r.action}`, off: !pair[1] });
+        const pad = this.ports.pad;
+        if (pad) {
+          const waiting = this.padCapture?.action === r.action;
+          const label = waiting ? '=…' : `=${pad.bindings.glyph(r.action)}`;
+          this.button(c, label, () => this.startPadCapture(r.action), {
+            id: `pad-${r.action}`,
+            on: waiting,
+            off: !pad.bindings.rebindable(r.action),
+          });
+        }
       }
     }
     const actions = makeEl(this.doc, 'div', 'owg-pause-actions', this.body);
@@ -394,3 +475,5 @@ export class PauseMenu {
 function sameBinding(a: Binding, b: Binding): boolean {
   return a.device === 'key' ? b.device === 'key' && a.code === b.code : b.device === 'mouse' && a.button === b.button;
 }
+
+const padName = (button: number): string => PAD_NAMES[button] ?? `Button ${button}`;

@@ -38,6 +38,7 @@ export const SETTINGS_STRINGS_EN: Record<string, string> = {
   'settings.off': 'Off',
   'settings.controls.title': 'Controls',
   'settings.controls.press': 'Press a key or mouse button… (Esc cancels)',
+  'settings.controls.pressPad': 'Press a controller button (hold LB for the LB layer)… (Start or Esc cancels)',
   'settings.controls.reset': 'Reset to defaults',
   'settings.controls.clear': 'Clear',
   'settings.controls.none': '—',

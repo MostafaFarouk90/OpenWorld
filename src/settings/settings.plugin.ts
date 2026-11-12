@@ -2,6 +2,7 @@
 // is how Chrome delivers the first Esc), the clock pauses while it is up, and it applies the player's audio settings at
 // boot and on every change. Other plugins add items through the `pauseMenu` service (G3, G4) and read settings through
 // the `settings` service (G2's pad settings live in the same store).
+import '../input/gamepad/services';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import { StubDocument, type DocumentLike } from '../hud/dom';
@@ -216,6 +217,11 @@ const plugin: GamePlugin = {
           hints: hints(),
           bindings: ctx.input.bindings,
           listen,
+          // G2: the Controller column, when the world scene provided the gamepad.
+          pad: (() => {
+            const gp = ctx.services.get('gamepad');
+            return gp ? { bindings: gp.bindings, listen: (cb: Parameters<typeof gp.pad.listenNext>[0]) => gp.pad.listenNext(cb) } : null;
+          })(),
           items: () => items.filter((i) => safeWhen(i)),
           canSave,
           save,
