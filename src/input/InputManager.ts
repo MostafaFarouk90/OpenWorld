@@ -4,6 +4,9 @@ import { InputBindings, safeLocalStorage } from './InputBindings';
 import { InputContexts } from './InputContexts';
 import { NO_ACTIONS } from './actions';
 import type { Action, ActionState } from './actions';
+import { GamepadInput } from './gamepad/GamepadInput';
+import type { GamepadLike } from './gamepad/GamepadInput';
+import { PadBindings } from './gamepad/PadBindings';
 
 /** Input state as seen by one fixed simulation tick. */
 export interface InputSnapshot {
@@ -31,7 +34,24 @@ export type PointerLockDocument = EventTarget & { readonly pointerLockElement: E
 
 export interface InputManagerOptions {
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
+  /** G2: the Gamepad API (default `navigator.getGamepads`); tests pass a fake. */
+  getGamepads?: () => readonly (GamepadLike | null)[] | null;
 }
+
+function navigatorGamepads(): readonly (GamepadLike | null)[] | null {
+  try {
+    if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') return null;
+    return navigator.getGamepads() as unknown as readonly (GamepadLike | null)[];
+  } catch {
+    return null;
+  }
+}
+
+/** Expando flag on keyboard events the gamepad's menu navigator dispatches. */
+export const PAD_SYNTHETIC = 'owgPadSynthetic';
+
+/** Mouse movement (pixels in one event) that counts as the player switching back from the pad. */
+const MOUSE_DEVICE_SWITCH_PX = 3;
 
 const ATTACKS: readonly Action[] = ['attack1', 'attack2', 'attack3', 'attack4'];
 
@@ -41,6 +61,10 @@ export class InputManager {
   readonly bindings: InputBindings;
   readonly contexts = new InputContexts();
   readonly actionMap: ActionMap;
+  /** G2: controller chords, kept apart from the key slots. */
+  readonly padBindings: PadBindings;
+  /** G2: the polled gamepad. */
+  readonly pad: GamepadInput;
   /** True while `navigator.keyboard.lock` is active (Ctrl+W and friends reach the game). */
   private lockedState = false;
   private readonly lockListeners = new Set<(state: { supported: boolean; locked: boolean }) => void>();
@@ -62,6 +86,27 @@ export class InputManager {
     const storage = opts.storage !== undefined ? opts.storage : typeof window !== 'undefined' ? safeLocalStorage() : null;
     this.bindings = new InputBindings(storage);
     this.actionMap = new ActionMap(this.bindings, this.contexts, { pointerLocked: () => this.pointerLocked });
+    this.padBindings = new PadBindings(storage);
+    this.actionMap.setExtraTokens(this.padBindings);
+    this.pad = new GamepadInput({
+      getGamepads: opts.getGamepads ?? navigatorGamepads,
+      sink: this.actionMap,
+      bindings: this.padBindings,
+      context: () => this.contexts.top(),
+      wheelClaimed: () => this.wheelClaims.length > 0,
+      addWheel: (steps) => {
+        this.wheel += steps;
+      },
+      now: () => (typeof performance !== 'undefined' ? performance.now() : Date.now()),
+    });
+    const padGlyph = (a: Action): string | null => this.padBindings.glyph(a);
+    this.pad.onDeviceChange((on) => this.bindings.setGlyphOverride(on ? padGlyph : null));
+    this.padBindings.onChange(() => {
+      if (this.pad.active) {
+        this.bindings.setGlyphOverride(null);
+        this.bindings.setGlyphOverride(padGlyph);
+      }
+    });
     this.unsubscribeBindings = this.bindings.onChange(() => {
       if (this.keyboardLocked) void this.applyKeyboardLock();
     });
@@ -125,6 +170,7 @@ export class InputManager {
 
   /** Samples the action map once and derives the legacy snapshot from it. */
   sampleTick(): { snapshot: InputSnapshot; actions: ActionState } {
+    this.pad.poll();
     const actions: SampledActions = this.actionMap.sample();
     this.latest = actions;
     let attack = 0;
@@ -137,9 +183,12 @@ export class InputManager {
         attack = i + 1;
       }
     });
+    // G2: the left stick keeps its magnitude when it agrees with the action axis (keyboard stays -1/0/+1).
+    const stick = this.pad.leftStick;
+    const analog = (digital: -1 | 0 | 1, v: number): number => (stick.mag > 0 && digital !== 0 && Math.sign(v) === digital ? v : digital);
     const snapshot: InputSnapshot = {
-      moveRight: actions.axis('moveLeft', 'moveRight'),
-      moveForward: actions.axis('moveBack', 'moveForward'),
+      moveRight: analog(actions.axis('moveLeft', 'moveRight'), stick.x),
+      moveForward: analog(actions.axis('moveBack', 'moveForward'), stick.y),
       sprint: actions.down('sprint'),
       jump: actions.pressed('jump'),
       attack,
@@ -153,7 +202,8 @@ export class InputManager {
 
   /** Mouse movement in pixels since the last call (only while pointer-locked). */
   consumeMouseDelta(): { dx: number; dy: number } {
-    const d = { dx: this.mouseDX, dy: this.mouseDY };
+    const look = this.pad.consumeLook();
+    const d = { dx: this.mouseDX + look.dx, dy: this.mouseDY + look.dy };
     this.mouseDX = 0;
     this.mouseDY = 0;
     return d;
@@ -221,6 +271,7 @@ export class InputManager {
 
   dispose(): void {
     this.unsubscribeBindings();
+    this.pad.releaseAll();
     this.lockListeners.clear();
     this.win.removeEventListener('keydown', this.onKeyDown as EventListener);
     this.win.removeEventListener('keyup', this.onKeyUp as EventListener);
@@ -277,6 +328,8 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     const code = e.code;
+    // Keys the pad's menu navigator dispatches carry PAD_SYNTHETIC and do not switch the device back.
+    if (!(e as unknown as Record<string, unknown>)[PAD_SYNTHETIC]) this.pad.noteKeyboardMouse();
     if (code === 'Space' || code.startsWith('Arrow')) e.preventDefault();
     else if (this.pointerLocked) {
       const bound = this.bindings.actionsFor({ device: 'key', code }).length > 0;
@@ -302,6 +355,7 @@ export class InputManager {
 
   private onMouseDown = (e: MouseEvent): void => {
     if (e.button === 3 || e.button === 4) e.preventDefault?.();
+    this.pad.noteKeyboardMouse();
     this.actionMap.mouseDown(e.button, e.timeStamp);
   };
 
@@ -320,6 +374,7 @@ export class InputManager {
 
   private onMouseMove = (e: MouseEvent): void => {
     if (!this.pointerLocked) return;
+    if (Math.abs(e.movementX) + Math.abs(e.movementY) >= MOUSE_DEVICE_SWITCH_PX) this.pad.noteKeyboardMouse();
     this.mouseDX += e.movementX;
     this.mouseDY += e.movementY;
   };

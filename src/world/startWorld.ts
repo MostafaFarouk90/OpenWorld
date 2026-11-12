@@ -7,6 +7,7 @@ import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
 import { NearFade } from '../rendering/nearFade';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../input/InputManager';
+import '../input/gamepad/services';
 import { TerrainManager } from '../terrain/TerrainManager';
 import { AssetLoader } from '../assets';
 import { AudioManager, proceduralSounds } from '../audio';
@@ -86,6 +87,8 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   });
   // Core services exist before any plugin sets up; audio is provided while still locked.
   if (audio) game.ctx.services.provide('audio', audio);
+  // G2: the gamepad (polled by the gamepad plugin each frame and by InputManager each tick).
+  game.ctx.services.provide('gamepad', { pad: input.pad, bindings: input.padBindings });
   {
     const actors = game.ctx.actors;
     // NPCs and enemies have no collider the camera ray can hit: keep it out of their bodies too.

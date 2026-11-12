@@ -98,6 +98,11 @@ export class HudLayer {
     }
   }
 
+  /** G2: the open modal's wrapper element (the gamepad's menu navigator searches it); null when none or headless. */
+  get modalElement(): HTMLElement | null {
+    return this.modal ? this.modalEl : null;
+  }
+
   get modalOpen(): string | null {
     return this.modal ? this.modal.widget.id : null;
   }

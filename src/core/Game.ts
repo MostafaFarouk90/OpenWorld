@@ -146,9 +146,11 @@ export function lockedActions(actions: ActionState, locked: (a: Action) => boole
 /** The tick's snapshot after action locks added up to the end of the intent phase. */
 export function applyLocks(s: InputSnapshot, a: ActionState): InputSnapshot {
   const attackAction = s.attack > 0 ? (`attack${s.attack}` as Action) : null;
+  // G2: an analog stick value survives when its direction is not locked; keyboard values stay -1/0/+1.
+  const keep = (v: number, axis: -1 | 0 | 1): number => (v === 0 ? 0 : axis !== 0 && Math.sign(v) === axis ? v : axis);
   return {
-    moveRight: s.moveRight === 0 ? 0 : a.axis('moveLeft', 'moveRight'),
-    moveForward: s.moveForward === 0 ? 0 : a.axis('moveBack', 'moveForward'),
+    moveRight: keep(s.moveRight, a.axis('moveLeft', 'moveRight')),
+    moveForward: keep(s.moveForward, a.axis('moveBack', 'moveForward')),
     sprint: s.sprint && a.down('sprint'),
     jump: s.jump && a.pressed('jump'),
     attack: attackAction && a.pressed(attackAction) ? s.attack : 0,

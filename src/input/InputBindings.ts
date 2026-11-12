@@ -49,6 +49,8 @@ export class InputBindings {
   private readonly map = new Map<Action, [Binding | null, Binding | null]>();
   private readonly listeners = new Set<() => void>();
   private storageFailed = false;
+  /** G2: while set (the gamepad is the device in use), `glyph()` asks it first. */
+  private glyphOverride: ((action: Action) => string | null) | null = null;
 
   constructor(
     private readonly storage: Storageish | null = safeLocalStorage(),
@@ -111,7 +113,19 @@ export class InputBindings {
     this.changed();
   }
 
+  /**
+   * G2: routes `glyph()` through `fn` (null restores key glyphs). Fires `onChange` without saving, so every prompt
+   * re-renders with the new device's labels.
+   */
+  setGlyphOverride(fn: ((action: Action) => string | null) | null): void {
+    if (this.glyphOverride === fn) return;
+    this.glyphOverride = fn;
+    for (const l of [...this.listeners]) l();
+  }
+
   glyph(action: Action): string {
+    const o = this.glyphOverride?.(action);
+    if (o) return o;
     const p = this.map.get(action);
     const b = p?.[0] ?? p?.[1];
     return b ? glyphOf(b) : '?';

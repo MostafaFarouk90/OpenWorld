@@ -17,6 +17,11 @@ export interface ActionMapOptions {
   pointerLocked?: () => boolean;
 }
 
+/** A second source of input tokens per action (G2: gamepad chords `p:...`), checked after the key bindings. */
+export interface ExtraTokenSource {
+  tokensFor(a: Action): readonly string[];
+}
+
 /** Turns raw key and mouse events into per-tick action state (contracts/input-and-hud.md sections 2 and 3). */
 export class ActionMap {
   private readonly physical = new Set<string>();
@@ -30,6 +35,7 @@ export class ActionMap {
   private counter = 0;
   private filter: ((a: Action) => boolean) | null = null;
   private readonly pointerLocked: () => boolean;
+  private extra: ExtraTokenSource | null = null;
 
   constructor(
     private readonly bindings: InputBindings,
@@ -42,6 +48,25 @@ export class ActionMap {
       this.pressedLatch.clear();
       this.pressedAt.clear();
     });
+  }
+
+  /** G2: adds gamepad tokens; they latch, hold and are ignored across a context change exactly like keys. */
+  setExtraTokens(source: ExtraTokenSource | null): void {
+    this.extra = source;
+  }
+
+  /** G2: a virtual input such as `p:base:0` (a pad button) went down; `timeMs` as for `keyDown`. */
+  tokenDown(token: string, timeMs?: number): void {
+    this.press(token, false, timeMs);
+  }
+
+  tokenUp(token: string): void {
+    this.release(token);
+  }
+
+  /** G2: true while `token` is physically held (pad toggles read it). */
+  isTokenHeld(token: string): boolean {
+    return this.physical.has(token);
   }
 
   setActionFilter(fn: ((a: Action) => boolean) | null): void {
@@ -116,6 +141,7 @@ export class ActionMap {
       const t = bindingToken(b);
       if (this.physical.has(t) && !this.ignored.has(t)) return true;
     }
+    if (this.extra) for (const t of this.extra.tokensFor(a)) if (this.physical.has(t) && !this.ignored.has(t)) return true;
     return false;
   }
 
@@ -126,7 +152,10 @@ export class ActionMap {
     const top = this.contexts.top();
     for (const a of ACTIONS) {
       if (!ACTION_DEFS[a].contexts.includes(top)) continue;
-      if (this.bindings.get(a).some((b) => b !== null && bindingToken(b) === token)) {
+      if (
+        this.bindings.get(a).some((b) => b !== null && bindingToken(b) === token) ||
+        (this.extra !== null && this.extra.tokensFor(a).includes(token))
+      ) {
         this.pressedLatch.add(a);
         this.seq.set(a, ++this.counter);
         if (!this.pressedAt.has(a)) this.pressedAt.set(a, Number.isFinite(timeMs) ? (timeMs as number) : now());
