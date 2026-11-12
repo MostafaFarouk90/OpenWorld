@@ -37,8 +37,11 @@ export const BOSS_DESIGN_LEVEL: Readonly<Record<string, number>> = {
 /** Design 12.5: +1 tempering per cycle ("+1 tempering available"); at most this many levels over the base cap. */
 export const TEMPER_BONUS_MAX = 2;
 
-/** Design 12.5 (Heat 5 list): from cycle 2 a hostile melee hit sets the target burning (taste call G3-5). */
-export const NGPLUS_BURNING = { fromCycle: 2, id: 'ngplus.burning', dps: 4, seconds: 3 } as const;
+/**
+ * Design 12.5 (Heat 5 list): from cycle 2 enemies are Burning. G4's Cinderlands Burning (35% of hits ignite, 4 per second
+ * for 3 s) made deterministic: every third hostile melee hit on the player ignites, the first one included (taste call G3-5).
+ */
+export const NGPLUS_BURNING = { fromCycle: 2, id: 'ngplus.burning', dps: 4, seconds: 3, everyNthHit: 3 } as const;
 
 /**
  * The `tutorial` entry a Second Hearth starts with: not begun, so the tutorial's start runs, and G3's row there takes

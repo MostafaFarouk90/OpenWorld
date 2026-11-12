@@ -73,6 +73,11 @@ describe('a Second Hearth in the real game (G3)', () => {
     expect(inv.gold).toBeGreaterThanOrEqual(endedInv.gold);
     expect(ctx.services.require('progression').level).toBe((ended.entries as any).progression.data.xp ? ctx.services.require('progression').level : 0);
     expect(ctx.services.require('progression').level).toBe(28);
+    // a fresh start fills health (the reset `player` entry holds a level 1 player's), and `fresh` is not saved again
+    expect(ctx.player.actor.health).toBe(ctx.player.actor.maxHealth);
+    expect(ctx.player.actor.maxHealth).toBeGreaterThan(200);
+    const saved = ctx.persist.all().find((p) => p.key === 'ngplus')!.serialize() as Record<string, unknown>;
+    expect(saved.fresh).toBeUndefined();
     expect(ctx.services.require('ngPlus').heat()).toBe(3);
   }, TIMEOUT);
 

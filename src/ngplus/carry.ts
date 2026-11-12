@@ -10,6 +10,8 @@ export interface NgPlusState {
   cycle: number;
   /** The endings this save line has reached, oldest first ('rekindle' | 'let-it-die'); a repeat is listed once. */
   endingsSeen: string[];
+  /** Only in the file a Second Hearth starts from: the first load fills health and stamina (the `player` entry is reset). */
+  fresh?: boolean;
 }
 
 export const EMPTY_NGPLUS: Readonly<NgPlusState> = Object.freeze({ cycle: 0, endingsSeen: [] as string[] });
@@ -24,7 +26,9 @@ export function readNgPlus(data: unknown): NgPlusState {
   const c = data.cycle;
   const cycle = typeof c === 'number' && Number.isInteger(c) && c >= 0 ? c : 0;
   const seen = Array.isArray(data.endingsSeen) ? data.endingsSeen.filter((e): e is string => typeof e === 'string') : [];
-  return { cycle, endingsSeen: [...new Set(seen)] };
+  const out: NgPlusState = { cycle, endingsSeen: [...new Set(seen)] };
+  if (data.fresh === true) out.fresh = true;
+  return out;
 }
 
 function flagsOf(file: SaveFile): Record<string, unknown> {
@@ -81,7 +85,7 @@ export function buildSecondHearth(raw: unknown, kindOf: (id: string) => string |
   const before = readNgPlus(ended.entries[NGPLUS_KEY]?.data);
   const choice = flagsOf(ended)[M56_CHOICE_FLAG];
   const endingsSeen = typeof choice === 'string' && !before.endingsSeen.includes(choice) ? [...before.endingsSeen, choice] : [...before.endingsSeen];
-  const state: NgPlusState = { cycle: before.cycle + 1, endingsSeen };
+  const state: NgPlusState = { cycle: before.cycle + 1, endingsSeen, fresh: true };
 
   const entries: Record<string, SaveEntry> = {};
   for (const key of CARRIED_KEYS) {

@@ -58,10 +58,32 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
     }),
   );
   // A save without the entry is a first playthrough.
+  // The Second Hearth's first load starts at full health and stamina: the `player` entry was reset, and its default
+  // health is a level 1 player's (seen in the real-game run: 120 of 440). Filled on the next tick, after progression
+  // recomputed the maximum; `fresh` is never saved again.
+  let fillPending = false;
   local.push(
     ctx.events.on('save.loaded', () => {
       if (!sawEntry) applyState({ cycle: 0, endingsSeen: [] });
       sawEntry = false;
+      if (state.fresh) {
+        fillPending = true;
+        state = { cycle: state.cycle, endingsSeen: state.endingsSeen };
+      }
+    }),
+  );
+  local.push(
+    ctx.systems.add({
+      id: 'ngplus.fresh-fill',
+      fixedPhase: 'late',
+      order: 51,
+      fixedUpdate: () => {
+        if (!fillPending || ctx.services.get('save')?.loading) return;
+        fillPending = false;
+        const a = ctx.player.actor;
+        a.health = a.maxHealth;
+        a.stamina = a.maxStamina;
+      },
     }),
   );
 
@@ -80,11 +102,13 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
     if (state.cycle > 0) scaling.modify(req, target, attacker);
   }, NGPLUS_DAMAGE_ORDER));
   // Design 12.5: from cycle 2 enemies carry one Heat 5 affix, Burning (taste call G3-5).
+  let burnCount = 0;
   local.push(
     ctx.events.on('damage.dealt', (r) => {
       if (state.cycle < NGPLUS_BURNING.fromCycle || r.kind !== 'melee' || r.outcome !== 'hit' || r.dealt <= 0) return;
       if (!r.attackerId || scaling.levelAtSpawn(r.attackerId) === undefined) return;
       if (r.targetId !== ctx.player.actor.id) return;
+      if (burnCount++ % NGPLUS_BURNING.everyNthHit !== 0) return;
       ctx.services.get('status')?.apply(r.targetId, {
         id: NGPLUS_BURNING.id,
         kind: 'ignite',

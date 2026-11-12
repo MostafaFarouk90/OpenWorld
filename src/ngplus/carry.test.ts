@@ -48,7 +48,7 @@ describe('buildSecondHearth (G3)', () => {
     expect(r.file.entries.progression!.data).toEqual({ xp: 109000, classId: 'knight', learned: ['knight.rimBash'] });
     expect(r.file.entries.cinderlands!.data).toEqual({ embers: 900 });
     expect(r.file.entries.tutorial).toEqual(TUTORIAL_NOT_BEGUN);
-    expect(r.file.entries[NGPLUS_KEY]!.data).toEqual({ cycle: 1, endingsSeen: ['rekindle'] });
+    expect(r.file.entries[NGPLUS_KEY]!.data).toEqual({ cycle: 1, endingsSeen: ['rekindle'], fresh: true });
     expect(r.file.savedAt).toBe(77);
     expect(r.file.playtimeSeconds).toBe(360000);
     expect(cycleOf(r.file)).toBe(1);
@@ -67,9 +67,9 @@ describe('buildSecondHearth (G3)', () => {
 
   it('counts up from an earlier cycle and lists each ending once', () => {
     const second = buildSecondHearth(ended({ choice: 'let-it-die', ngplus: { cycle: 1, endingsSeen: ['rekindle'] } }), kindOf, 1);
-    expect(second.ok && second.state).toEqual({ cycle: 2, endingsSeen: ['rekindle', 'let-it-die'] });
+    expect(second.ok && second.state).toEqual({ cycle: 2, endingsSeen: ['rekindle', 'let-it-die'], fresh: true });
     const third = buildSecondHearth(ended({ choice: 'rekindle', ngplus: { cycle: 2, endingsSeen: ['rekindle', 'let-it-die'] } }), kindOf, 1);
-    expect(third.ok && third.state).toEqual({ cycle: 3, endingsSeen: ['rekindle', 'let-it-die'] });
+    expect(third.ok && third.state).toEqual({ cycle: 3, endingsSeen: ['rekindle', 'let-it-die'], fresh: true });
   });
 
   it('leaves the ended save untouched (it is parked, not replaced)', () => {
@@ -93,7 +93,7 @@ describe('buildSecondHearth (G3)', () => {
     if (!r.ok) throw new Error(r.reason);
     expect(r.file.entries.inventory).toBeUndefined();
     expect(r.file.entries.cinderlands).toBeUndefined();
-    expect(r.state).toEqual({ cycle: 1, endingsSeen: ['rekindle'] });
+    expect(r.state).toEqual({ cycle: 1, endingsSeen: ['rekindle'], fresh: true });
     expect(readNgPlus(null)).toEqual({ cycle: 0, endingsSeen: [] });
     expect(readNgPlus({ cycle: 2.5, endingsSeen: ['a', 'a', 3] })).toEqual({ cycle: 0, endingsSeen: ['a'] });
     expect(stripQuestItems('odd', kindOf)).toBe('odd');
