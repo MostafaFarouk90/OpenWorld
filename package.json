@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:chains": "vitest run --config vitest.chains.config.ts",
+    "size": "node scripts/size-report.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -20,6 +20,13 @@ export const CHAIN_PATHS = [
   'src/enemies/',
   'src/bosses/',
   'src/region/',
+  // December roadmap H2 (final-tree review finding 2): what Phases I and J play beyond the folders above.
+  'src/caldera/',
+  'src/siege/',
+  'src/waves/',
+  'src/hud/act5/',
+  'src/economy/',
+  'src/afterEnding/',
   '.github/workflows/ci.yml',
   '.github/scripts/chains-scope.mjs',
   'vitest.chains.ts',

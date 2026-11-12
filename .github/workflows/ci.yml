@@ -1,19 +1,21 @@
 name: CI
 
 # PRs run once per push (no separate branch-push run); main runs after merge.
-# Markdown at the repo root and asset provenance notes are skipped. Anything
+# Markdown at the repo root, asset provenance notes and docs/ (the tester guide) are skipped. Anything
 # under src/ (e.g. the ANCHORS.md files that drift tests read) always runs CI.
 on:
   pull_request:
     paths-ignore:
       - '*.md'
       - 'public/assets/**/*.md'
+      - 'docs/**'
       - 'LICENSE'
   push:
     branches: [main]
     paths-ignore:
       - '*.md'
       - 'public/assets/**/*.md'
+      - 'docs/**'
       - 'LICENSE'
   # By hand (Actions > CI > Run workflow): the build and the whole-phase chains only, never the shards or a deploy.
   workflow_dispatch:
@@ -73,6 +75,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # December roadmap T2: the download size, in the job summary (never fails the build).
+      - name: Size report
+        run: node scripts/size-report.mjs >> "$GITHUB_STEP_SUMMARY" || true
       # Q14: the PR run records the tree it tested (the merge checkout), in the artifact's name, for the main-run gate.
       - name: Record the tested tree
         if: github.event_name == 'pull_request'

@@ -26,6 +26,14 @@ describe('the chains scope rule', () => {
       expect(decideChains({ event: 'pull_request', files: ['src/hud/a.ts', f] }).chains, f).toBe('run');
     }
   });
+  it('runs on a change to what Phases I and J play (December roadmap H2)', () => {
+    for (const f of ['src/caldera/lava/x.ts', 'src/siege/runner.ts', 'src/waves/w.ts', 'src/hud/act5/Screens.ts', 'src/economy/e.ts',
+      'src/afterEnding/a.ts']) {
+      expect(decideChains({ event: 'pull_request', files: [f] }).chains, f).toBe('run');
+    }
+    // the rest of the HUD stays out: only its Act 5 folder
+    expect(decideChains({ event: 'pull_request', files: ['src/hud/act4/x.ts', 'src/settings/PauseMenu.ts'] }).chains).toBe('skip');
+  });
   it('skips a change outside the scope, on a PR and on main alike', () => {
     const files = ['src/hud/Hud.ts', 'src/companions/c.ts', 'public/assets/env/tree.glb', 'README.md'];
     expect(decideChains({ event: 'pull_request', files })).toMatchObject({ chains: 'skip' });
