@@ -29,6 +29,7 @@ function hitPlayer(hh: ChapterHarness, attackerId: string): number {
 }
 
 const TIMEOUT = 600_000;
+const LONG_TIMEOUT = TIMEOUT * 3;
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -124,7 +125,7 @@ describe('a Second Hearth in the real game (G3)', () => {
     for (const f of fighters) expect(f.level, f.kind).toBe(40);
     expect(ng.heat()).toBeGreaterThanOrEqual(3);
     expect(healthLift(9) * heatMultiplier(3)).toBeGreaterThan(3);
-  }, TIMEOUT * 3);
+  }, LONG_TIMEOUT);
 
   it('a first playthrough is untouched; begin() parks the ended world and writes the Second Hearth', async () => {
     const { ended } = await secondHearth();
