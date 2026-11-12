@@ -185,6 +185,7 @@ const save: GamePlugin = {
         return r.ok;
       },
       suspend: (reason) => suspensions.suspend(reason),
+      canSaveNow: () => !loading && !manager.isProtected && ports.gameplaySafe().safe,
       checkpoint: (reason) => {
         ports.log('info', `save: checkpoint (${reason})`);
         return manager.checkpoint();

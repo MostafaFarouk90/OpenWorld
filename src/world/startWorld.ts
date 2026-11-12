@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { leaveGuardActive } from './leaveGuard';
 import { COMBAT, KNIGHT, TERRAIN, WORLD } from '../config/constants';
 import { GameLoop } from '../core/GameLoop';
 import { Renderer } from '../rendering/Renderer';
@@ -196,6 +197,7 @@ function installLeaveGuard(strings: StringTable): void {
   if (leaveGuardInstalled) return;
   leaveGuardInstalled = true;
   window.addEventListener('beforeunload', (e) => {
+    if (!leaveGuardActive()) return;
     e.preventDefault();
     // Older browsers show a dialog only when returnValue is set.
     e.returnValue = strings.t('core.leaveGuard');

@@ -34,7 +34,8 @@ const KEY_GLYPHS: Record<string, string> = {
 };
 const MOUSE_GLYPHS = ['LMB', 'MMB', 'RMB', 'Mouse4', 'Mouse5'];
 
-function glyphOf(b: Binding): string {
+/** The glyph of one binding ("Q", "Mouse4"); G1's Controls tab shows both slots with it. */
+export function glyphOf(b: Binding): string {
   if (b.device === 'mouse') return MOUSE_GLYPHS[b.button] ?? '?';
   if (KEY_GLYPHS[b.code]) return KEY_GLYPHS[b.code];
   const m = /^(?:Key|Digit)(.)$/.exec(b.code);

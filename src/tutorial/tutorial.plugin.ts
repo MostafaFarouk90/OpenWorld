@@ -577,7 +577,10 @@ const tutorial: GamePlugin = {
       if (id && !a) wired.ports.warn(`[tutorial] beacon target ${id} has no anchor`);
       return a ? { x: a.position.x, y: a.position.y, z: a.position.z } : null;
     };
-    const unprovide = ctx.services.provide('tutorial', { target: beaconTarget });
+    const unprovide = ctx.services.provide('tutorial', {
+      target: beaconTarget,
+      skipBeatActive: () => director.beat !== null && !director.restartInFlight,
+    });
     const beacon = new TutorialBeacon({
       scene: ctx.scene,
       doc: d,

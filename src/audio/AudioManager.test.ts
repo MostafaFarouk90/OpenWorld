@@ -28,6 +28,7 @@ const mock = vi.hoisted(() => {
     pos = vi.fn();
     loop = vi.fn();
     unload = vi.fn();
+    volume = vi.fn();
     constructor(public options: Record<string, unknown>) {
       FakeHowl.instances.push(this);
     }
@@ -644,6 +645,40 @@ describe('AudioManager master volume and mute', () => {
     manager.setMuted(true);
     expect(Howler.volume).toHaveBeenLastCalledWith(0.3);
     expect(Howler.mute).toHaveBeenCalledWith(true);
+  });
+});
+
+describe('AudioManager music and effects volume (G1)', () => {
+  const gainNode = () => ({ gain: { value: 1 }, connect: vi.fn(), disconnect: vi.fn() });
+  it('scales every Howl by the effects volume, now and for sounds registered later', () => {
+    make('running');
+    manager.register('a', { src: ['a.ogg'], volume: 0.5 });
+    manager.setEffectsVolume(0.4);
+    expect(howl(0).volume).toHaveBeenLastCalledWith(0.2);
+    manager.register('b', { src: ['b.ogg'] });
+    expect(howl(1).options.volume).toBe(0.4);
+    manager.setEffectsVolume(2);
+    expect(howl(0).volume).toHaveBeenLastCalledWith(0.5);
+  });
+
+  it('drives its own gain nodes for music and effects, leaving the music bus alone', () => {
+    const nodes: ReturnType<typeof gainNode>[] = [];
+    Howler.ctx = { state: 'running', resume: vi.fn(), createGain: () => { const n = gainNode(); nodes.push(n); return n; } } as never;
+    manager = new AudioManager();
+    const [bus, music, effects] = nodes;
+    manager.setMusicVolume(0.25);
+    manager.setEffectsVolume(0.6);
+    expect(music.gain.value).toBe(0.25);
+    expect(effects.gain.value).toBe(0.6);
+    expect(bus.gain.value).toBe(1);
+    expect(music.connect).toHaveBeenCalledWith(bus);
+    expect(manager.effectsNode).toBe(effects);
+  });
+
+  it('without gain nodes the music volume is a no-op and effects still reach the Howls', () => {
+    make('running');
+    expect(() => manager.setMusicVolume(0.5)).not.toThrow();
+    expect(manager.effectsNode).toBe(Howler.masterGain);
   });
 });
 

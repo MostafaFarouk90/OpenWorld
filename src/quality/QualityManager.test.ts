@@ -125,4 +125,23 @@ describe('QualityManager', () => {
     const q = new QualityManager({ graphics: null });
     expect(() => q.applyToGraphics()).not.toThrow();
   });
+  it('clearUserChoice (G1 "Auto") hands the step back and drops the stored choice', () => {
+    const m = new Map<string, string>([[QUALITY_STORAGE_KEY, JSON.stringify({ step: 'high', userChosen: true })]]);
+    const storage = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+    const q = new QualityManager({ storage });
+    expect(q.userChosen).toBe(true);
+    q.clearUserChoice();
+    expect(q.userChosen).toBe(false);
+    expect(q.hasStoredChoice).toBe(false);
+    expect(q.step).toBe('high');
+    expect(m.has(QUALITY_STORAGE_KEY)).toBe(false);
+    expect(new QualityManager({ storage }).hasStoredChoice).toBe(false);
+  });
+  it('clearUserChoice is safe without removeItem or with nothing chosen', () => {
+    const q = new QualityManager({ storage: mem().m && { getItem: () => null, setItem: () => {} } });
+    expect(() => q.clearUserChoice()).not.toThrow();
+    q.set('low', 'user');
+    q.clearUserChoice();
+    expect(q.userChosen).toBe(false);
+  });
 });

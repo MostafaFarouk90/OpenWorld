@@ -117,7 +117,8 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   const fx = InteriorFx.create(audio.context, audio.musicBus ?? null, audio.masterNode ?? null);
   // One cheap shared reverb outdoors; indoors the interior's own takes over.
   const reverb = MusicReverb.create(audio.context as never, audio.musicBus ?? null, audio.masterNode ?? null);
-  const bed = AmbienceBed.create(audio.context as never, audio.masterNode ?? null);
+  // G1: the ambience counts as an effect, so it follows the effects volume (the master node when that is absent).
+  const bed = AmbienceBed.create(audio.context as never, audio.effectsNode ?? audio.masterNode ?? null);
 
   // Region handover state (design 6.1 trigger 6): the idle mixer holds the next track's stems.
   const machine = new HandoverMachine(track.id);

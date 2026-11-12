@@ -65,6 +65,12 @@ const plugin = {
         quality.set(step, 'user');
       },
       subscribe: (fn) => quality.subscribe(fn),
+      get userChosen() {
+        return quality.userChosen;
+      },
+      setAuto() {
+        quality.clearUserChoice();
+      },
     };
     const unprovide = ctx.services.provide('quality', service);
 

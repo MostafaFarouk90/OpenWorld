@@ -18,6 +18,11 @@ export interface SaveService {
    * writing either slot. Resolves false in production, for a malformed file, or when the apply fails.
    */
   loadFile?(raw: unknown): Promise<boolean>;
+  /**
+   * G1: whether a save asked for now would be written at once (not deferred, dropped or refused). The pause menu greys
+   * "Save game" and warns on "Quit to title" when it is false.
+   */
+  canSaveNow?(): boolean;
   /** Clears both slots (after backing up a problem save). */
   newGame(): Promise<boolean>;
   /**

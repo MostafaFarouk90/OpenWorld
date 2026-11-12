@@ -46,6 +46,10 @@ const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchend'] as const;
  * devices that do not run at 44.1 kHz (which would orphan the StemMixer), and autoSuspend only
  * counts Howl sounds, so it would suspend the context under playing music.
  */
+function clampUnit(v: number): number {
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1;
+}
+
 export class AudioManager {
   private readonly mixers: [StemMixer, StemMixer];
   private activeMixer = 0;
@@ -55,6 +59,13 @@ export class AudioManager {
    * context cannot make a gain node (then music goes straight to the master gain).
    */
   readonly musicBus: GainNode | null;
+  /** G1: the player's music volume, between the stem mixers and the music bus. Null without Web Audio gain nodes. */
+  private readonly musicVolumeNode: GainNode | null;
+  /** G1: the player's effects volume for sources that are not Howl sounds (the ambience bed). */
+  private readonly effectsBus: GainNode | null;
+  /** G1: the player's effects volume (0..1); every Howl plays at its own volume times this. */
+  private effectsVolume = 1;
+  private readonly baseVolumes = new Map<string, number>();
   private readonly sounds = new Map<string, Howl>();
   private readonly emitters = new Map<number, Emitter>();
   private readonly unlockCallbacks: Array<() => void> = [];
@@ -83,7 +94,25 @@ export class AudioManager {
       bus = null;
     }
     this.musicBus = bus;
-    this.mixers = [new StemMixer(Howler.ctx, bus ?? Howler.masterGain), new StemMixer(Howler.ctx, bus ?? Howler.masterGain)];
+    // G1: the player's music volume sits in front of the bus, so ducks and reverb sends on the bus are untouched.
+    let musicVolume: GainNode | null = null;
+    let effects: GainNode | null = null;
+    try {
+      musicVolume = Howler.ctx.createGain();
+      musicVolume.connect(bus ?? Howler.masterGain);
+    } catch {
+      musicVolume = null;
+    }
+    try {
+      effects = Howler.ctx.createGain();
+      effects.connect(Howler.masterGain);
+    } catch {
+      effects = null;
+    }
+    this.musicVolumeNode = musicVolume;
+    this.effectsBus = effects;
+    const musicOut = musicVolume ?? bus ?? Howler.masterGain;
+    this.mixers = [new StemMixer(Howler.ctx, musicOut), new StemMixer(Howler.ctx, musicOut)];
     if (Howler.ctx.state === 'running') this.unlocked = true;
     else for (const type of UNLOCK_EVENTS) window.addEventListener(type, this.unlock, true);
   }
@@ -108,6 +137,11 @@ export class AudioManager {
     return Howler.masterGain;
   }
 
+  /** G1: where non-Howl sound effects (the ambience bed) connect, so the effects volume reaches them. */
+  get effectsNode(): AudioNode {
+    return this.effectsBus ?? Howler.masterGain;
+  }
+
   /** Howler's shared AudioContext, for decoding or building buffers. */
   get context(): AudioContext {
     return Howler.ctx;
@@ -128,7 +162,7 @@ export class AudioManager {
     const howl = new Howl({
       src: def.src,
       format: def.format,
-      volume: def.volume ?? 1,
+      volume: (def.volume ?? 1) * this.effectsVolume,
       loop: def.loop ?? false,
       html5: false, // PannerNode spatialization needs Web Audio buffers.
       onloaderror: (_id, error) => console.warn(`Sound "${key}" failed to load:`, error),
@@ -146,6 +180,7 @@ export class AudioManager {
       maxDistance: def.maxDistance ?? 100,
     });
     this.sounds.set(key, howl);
+    this.baseVolumes.set(key, def.volume ?? 1);
 
     // Emitters on a re-registered key were bound to the unloaded Howl; restart them on the new one.
     for (const emitter of this.emitters.values()) {
@@ -228,6 +263,21 @@ export class AudioManager {
     Howler.volume(volume);
   }
 
+  /** G1: the player's music volume, 0..1 (clamped). No-op without a gain node. */
+  setMusicVolume(volume: number): void {
+    const v = clampUnit(volume);
+    if (this.musicVolumeNode) this.musicVolumeNode.gain.value = v;
+  }
+
+  /** G1: the player's effects volume, 0..1 (clamped): every Howl sound and the effects bus. */
+  setEffectsVolume(volume: number): void {
+    const v = clampUnit(volume);
+    if (v === this.effectsVolume) return;
+    this.effectsVolume = v;
+    if (this.effectsBus) this.effectsBus.gain.value = v;
+    for (const [key, howl] of this.sounds) howl.volume((this.baseVolumes.get(key) ?? 1) * v);
+  }
+
   setMuted(muted: boolean): void {
     Howler.mute(muted);
   }
@@ -240,6 +290,8 @@ export class AudioManager {
     for (const id of [...this.emitters.keys()]) this.detach(id);
     for (const mixer of this.mixers) mixer.dispose();
     this.musicBus?.disconnect();
+    this.musicVolumeNode?.disconnect();
+    this.effectsBus?.disconnect();
     for (const howl of this.sounds.values()) howl.unload();
     this.sounds.clear();
   }

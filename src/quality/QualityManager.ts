@@ -2,7 +2,7 @@ import { QUALITY, QUALITY_STORAGE_KEY, type QualityStep } from '../vfx/tuning';
 import type { GraphicsService } from '../vfx/ports';
 
 export type QualitySource = 'user' | 'probe' | 'governor';
-type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'removeItem'>>;
 
 export function isQualityStep(v: unknown): v is QualityStep {
   return v === 'low' || v === 'medium' || v === 'high';
@@ -65,6 +65,21 @@ export class QualityManager {
       }
     }
     return true;
+  }
+
+  /**
+   * G1 ("Auto" in the settings menu): hands the step back to the probe and governor. The current step stays until
+   * they change it; the stored choice is marked as not the user's, so the next boot's probe decides again.
+   */
+  clearUserChoice(): void {
+    if (!this._userChosen && !this._stored) return;
+    this._userChosen = false;
+    this._stored = false;
+    try {
+      this.storage?.removeItem?.(QUALITY_STORAGE_KEY);
+    } catch {
+      // storage unavailable: nothing was stored either
+    }
   }
 
   subscribe(fn: (q: QualityStep) => void): () => void {
