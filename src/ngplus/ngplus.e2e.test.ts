@@ -7,7 +7,7 @@ import { bootFromSave, type ChapterHarness } from '../integration/chapterHarness
 import { strandedSave } from '../afterEnding/testing';
 import { getItem } from '../inventory/items';
 import { buildSecondHearth } from './carry';
-import { emptyTrails, ensure, objectiveDone, playPhaseA, reachPhaseAStart, talkTo, type QuestTrail } from '../integration/phaseA';
+import { ensure, objectiveDone, playPhaseA, reachPhaseAStart, talkTo, type QuestTrail } from '../integration/phaseA';
 import { killGroup, playM06, playM08, playM09, playM10, playR03, playR04, reachSouthGate, useAt } from '../integration/phaseB';
 import { healthLift } from './scaling';
 import { heatMultiplier } from '../cinderlands/heat';
@@ -170,5 +170,19 @@ describe('a Second Hearth in the real game (G3)', () => {
     expect(k).toBeGreaterThan(1.5);
     const burning = ctx.services.require('status').list(ctx.player.actor.id).find((e) => e.id === NGPLUS_BURNING.id);
     expect(burning?.kind).toBe('ignite');
+  }, TIMEOUT);
+});
+
+describe('the pause menu row (G1 hook)', () => {
+  it('is offered in the ended world, and not in a Second Hearth before its ending', async () => {
+    const { ended, file } = await secondHearth();
+    h = await bootFromSave(ended, { models: true, virtualClock: true });
+    await h.runAsync(2);
+    const ng = h.ctx.services.require('ngPlus');
+    expect(h.ctx.services.get('pauseMenu')).toBeDefined();
+    expect(ng.available()).toBe(true);
+    h.dispose();
+    h = await bootFromSave(file, { models: true, virtualClock: true });
+    expect(h.ctx.services.require('ngPlus').available()).toBe(false);
   }, TIMEOUT);
 });

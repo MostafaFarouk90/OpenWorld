@@ -13,17 +13,13 @@ import { setTemperCapBonus } from '../gear/tempering';
 import { getItem } from '../inventory/items';
 import type { SaveFile } from '../save/SaveSchema';
 import { showToast } from '../waystones/toast';
+import { liftLeaveGuard } from '../world/leaveGuard';
 import { buildSecondHearth, EMPTY_NGPLUS, isEndedSave, readNgPlus, type NgPlusState } from './carry';
 import { NGPLUS_DAMAGE_MODIFIER_ID, NGPLUS_DAMAGE_ORDER, SecondHearthScaling } from './scaling';
 import type { NgPlusService } from './service';
 import './service';
 import { NGPLUS_STRINGS_EN } from './strings.en';
 import { NGPLUS_BURNING, NGPLUS_KEY, NGPLUS_VERSION, TEMPER_BONUS_MAX } from './tuning';
-
-/** G1's pause menu hook (src/settings), read softly until it lands. */
-interface PauseMenuLike {
-  addItem(item: { id: string; labelKey: string; when: () => boolean; onSelect: () => void; confirmKey?: string }): () => void;
-}
 
 const kindOf = (id: string): string | undefined => getItem(id)?.kind;
 
@@ -112,7 +108,11 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
     }
     if (!atBoot) {
       const url = switchedUrl();
-      if (url) reload(url);
+      if (url) {
+        // G1's "leave site?" guard would stop the one reload a switch makes (the world was just saved).
+        liftLeaveGuard();
+        reload(url);
+      }
     }
     return true;
   };
@@ -187,8 +187,8 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
       fixedUpdate: () => {
         if (pauseTried) return;
         pauseTried = true;
-        const pause = (ctx.services as unknown as { get(k: string): unknown }).get('pauseMenu') as PauseMenuLike | undefined;
-        if (!pause?.addItem) return;
+        const pause = ctx.services.get('pauseMenu');
+        if (!pause) return;
         local.push(
           pause.addItem({
             id: 'ngplus-begin',

@@ -401,7 +401,8 @@ describe('gear (v2)', () => {
     expect(inv.setTemper('practice-sword', 3, 'keen')).toBe(true);
     expect(inv.gear('practice-sword')).toEqual({ temper: 3, affix: 'keen' });
     inv.setTemper('practice-sword', 99);
-    expect(inv.gear('practice-sword')).toEqual({ temper: 5, affix: 'keen' });
+    // G3: the stored ceiling is 7 (a Second Hearth's +2); tempering itself stops at temperCap()
+    expect(inv.gear('practice-sword')).toEqual({ temper: 7, affix: 'keen' });
     inv.setTemper('practice-sword', -4);
     expect(inv.gear('practice-sword').temper).toBe(0);
     expect(events).toEqual([]);
