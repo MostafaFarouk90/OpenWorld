@@ -89,10 +89,7 @@ describe('the persistables', () => {
     // v0.9: Act 5 adds no persistable in N0 (favour snapshots are flags); wave 1 added none either. N12 PR 1's act5-*.json
     // fixtures carry every key; a thread that adds one lists it here until N12 regenerates them.
     const AWAITING_ACT5_FIXTURES: string[] = [];
-    // G3: `ngplus` is written only by a Second Hearth, which no story fixture is; ngplus.e2e.test.ts builds that save from
-    // N13's after-ending fixture with the shipped transform and loads it (its loader test). A later fixture pass may add one.
-    const NOT_IN_STORY_FIXTURES: string[] = ['ngplus'];
-    const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES, ...AWAITING_ACT5_FIXTURES, ...NOT_IN_STORY_FIXTURES];
+    const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES, ...AWAITING_ACT5_FIXTURES];
     const orphans = keys.filter((k) => !inAny.has(k) && !awaited.includes(k));
     expect(orphans, 'persistables no fixture carries').toEqual([]);
     for (const k of awaited) expect(inAny.has(k), `${k}: a fixture carries it now, drop the entry`).toBe(false);

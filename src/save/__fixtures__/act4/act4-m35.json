@@ -1056,6 +1056,13 @@
       },
       "version": 1
     },
+    "ngplus": {
+      "data": {
+        "cycle": 0,
+        "endingsSeen": []
+      },
+      "version": 1
+    },
     "platforms": {
       "data": {},
       "version": 1
