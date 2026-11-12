@@ -37,6 +37,24 @@ export const WAYSTONE_STONE_OFFSET: Readonly<Record<string, { x: number; z: numb
   'frostfang-aerie': { x: 0, z: 1.8 },
   // Review (December final tree): Ashgate's, the Waste's (L1 PR 2) and the Caldera's (N1) stones stand 2.6 m north of
   // their anchors (ASHGATE_ / WASTE_ / CALDERA_WAYSTONE_STONE_OFFSET), so on the anchor only its own face was in reach.
+  // December (roadmap P1): the Act 1 to 3 stones are built the same way as Dragonspine's (the stone 1.8 m south of the
+  // anchor), so from the far face the anchor was 2.95 m away against a 2.5 m radius. stoneOffset.all.test.ts checks them.
+  chapel: { x: 0, z: 1.8 },
+  kettlewick: { x: 0, z: 1.8 },
+  north: { x: 0, z: 1.8 },
+  'hollin-ford': { x: 0, z: 1.8 },
+  quenchstone: { x: 0, z: 1.8 },
+  'farm-ring': { x: 0, z: 1.8 },
+  'harrowmark-gate': { x: 0, z: 1.8 },
+  'cinder-road': { x: 0, z: 1.8 },
+  cinderford: { x: 0, z: 1.8 },
+  stonefold: { x: 0, z: 1.8 },
+  deepgate: { x: 0, z: 1.8 },
+  'weeping-bellows': { x: 0, z: 1.8 },
+  reedgate: { x: 0, z: 1.8 },
+  'hathrens-mere': { x: 0, z: 1.8 },
+  greywatch: { x: 0, z: 1.8 },
+  'mireweather-hut': { x: 0, z: 1.8 },
   ashgate: { x: 0, z: 2.6 },
   'walker-camp': { x: 0, z: 2.6 },
   'cinder-chapel': { x: 0, z: 2.6 },
