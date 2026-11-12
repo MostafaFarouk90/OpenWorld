@@ -47,8 +47,11 @@ export interface PadInterceptor {
 
 export const STICK_DEAD_ZONE = 0.2;
 export const STICK_OUTER = 0.95;
-/** A stick component past this (after the radial dead zone) holds that move direction. */
-export const MOVE_AXIS_THRESHOLD = 0.12;
+/**
+ * A stick component holds its move direction when it is at least this share of the stick's length (about 11.5
+ * degrees off the other axis); nearer the axis it snaps to the axis, keeping the push's magnitude.
+ */
+export const MOVE_AXIS_SHARE = 0.2;
 /** Right stick full deflection in camera radians per second (yaw, pitch) at sensitivity 1. */
 export const LOOK_RATE = { yaw: 2.8, pitch: 1.7 };
 /** Mouse pixels to radians in the camera (CAMERA.mouseSensitivity); look is fed to it as pixels. */
@@ -85,12 +88,14 @@ export class GamepadInput {
   private readonly warnedUnsupported = new Set<string>();
   private left: Stick = { x: 0, y: 0, mag: 0 };
   private right: Stick = { x: 0, y: 0, mag: 0 };
-  private rawRightX = 0;
   private lookX = 0;
   private lookY = 0;
   private stickTokens = new Set<string>();
   private padActive = false;
   private flicked = false;
+  private prevLeftMag = 0;
+  private prevRightMag = 0;
+  private lastContext: InputContext | null = null;
   /** Look settings (G1 SettingsStore keys padLookSensitivity, padInvertY). */
   sensitivity = 1;
   invertY = false;
@@ -98,6 +103,8 @@ export class GamepadInput {
   lockedOn: () => boolean = () => false;
   /** Set by the radial while it is open: the right stick picks a wedge and does not move the camera. */
   lookSuppressed = false;
+  /** Set by the plugin: true while G1's pause menu is open (look stops, as mouse look does behind a modal). */
+  lookBlocked: () => boolean = () => false;
 
   constructor(private readonly host: PadHost) {}
 
@@ -119,6 +126,16 @@ export class GamepadInput {
   /** The shaped left stick (x right, y forward). */
   get leftStick(): Stick {
     return this.left;
+  }
+
+  /** The left stick as a move: within MOVE_AXIS_SHARE of an axis it snaps to that axis, keeping its magnitude. */
+  get move(): { x: number; y: number } {
+    const { x, y, mag } = this.left;
+    if (mag === 0) return { x: 0, y: 0 };
+    const keepX = Math.abs(x) >= MOVE_AXIS_SHARE * mag;
+    const keepY = Math.abs(y) >= MOVE_AXIS_SHARE * mag;
+    if (keepX && keepY) return { x, y };
+    return keepX ? { x: Math.sign(x) * mag, y: 0 } : { x: 0, y: Math.sign(y) * mag };
   }
 
   /** The shaped right stick (x right, y up). */
@@ -179,6 +196,12 @@ export class GamepadInput {
       return;
     }
     const now = this.host.now();
+    const ctx = this.host.context();
+    if (ctx !== this.lastContext) {
+      // A context change makes the ActionMap ignore held tokens; toggles would then be on in name only.
+      if (this.lastContext !== null) this.dropToggles();
+      this.lastContext = ctx;
+    }
     for (let i = 0; i < PAD_BUTTON_COUNT; i++) {
       const btn = pad.buttons[i];
       const down = !!btn && (btn.pressed || btn.value > 0.5);
@@ -190,17 +213,19 @@ export class GamepadInput {
     }
     this.left = shapeStick(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
     this.right = shapeStick(pad.axes[2] ?? 0, pad.axes[3] ?? 0);
-    if (this.left.mag > 0 || this.right.mag > 0) this.setActive(true);
+    // Only a fresh deflection switches the device: a stick held still while the mouse moves does not flip-flop.
+    if ((this.left.mag > 0 && this.prevLeftMag === 0) || (this.right.mag > 0 && this.prevRightMag === 0)) this.setActive(true);
     this.updateStickTokens(now);
     this.updateLook(dtSeconds);
     this.resyncToggles();
+    this.prevLeftMag = this.left.mag;
+    this.prevRightMag = this.right.mag;
   }
 
   /** Drops every held pad input (pad unplugged, plugin disposed). */
   releaseAll(): void {
     for (const b of [...this.heldAs.keys()]) this.release(b);
-    for (const t of this.toggled.values()) this.host.sink.tokenUp(t);
-    this.toggled.clear();
+    this.dropToggles();
     for (const t of this.stickTokens) this.host.sink.tokenUp(t);
     this.stickTokens.clear();
     this.prev.fill(false);
@@ -208,6 +233,13 @@ export class GamepadInput {
     this.right = { x: 0, y: 0, mag: 0 };
     this.lookX = 0;
     this.lookY = 0;
+    this.prevLeftMag = 0;
+    this.prevRightMag = 0;
+  }
+
+  private dropToggles(): void {
+    for (const t of this.toggled.values()) this.host.sink.tokenUp(t);
+    this.toggled.clear();
   }
 
   private pads(): readonly (GamepadLike | null)[] | null {
@@ -300,25 +332,32 @@ export class GamepadInput {
 
   private updateStickTokens(now: number): void {
     const want = new Set<string>();
-    const gameplayish = this.host.context() !== 'menu';
-    if (gameplayish) {
-      if (this.left.y > MOVE_AXIS_THRESHOLD) want.add(STICK_TOKENS.moveForward);
-      if (this.left.y < -MOVE_AXIS_THRESHOLD) want.add(STICK_TOKENS.moveBack);
-      if (this.left.x > MOVE_AXIS_THRESHOLD) want.add(STICK_TOKENS.moveRight);
-      if (this.left.x < -MOVE_AXIS_THRESHOLD) want.add(STICK_TOKENS.moveLeft);
+    if (this.host.context() !== 'menu') {
+      const m = this.move;
+      if (m.y > 0) want.add(STICK_TOKENS.moveForward);
+      if (m.y < 0) want.add(STICK_TOKENS.moveBack);
+      if (m.x > 0) want.add(STICK_TOKENS.moveRight);
+      if (m.x < 0) want.add(STICK_TOKENS.moveLeft);
     }
     for (const t of this.stickTokens) if (!want.has(t)) this.host.sink.tokenUp(t);
     for (const t of want) if (!this.stickTokens.has(t)) this.host.sink.tokenDown(t, now);
     this.stickTokens = want;
-    // Sprint toggled on the pad ends when the stick returns to centre.
+    // Sprint toggled on the pad ends when the stick returns to centre (not when L3 is clicked with it centred).
     const sprint = this.toggled.get('sprint');
-    if (sprint && this.left.mag === 0) {
+    if (sprint && this.left.mag === 0 && this.prevLeftMag > 0) {
       this.host.sink.tokenUp(sprint);
       this.toggled.delete('sprint');
     }
   }
 
   private updateLook(dt: number): void {
+    if (this.host.context() !== 'gameplay' || this.lookBlocked()) {
+      // Behind a menu, dialogue, a cutscene or the pause menu the camera does not turn (mouse look stops there too).
+      this.lookX = 0;
+      this.lookY = 0;
+      this.flicked = Math.abs(this.right.x) >= FLICK_THRESHOLD;
+      return;
+    }
     const locked = this.lockedOn();
     const rx = this.right.x;
     if (locked && !this.lookSuppressed) {
@@ -327,11 +366,9 @@ export class GamepadInput {
         this.flicked = true;
         this.lookX += Math.sign(rx) * (LOCK_ON.swapMousePixels + 1);
       } else if (Math.abs(rx) < FLICK_THRESHOLD * 0.5) this.flicked = false;
-      this.rawRightX = rx;
       return;
     }
     this.flicked = Math.abs(rx) >= FLICK_THRESHOLD;
-    this.rawRightX = rx;
     if (!(dt > 0) || this.lookSuppressed || this.right.mag === 0) return;
     // Squared response: fine aim near the centre, full speed at the rim.
     const curve = this.right.mag;
@@ -346,10 +383,5 @@ export class GamepadInput {
   private resyncToggles(): void {
     // A window blur clears every held token; forget toggles that no longer hold.
     for (const [a, t] of [...this.toggled]) if (!this.host.sink.isTokenHeld(t)) this.toggled.delete(a);
-  }
-
-  /** Last raw right-stick x (diagnostics, tests). */
-  get lastRightX(): number {
-    return this.rawRightX;
   }
 }

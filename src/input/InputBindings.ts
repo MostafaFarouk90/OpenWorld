@@ -123,6 +123,11 @@ export class InputBindings {
     for (const l of [...this.listeners]) l();
   }
 
+  /** G2: tells listeners the glyphs changed (controller chords rebound) without saving key bindings. */
+  refreshGlyphs(): void {
+    for (const l of [...this.listeners]) l();
+  }
+
   glyph(action: Action): string {
     const o = this.glyphOverride?.(action);
     if (o) return o;

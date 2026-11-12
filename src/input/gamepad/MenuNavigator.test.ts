@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { InputContext } from '../actions';
 import { GamepadInput } from './GamepadInput';
-import { DIALOGUE_FOCUSABLE, MENU_FOCUSABLE, MenuNavigator, NAV_REPEAT, PAD_FOCUS_CLASS, pickInDirection } from './MenuNavigator';
+import { CHOICE_ARM_S, DIALOGUE_FOCUSABLE, MENU_FOCUSABLE, MenuNavigator, NAV_REPEAT, PAD_FOCUS_CLASS, pickInDirection } from './MenuNavigator';
 import type { NavElement } from './MenuNavigator';
 import { PadBindings } from './PadBindings';
 import { PAD } from './padLayout';
@@ -52,7 +52,15 @@ function world(opts: { ctx?: InputContext; empty?: boolean; pauseOpen?: boolean;
     fake.set(button, false);
     pad.poll();
   };
-  return { nav, pad, fake, tap, keys, back, state, els: { a, b, c, d, hidden } };
+  /** Makes the pad the device in use (a fresh right-stick flick), as any real press would. */
+  const wake = () => {
+    fake.right(0.6, 0);
+    pad.poll();
+    fake.right(0, 0);
+    pad.poll();
+  };
+  wake();
+  return { nav, pad, fake, tap, keys, back, state, wake, els: { a, b, c, d, hidden } };
 }
 
 describe('pickInDirection', () => {
@@ -144,6 +152,19 @@ describe('MenuNavigator in a menu', () => {
     expect(sink.tokenDown).not.toHaveBeenCalled();
   });
 
+  it('stays idle for keyboard and mouse players: no focus ring, no focus moves, and the ring goes when they switch', () => {
+    const { nav, pad, els } = world();
+    nav.frame(0.016, pad);
+    expect(nav.focused).toBe(els.a);
+    pad.noteKeyboardMouse();
+    nav.frame(0.016, pad);
+    expect(nav.focused).toBeNull();
+    expect(els.a.classes.has(PAD_FOCUS_CLASS)).toBe(false);
+    expect(els.a.focus).toHaveBeenCalledTimes(1);
+    nav.frame(0.016, pad);
+    expect(els.a.focus).toHaveBeenCalledTimes(1);
+  });
+
   it('does nothing in gameplay', () => {
     const { pad, fake, keys, nav } = world({ ctx: 'gameplay' });
     const sink = (pad as unknown as { host: { sink: { tokenDown: ReturnType<typeof vi.fn> } } }).host.sink;
@@ -166,6 +187,17 @@ describe('MenuNavigator in dialogue', () => {
     tap(PAD.DOWN);
     tap(PAD.A);
     expect(c2.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('A tapped through lines does not pick a choice the moment the choices appear', () => {
+    const c1 = new El('1', 0, 0, 300, 18);
+    const { nav, pad, tap } = world({ ctx: 'dialogue', dialogue: [c1] });
+    nav.frame(0.016, pad);
+    tap(PAD.A);
+    expect(c1.click).not.toHaveBeenCalled();
+    nav.frame(CHOICE_ARM_S, pad);
+    tap(PAD.A);
+    expect(c1.click).toHaveBeenCalledTimes(1);
   });
 
   it('without choices, A falls through to dialogueNext', () => {

@@ -6,7 +6,7 @@ export const RUMBLE = {
   heavyDealt: { ms: 150, weak: 0.6, strong: 0.5 },
   hitTaken: { ms: 120, weak: 0.5, strong: 0.35 },
   bossPhase: { ms: 300, weak: 0.6, strong: 0.8 },
-  ramHit: { ms: 300, weak: 0.7, strong: 0.9 },
+  gateBreach: { ms: 300, weak: 0.7, strong: 0.9 },
 } as const;
 export type RumbleKind = keyof typeof RUMBLE;
 

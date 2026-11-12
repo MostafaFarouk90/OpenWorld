@@ -33,6 +33,8 @@ export const PAD_FOCUS_CLASS = 'owg-pad-focus';
 
 /** First repeat after holding a direction, then the interval (seconds). */
 export const NAV_REPEAT = { first: 0.4, every: 0.12 };
+/** Dialogue choices take A only this long after they appear (or after a D-pad move), so tapping A through lines never picks one. */
+export const CHOICE_ARM_S = 0.4;
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 const DIR_KEYS: Record<Dir, string> = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
@@ -86,6 +88,8 @@ export class MenuNavigator implements PadInterceptor {
   private heldFor = 0;
   private nextRepeat = 0;
   private stickDir: Dir | null = null;
+  /** Seconds the dialogue choices have been on screen; null outside dialogue choices. */
+  private choicesFor: number | null = null;
 
   constructor(private readonly deps: MenuNavigatorDeps) {}
 
@@ -109,6 +113,7 @@ export class MenuNavigator implements PadInterceptor {
     if (!mode) return false;
     const dir = DPAD[button];
     if (dir) {
+      if (mode === 'dialogue') this.choicesFor = CHOICE_ARM_S;
       this.move(dir, mode);
       this.held = dir;
       this.heldFor = 0;
@@ -116,6 +121,7 @@ export class MenuNavigator implements PadInterceptor {
       return true;
     }
     if (button === PAD.A) {
+      if (mode === 'dialogue' && (this.choicesFor ?? 0) < CHOICE_ARM_S) return true; // not armed yet: swallow
       this.activate(mode);
       return true;
     }
@@ -135,7 +141,10 @@ export class MenuNavigator implements PadInterceptor {
 
   /** Once per rendered frame: held D-pad and the left stick repeat moves. */
   frame(dt: number, pad: GamepadInput): void {
-    const mode = this.mode();
+    // Keyboard and mouse players never see the ring or have focus moved under them.
+    const mode = pad.active ? this.mode() : null;
+    if (mode === 'dialogue') this.choicesFor = (this.choicesFor ?? 0) + (dt > 0 ? dt : 0);
+    else this.choicesFor = null;
     if (!mode) {
       this.setFocus(null);
       this.held = null;

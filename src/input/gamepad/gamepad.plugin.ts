@@ -71,6 +71,7 @@ const gamepad: GamePlugin = {
     applySettings();
     let offSettings: (() => void) | null = null;
     pad.lockedOn = () => ctx.cameraRig?.lockTarget?.() != null;
+    pad.lookBlocked = () => softGet<PauseMenuLike>(ctx, 'pauseMenu')?.isOpen === true;
 
     // Menus.
     const doc = typeof document !== 'undefined' ? document : null;
@@ -109,7 +110,7 @@ const gamepad: GamePlugin = {
     const offRadial = pad.intercept(radial);
     const offNav = pad.intercept(nav); // asked first: menus own the pad
 
-    // Rumble (design section 11): hits dealt and taken, boss phases, the siege gate.
+    // Rumble (design section 11): hits dealt and taken, boss phases, the siege gate breach.
     const rumble = new Rumble({
       pad: () => pad.gamepad,
       padActive: () => pad.active,
@@ -124,7 +125,7 @@ const gamepad: GamePlugin = {
     });
     ctx.events.on('boss.phase', () => rumble.play('bossPhase'));
     const onAny = ctx.events as unknown as { on(n: string, fn: () => void): () => void };
-    onAny.on('siege.ram.hit', () => rumble.play('ramHit'));
+    onAny.on('siege.gate.breached', () => rumble.play('gateBreach'));
 
     // Unsupported pads get one toast each.
     const offUnsupported = pad.onUnsupported(() => ctx.events.emit('hud.toast', { textKey: 'gamepad.unsupported' }));
@@ -136,6 +137,7 @@ const gamepad: GamePlugin = {
       offSettings?.();
       offSettings = null;
       pad.lockedOn = () => false;
+      pad.lookBlocked = () => false;
       pad.lookSuppressed = false;
       pad.releaseAll();
       view.dispose();

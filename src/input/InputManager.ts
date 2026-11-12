@@ -102,12 +102,14 @@ export class InputManager {
     const padGlyph = (a: Action): string | null => this.padBindings.glyph(a);
     this.pad.onDeviceChange((on) => this.bindings.setGlyphOverride(on ? padGlyph : null));
     this.padBindings.onChange(() => {
-      if (this.pad.active) {
-        this.bindings.setGlyphOverride(null);
-        this.bindings.setGlyphOverride(padGlyph);
-      }
+      if (this.pad.active) this.bindings.refreshGlyphs();
     });
+    let lockedCodes = this.bindings.boundKeyCodes().join();
     this.unsubscribeBindings = this.bindings.onChange(() => {
+      // Glyph-only changes (the pad becoming the device) leave the bound keys, and so the lock, as they are.
+      const codes = this.bindings.boundKeyCodes().join();
+      if (codes === lockedCodes) return;
+      lockedCodes = codes;
       if (this.keyboardLocked) void this.applyKeyboardLock();
     });
     win.addEventListener('keydown', this.onKeyDown as EventListener);
@@ -184,8 +186,8 @@ export class InputManager {
       }
     });
     // G2: the left stick keeps its magnitude when it agrees with the action axis (keyboard stays -1/0/+1).
-    const stick = this.pad.leftStick;
-    const analog = (digital: -1 | 0 | 1, v: number): number => (stick.mag > 0 && digital !== 0 && Math.sign(v) === digital ? v : digital);
+    const stick = this.pad.move;
+    const analog = (digital: -1 | 0 | 1, v: number): number => (v !== 0 && Math.sign(v) === digital ? v : digital);
     const snapshot: InputSnapshot = {
       moveRight: analog(actions.axis('moveLeft', 'moveRight'), stick.x),
       moveForward: analog(actions.axis('moveBack', 'moveForward'), stick.y),

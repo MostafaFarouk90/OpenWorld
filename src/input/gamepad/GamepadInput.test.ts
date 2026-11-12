@@ -120,6 +120,28 @@ describe('GamepadInput buttons', () => {
     expect(input.sampleTick().actions.down('sprint')).toBe(false);
   });
 
+  it('L3 with the stick centred, then a push, sprints', () => {
+    const { input, pad } = setup(new FakePad());
+    pad.set(PAD.LS, true);
+    input.sampleTick();
+    pad.set(PAD.LS, false).left(0, 1);
+    expect(input.sampleTick().actions.down('sprint')).toBe(true);
+  });
+
+  it('a toggle does not survive a context change in name only', () => {
+    const { input, pad } = setup(new FakePad());
+    pad.set(PAD.DOWN, true);
+    input.sampleTick();
+    pad.set(PAD.DOWN, false);
+    expect(input.sampleTick().actions.down('sneak')).toBe(true);
+    const pop = input.contexts.push('menu', 'inventory');
+    input.sampleTick();
+    pop();
+    expect(input.sampleTick().actions.down('sneak')).toBe(false);
+    pad.set(PAD.DOWN, true); // one press turns it back on
+    expect(input.sampleTick().actions.down('sneak')).toBe(true);
+  });
+
   it('sneak toggles on D-pad down: first press on, second off', () => {
     const { input, pad } = setup(new FakePad());
     pad.set(PAD.DOWN, true);
@@ -225,6 +247,22 @@ describe('GamepadInput devices', () => {
     expect(changed).toHaveBeenCalledTimes(2);
   });
 
+  it('a stick held still while the mouse moves does not flip the device back and forth', () => {
+    const { input, pad, element } = setup(new FakePad());
+    const changed = vi.fn();
+    input.bindings.onChange(changed);
+    pad.left(0, 1);
+    input.sampleTick();
+    expect(changed).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 20; i++) {
+      element.dispatchEvent(Object.assign(new Event('mousedown'), { button: 2 }));
+      input.sampleTick();
+      input.pad.poll(0.016);
+    }
+    expect(changed).toHaveBeenCalledTimes(2); // once to the pad, once back to the mouse
+    expect(input.pad.active).toBe(false);
+  });
+
   it('untrusted (synthetic) keys do not switch the device back', () => {
     const { input, pad, win } = setup(new FakePad());
     pad.set(PAD.A, true);
@@ -270,6 +308,33 @@ describe('GamepadInput sticks', () => {
     const pressing = (dir: Action) => ({ ...NO_ACTIONS, axis: (n: Action, p: Action) => (p === dir ? 1 : n === dir ? -1 : 0) }) as ActionState;
     expect(applyLocks({ moveRight: 0.4, moveForward: 0, sprint: false, jump: false, attack: 0 }, pressing('moveRight')).moveRight).toBe(0.4);
     expect(applyLocks({ moveRight: 1, moveForward: 0, sprint: false, jump: false, attack: 0 }, pressing('moveRight')).moveRight).toBe(1);
+  });
+
+  it('a push near an axis snaps to it and keeps its magnitude; a light diagonal still moves', () => {
+    const { input, pad } = setup(new FakePad());
+    pad.left(0.1, 0.99);
+    let s = input.sampleTick().snapshot;
+    expect(s.moveRight).toBe(0);
+    expect(s.moveForward).toBeCloseTo(shapeStick(0.1, -0.99).mag);
+    pad.left(0.2, 0.2); // length 0.28, past the dead zone
+    s = input.sampleTick().snapshot;
+    expect(s.moveRight).toBeGreaterThan(0);
+    expect(s.moveForward).toBeGreaterThan(0);
+  });
+
+  it('look stops behind a menu, dialogue or the pause menu', () => {
+    const { input, pad } = setup(new FakePad());
+    pad.right(1, 0);
+    const pop = input.contexts.push('menu', 'm');
+    input.pad.poll(0.1);
+    expect(input.consumeMouseDelta().dx).toBe(0);
+    pop();
+    input.pad.lookBlocked = () => true;
+    input.pad.poll(0.1);
+    expect(input.consumeMouseDelta().dx).toBe(0);
+    input.pad.lookBlocked = () => false;
+    input.pad.poll(0.1);
+    expect(input.consumeMouseDelta().dx).toBeGreaterThan(0);
   });
 
   it('the left stick does nothing in a menu', () => {
