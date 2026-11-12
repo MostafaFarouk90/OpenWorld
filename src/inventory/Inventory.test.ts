@@ -431,8 +431,9 @@ describe('gear (v2)', () => {
     b.load(JSON.parse(JSON.stringify(saved)), 2);
     expect(b.gear('practice-sword')).toEqual({ temper: 4, affix: 'ember' });
     b.load({ items: { 'practice-sword': 1 }, gear: { 'practice-sword': { temper: 9 }, nope: { temper: 1 }, 'healing-flask': 'x' } }, 2);
-    expect(b.gear('practice-sword').temper).toBe(5);
-    expect(b.serialize().gear).toEqual({ 'practice-sword': { temper: 5 } });
+    // G3: the stored ceiling is 7 (a Second Hearth's +2); tempering itself stops at temperCap()
+    expect(b.gear('practice-sword').temper).toBe(7);
+    expect(b.serialize().gear).toEqual({ 'practice-sword': { temper: 7 } });
     b.load({ items: { 'practice-sword': 1 }, gear: 'bad' }, 2);
     expect(b.gear('practice-sword').temper).toBe(0);
   });

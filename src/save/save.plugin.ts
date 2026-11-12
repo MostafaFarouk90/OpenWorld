@@ -9,7 +9,7 @@ import { createContinueModal } from './ContinueModal';
 import { devJumpBoot } from './devJump';
 import { SLOT_MANUAL, SaveManager, type ApplyReport } from './SaveManager';
 import { parseSave, type SaveFile } from './SaveSchema';
-import type { SaveService } from './service';
+import type { BootChoice, SaveService } from './service';
 import './service';
 import { IndexedDbSaveStore, MemorySaveStore } from './SaveStore';
 import { SAVE_STRINGS_EN } from './strings.en';
@@ -108,9 +108,15 @@ const save: GamePlugin = {
 
     const manager = new SaveManager({ ports, store: new IndexedDbSaveStore(), createFallbackStore: () => new MemorySaveStore() });
     // The IndexedDB read runs while the other plugins are still setting up.
-    const bootRead = manager.continue();
+    // G3: the parked world (a Second Hearth's other save) is read with the boot save, before the boot decision.
+    let parked: SaveFile | null = null;
+    const bootRead = manager.continue().then(async (r) => {
+      parked = await manager.readParked();
+      return r;
+    });
     let boot: Awaited<typeof bootRead> | null = null;
     void bootRead.then((r) => (boot = r));
+    const bootChoices: BootChoice[] = [];
     if (typeof navigator !== 'undefined') void navigator.storage?.persist?.().catch(() => undefined);
 
     // Saves stay locked from boot until the boot decision (Continue, New Game, or no save) has settled,
@@ -190,6 +196,28 @@ const save: GamePlugin = {
         ports.log('info', `save: checkpoint (${reason})`);
         return manager.checkpoint();
       },
+      addBootChoice: (choice) => {
+        bootChoices.push(choice);
+        return () => {
+          const i = bootChoices.indexOf(choice);
+          if (i >= 0) bootChoices.splice(i, 1);
+        };
+      },
+      bootFile: () => (boot?.ok === true && !consumed ? boot.file : null),
+      parkedFile: () => parked,
+      switchWorld: async (away, next) => {
+        const atBoot = !consumed;
+        if (atBoot) consumed = true;
+        const r = await manager.park(away, next);
+        if (!r.ok) {
+          if (atBoot) unlock();
+          return false;
+        }
+        parked = away;
+        if (atBoot) return applyFile(next, SLOT_MANUAL);
+        return true;
+      },
+      snapshotFile: () => (loading ? null : manager.snapshotFile()),
     };
     ctx.services.provide('save', service);
     clearSuspensions = () => suspensions.clear();
@@ -215,7 +243,13 @@ const save: GamePlugin = {
         void service.newGame();
         return;
       }
-      if (params.has('continue') && boot.ok) {
+      // G3: `?switched` is the reload after a world switch (a Second Hearth begun in game): Continue once, then drop it.
+      if (params.has('switched') && typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('switched');
+        window.history.replaceState(null, '', url.toString());
+      }
+      if ((params.has('continue') || params.has('switched')) && boot.ok) {
         void loadSequence();
         return;
       }
@@ -230,8 +264,19 @@ const save: GamePlugin = {
         hold();
         closeModal?.();
       };
+      const extra = bootChoices
+        .filter((c) => {
+          try {
+            return c.when();
+          } catch (err) {
+            console.warn(`save: boot choice ${c.id} failed`, err);
+            return false;
+          }
+        })
+        .map((c) => ({ id: c.id, labelKey: c.labelKey, confirmKey: c.confirmKey, onSelect: () => (finish(), c.run()) }));
       const widget = createContinueModal({
         hasSave: boot.ok,
+        extra,
         storageUnavailable: unavailable || manager.isUsingFallback,
         saveProblem: problem,
         t: (k, p) => ctx.strings.t(k, p),

@@ -67,6 +67,8 @@ export interface ContinueModalDeps {
   saveProblem: 'corrupt' | 'newer' | null;
   onContinue(): void;
   onNewGame(): void;
+  /** G3: extra buttons after Continue (a Second Hearth, the parked world); `confirmKey` asks first. */
+  extra?: { id: string; labelKey: string; confirmKey?: string; onSelect(): void }[];
   t(key: string, params?: Record<string, string | number>): string;
   doc?: Pick<Document, 'createElement'>;
 }

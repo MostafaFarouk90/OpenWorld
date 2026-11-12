@@ -30,9 +30,26 @@ export function isTemperable(def: ItemDef | undefined): def is ItemDef {
   return !!def && (def.kind === 'weapon' || def.kind === 'offhand' || def.kind === 'armour') && !!def.stats && (def.stats.attack !== undefined || def.stats.defense !== undefined);
 }
 
-/** Cost to reach `toLevel` (1..5) on a piece of `tier`; null outside the range. */
+/** G3 (New Game+, design 12.5 "+1 tempering available"): levels added to the temper cap; 0 on a first playthrough. */
+let temperCapBonus = 0;
+
+/** The temper cap now: `maxTemper` plus the Second Hearth's bonus. */
+export function temperCap(): number {
+  return GEAR_TUNING.maxTemper + temperCapBonus;
+}
+
+/** G3: sets the bonus (a whole number, 0 or more); returns the undo (back to 0). */
+export function setTemperCapBonus(levels: number): () => void {
+  const v = Number.isInteger(levels) && levels > 0 ? levels : 0;
+  temperCapBonus = v;
+  return () => {
+    if (temperCapBonus === v) temperCapBonus = 0;
+  };
+}
+
+/** Cost to reach `toLevel` (1..the cap) on a piece of `tier`; null outside the range. */
 export function temperCost(tier: number, toLevel: number): TemperCost | null {
-  if (!Number.isInteger(toLevel) || toLevel < 1 || toLevel > GEAR_TUNING.maxTemper) return null;
+  if (!Number.isInteger(toLevel) || toLevel < 1 || toLevel > temperCap()) return null;
   if (tier >= 4) {
     // K10: tier 4 (Wyrm-tempered) takes rime-iron and a scale; the tier 4 hide classes pay with hide (`temperCostFor`).
     return { gold: GEAR_TUNING.goldPerLevel[tier >= 5 ? 5 : 4] * toLevel, materials: [{ itemId: 'rime-iron', count: 1 }, { itemId: 'shed-wyrm-scale', count: 1 }] };
@@ -56,7 +73,7 @@ export function temperCostFor(itemId: string, toLevel: number): TemperCost | nul
 export function effectiveStats(itemId: string, temper: number): { attack?: number; defense?: number } {
   const stats = getItem(itemId)?.stats;
   if (!stats) return {};
-  const k = 1 + GEAR_TUNING.combat.temperPerLevel * Math.min(GEAR_TUNING.maxTemper, Math.max(0, Math.floor(temper)));
+  const k = 1 + GEAR_TUNING.combat.temperPerLevel * Math.min(temperCap(), Math.max(0, Math.floor(temper)));
   const out: { attack?: number; defense?: number } = {};
   if (stats.attack !== undefined) out.attack = Math.round(stats.attack * k);
   if (stats.defense !== undefined) out.defense = Math.round(stats.defense * k);

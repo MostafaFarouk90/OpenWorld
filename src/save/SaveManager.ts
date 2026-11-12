@@ -5,6 +5,8 @@ import { MemorySaveStore, type SaveStore, type StoreResult } from './SaveStore';
 export const SLOT_AUTOSAVE = 'autosave';
 export const SLOT_MANUAL = 'slot-0';
 export const SLOT_BACKUP = 'slot-0.backup';
+/** G3: the other world of a Second Hearth (the ended save while a Second Hearth runs, or the reverse after a switch). */
+export const SLOT_PARKED = 'slot-0.parked';
 export const PLAYER_POSITION_KEY = 'player-position';
 export const PLAYER_POSITION_VERSION = 1;
 
@@ -531,6 +533,54 @@ export class SaveManager {
       this.ports.log('error', 'save: continue failed', { error });
       return { ok: false, reason: 'unavailable' };
     }
+  }
+
+  /** G3: the parked world (slot-0.parked), parsed; null when empty, unreadable or newer. Never rejects. */
+  async readParked(): Promise<SaveFile | null> {
+    try {
+      if (!this.store.available) return null;
+      const r = await this.safeRead(SLOT_PARKED);
+      if (!r.ok || r.value === undefined) return null;
+      const parsed = parseSave(r.value);
+      return parsed.ok ? parsed.file : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * G3: in ONE transaction parks `away` (slot-0.parked, replacing what was parked) and makes `next` the save of both slots,
+   * then resets in-memory save state as newGame does. The Second Hearth's start and the switch between the two worlds.
+   */
+  async park(away: SaveFile, next: SaveFile): Promise<{ ok: boolean }> {
+    if (this.protectedSave) return { ok: false };
+    let ok = false;
+    try {
+      this.ensureStore();
+      const w = await this.store.writeMany([
+        { slot: SLOT_PARKED, value: away },
+        { slot: SLOT_AUTOSAVE, value: next },
+        { slot: SLOT_MANUAL, value: next },
+      ]);
+      ok = w.ok;
+      if (!w.ok) this.ports.log('error', `save: park failed (${w.reason})`, { error: w.error });
+    } catch (error) {
+      this.ports.log('error', 'save: park failed', { error });
+    }
+    if (ok) {
+      this.pendingBackup = null;
+      this.retained = new Map();
+      this.lastValues = new Map();
+      this.playtime = next.playtimeSeconds;
+      this.deferredReason = null;
+      this.lastSafeSnapshot = null;
+    }
+    return { ok };
+  }
+
+  /** G3: the live state as a save file now (the world parked when a Second Hearth begins in game). */
+  snapshotFile(): SaveFile {
+    return this.buildFile('manual');
   }
 
   /** Backs up the existing save, then clears both slots and resets in-memory save state. */

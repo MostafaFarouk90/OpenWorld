@@ -288,8 +288,16 @@ function makePorts(ctx: GameContext, ui: {
       if (p && p.level < 2) p.grantXp(p.xpToNext(), 'tutorial.t13');
     },
     grantItems: (sourceId, items) => ctx.events.emit('loot.granted', { sourceId, items }),
-    equip: (id) => void svc.get('inventory')?.equip(id),
-    resetToStarterKit: () => svc.get('inventory')?.reset(STARTER_KIT),
+    // G3: a Second Hearth keeps the carried gear on (the Kettlewick skip's T12 reward would put the Squire's sword on).
+    equip: (id) => {
+      if ((svc.get('ngPlus')?.cycle() ?? 0) > 0) return;
+      void svc.get('inventory')?.equip(id);
+    },
+    // G3: a Second Hearth carries its gear, so its automatic Kettlewick start keeps the bag as it is.
+    resetToStarterKit: () => {
+      if ((svc.get('ngPlus')?.cycle() ?? 0) > 0) return;
+      svc.get('inventory')?.reset(STARTER_KIT);
+    },
     hasConsumable: () => {
       const inv = svc.get('inventory');
       return !inv || inv.count('healing-flask') + inv.count('hearth-bread') > 0;
@@ -532,6 +540,11 @@ const tutorial: GamePlugin = {
     const openStart = () => {
       if (query) {
         director.begin(query.mode, query.at);
+        return;
+      }
+      // G3: a Second Hearth skips the start screen and takes "Skip to Kettlewick" (design 12.5; taste call G3-2).
+      if ((ctx.services.get('ngPlus')?.cycle() ?? 0) > 0) {
+        director.begin('kettlewick');
         return;
       }
       if (!d) return;

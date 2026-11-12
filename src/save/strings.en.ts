@@ -9,4 +9,6 @@ export const SAVE_STRINGS_EN: Record<string, string> = {
   'save.problem.newer': 'Your save is from a newer version of the game. A backup copy was kept.',
   'save.saved': 'Game saved',
   'save.loading': 'Loading',
+  'save.confirm.yes': 'Confirm',
+  'save.confirm.no': 'Cancel',
 };

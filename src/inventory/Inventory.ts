@@ -28,13 +28,17 @@ export interface InventorySave {
   sockets?: Record<string, SocketedShard[]>;
 }
 
-/** Per-item instance data (one record per item id). `temper` is 0..5. */
+/** Per-item instance data (one record per item id). `temper` is 0..5 (to 7 in a Second Hearth, G3). */
 export interface GearRecord {
   temper: number;
   affix?: string;
 }
 
-export const MAX_TEMPER = 5;
+/**
+ * The stored ceiling: the base cap 5 plus G3's Second Hearth bonus (at most 2, `TEMPER_BONUS_MAX`). Tempering itself stops
+ * at `temperCap()` (gear/tempering.ts), so a first playthrough still ends at 5.
+ */
+export const MAX_TEMPER = 7;
 
 /** Act 3 (K10, the R15 "Pack Mule Upgrade"): while held, quest-kind stacks of 10 or more hold this many more. */
 export const SADDLEBAGS_ID = 'ashmare-saddlebags';

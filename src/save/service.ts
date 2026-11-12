@@ -1,4 +1,4 @@
-import type { SaveReason } from './SaveSchema';
+import type { SaveFile, SaveReason } from './SaveSchema';
 import type { SaveOutcome } from './SaveManager';
 
 /** The `save` service (provided by thread 6). */
@@ -35,6 +35,31 @@ export interface SaveService {
    * first); while another hold is active it defers like any save.
    */
   checkpoint(reason: string): Promise<SaveOutcome>;
+  /**
+   * G3 (New Game+): an extra button on the boot Continue modal, shown when `when()` holds as the modal opens. With
+   * `confirmKey` the modal asks first. Returns the undo.
+   */
+  addBootChoice?(choice: BootChoice): () => void;
+  /** G3: the save the boot read found, while it is not yet applied (null after Continue, New Game or a switch). */
+  bootFile?(): SaveFile | null;
+  /** G3: the parked world (slot-0.parked) the boot read found, or null. */
+  parkedFile?(): SaveFile | null;
+  /**
+   * G3: parks `away` and makes `next` the save, in one write. Before the boot decision it also applies `next` (as
+   * Continue does); after it, the caller reloads the page (`?continue`) so the world starts from defaults. Resolves false
+   * when the write failed (nothing changed).
+   */
+  switchWorld?(away: SaveFile, next: SaveFile): Promise<boolean>;
+  /** G3: the live state as a save file (refused, null, while a load runs). */
+  snapshotFile?(): SaveFile | null;
+}
+
+export interface BootChoice {
+  id: string;
+  labelKey: string;
+  when(): boolean;
+  run(): void;
+  confirmKey?: string;
 }
 
 declare module '../core/Services' {
