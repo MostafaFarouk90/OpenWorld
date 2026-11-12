@@ -7,6 +7,17 @@
       },
       "version": 1
     },
+    "cinderlands": {
+      "data": {
+        "bests": [],
+        "embers": 0,
+        "hearth": {},
+        "mastery": {},
+        "maxHeat": 1,
+        "runs": 0
+      },
+      "version": 1
+    },
     "classes": {
       "data": {
         "drills": {
