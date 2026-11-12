@@ -19,12 +19,14 @@ import { NGPLUS_DAMAGE_MODIFIER_ID, NGPLUS_DAMAGE_ORDER, SecondHearthScaling } f
 import type { NgPlusService } from './service';
 import './service';
 import { NGPLUS_STRINGS_EN } from './strings.en';
+import { BURNING_STATUS } from '../cinderlands/heat';
+import { INSIDE_FLAG } from '../cinderlands/run';
 import { NGPLUS_BURNING, NGPLUS_KEY, NGPLUS_VERSION, TEMPER_BONUS_MAX } from './tuning';
 
 const kindOf = (id: string): string | undefined => getItem(id)?.kind;
 
-/** G4's `INSIDE_FLAG` (src/cinderlands/run.ts): set before a rift's actors spawn, cleared when the run is torn down. */
-export const CINDER_INSIDE_FLAG = 'cinder.run.inside';
+/** Inside a Rift Walk, G4's own Heat scales the foes. */
+export const CINDER_INSIDE_FLAG = INSIDE_FLAG;
 
 /** Where the page goes after a switch: the same page with only `?switched` (a dev jump's own params must not replay). */
 function switchedUrl(): string | null {
@@ -116,10 +118,7 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
       if (r.targetId !== ctx.player.actor.id) return;
       if (burnCount++ % NGPLUS_BURNING.everyNthHit !== 0) return;
       ctx.services.get('status')?.apply(r.targetId, {
-        id: NGPLUS_BURNING.id,
-        kind: 'ignite',
-        dps: NGPLUS_BURNING.dps,
-        seconds: NGPLUS_BURNING.seconds,
+        ...BURNING_STATUS,
         sourceId: r.attackerId,
       });
     }),

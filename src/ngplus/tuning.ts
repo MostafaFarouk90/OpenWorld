@@ -24,7 +24,8 @@ export const TEMPER_BONUS_MAX = 2;
  * Design 12.5 (Heat 5 list): from cycle 2 enemies are Burning. G4's Cinderlands Burning (35% of hits ignite, 4 per second
  * for 3 s) made deterministic: every third hostile melee hit on the player ignites, the first one included (taste call G3-5).
  */
-export const NGPLUS_BURNING = { fromCycle: 2, id: 'ngplus.burning', dps: 4, seconds: 3, everyNthHit: 3 } as const;
+/** From cycle 2, every third hostile melee hit applies G4's Burning (BURNING_STATUS, src/cinderlands/heat.ts). */
+export const NGPLUS_BURNING = { fromCycle: 2, everyNthHit: 3 } as const;
 
 /**
  * The `tutorial` entry a Second Hearth starts with: not begun, so the tutorial's start runs, and G3's row there takes

@@ -10,11 +10,10 @@ import { buildSecondHearth } from './carry';
 import { ensure, objectiveDone, playPhaseA, reachPhaseAStart, talkTo, type QuestTrail } from '../integration/phaseA';
 import { killGroup, playM06, playM08, playM09, playM10, playR03, playR04, reachSouthGate, useAt } from '../integration/phaseB';
 import { healthLift } from './scaling';
-import { heatMultiplier } from '../cinderlands/heat';
+import { BURNING_STATUS, heatMultiplier } from '../cinderlands/heat';
 import { temperCap } from '../gear/tempering';
 import * as THREE from 'three';
 import { damageLift } from './scaling';
-import { NGPLUS_BURNING } from './tuning';
 
 /** A hostile stand-in spawned straight through the registry (the scaling listens to every spawn). */
 function foe(hh: ChapterHarness, level: number) {
@@ -178,7 +177,7 @@ describe('a Second Hearth in the real game (G3)', () => {
     const dealt = hitPlayer(h, a.id);
     expect(dealt).toBeGreaterThan(10);
     expect(k).toBeGreaterThan(1.5);
-    const burning = ctx.services.require('status').list(ctx.player.actor.id).find((e) => e.id === NGPLUS_BURNING.id);
+    const burning = ctx.services.require('status').list(ctx.player.actor.id).find((e) => e.id === BURNING_STATUS.id);
     expect(burning?.kind).toBe('ignite');
   }, TIMEOUT);
 });
