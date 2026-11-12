@@ -25,8 +25,9 @@ const ACT3_DONE: Flags = {
   'story.gate.a4': true,
 };
 const BEFORE_M41: Flags = { ...ACT3_DONE, [OCCUPIED_FLAG]: true };
-const PHASE_G: Flags = { ...BEFORE_M41, 'story.m41.complete': true, 'story.m42.started': true };
-const PHASE_H: Flags = { ...PHASE_G, 'story.phase.wasteOpen': true };
+// Phase G's end: M41 done, M42 not yet accepted (L13 PR 2 retired the hold; the Waste opens on M42 alone)
+const PHASE_G: Flags = { ...BEFORE_M41, 'story.m41.complete': true };
+const PHASE_H: Flags = { ...PHASE_G, 'story.m42.started': true };
 function containment(flags: Flags): Containment {
   const c = new Containment({ getFlag: (k: string) => flags[k] }, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS, ...ACT4_CORRIDORS], [...ACT3_HOLES, ...ACT4_HOLES]);
   for (const def of ACT2_CORRIDORS) c.addCorridor(def);

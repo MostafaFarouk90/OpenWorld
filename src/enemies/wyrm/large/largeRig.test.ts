@@ -5,6 +5,7 @@ import { WYRM_PALETTES } from '../builder/palettes';
 import { LOD_DISTANCES, lodDistances, restPose, WyrmRig, type RootFrame } from '../builder/rig';
 import { lodFor } from '../WyrmBody';
 import { HATHREN_PARAMS } from '../hathren/scene';
+import { cpuNowMs } from '../../../testing/cpuClock';
 
 const DT = 1 / 60;
 const ROOT: RootFrame = { x: 0, y: 0, z: 0, yaw: 0 };
@@ -122,9 +123,10 @@ describe('builder extensions for large dragons (K6a)', () => {
       tick(small);
     }
     const batch = (r: WyrmRig) => {
-      const s = performance.now();
+      // CPU time, not wall time: a batch that waits for a core on a loaded runner is not charged for the wait.
+      const s = cpuNowMs();
       for (let i = 0; i < 120; i++) tick(r);
-      return performance.now() - s;
+      return cpuNowMs() - s;
     };
     const median = (xs: number[]) => [...xs].sort((p, q) => p - q)[xs.length >> 1]!;
     const bigT: number[] = [];

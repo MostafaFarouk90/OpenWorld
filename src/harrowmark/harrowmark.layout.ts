@@ -174,7 +174,8 @@ const trainerAnchors = ['gaut', 'stane', 'pennard', 'gerta', 'ashdown'].map((id)
 });
 
 export const HARROWMARK_NPCS: NpcSpec[] = [
-  { id: 'rook', post: 'npc-post.rook' },
+  // Act 5 N10: while M52's siege runs, N4's watch squad stands for Rook at the gate (his world body steps out)
+  { id: 'rook', post: 'npc-post.rook', absentWhen: 'story.m52.out.rook' },
   { id: 'aldith', post: 'npc-post.aldith' },
   { id: 'gerta', post: 'npc-post.gerta.guild' },
   { id: 'whitlock', post: 'npc-post.whitlock' },
@@ -184,7 +185,7 @@ export const HARROWMARK_NPCS: NpcSpec[] = [
   { id: 'wace', post: 'npc-post.wace' },
   { id: 'wystan', post: 'npc-post.wystan' },
   { id: 'merrin', post: 'npc-post.merrin' },
-  { id: 'edric', post: 'npc-post.edric' },
+  { id: 'edric', post: 'npc-post.edric', absentWhen: 'story.m52.out.edric' },
   { id: 'vey', post: 'npc-post.vey.keep', presentWhen: 'story.m08.started' },
 ];
 

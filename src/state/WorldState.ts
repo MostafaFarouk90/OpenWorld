@@ -150,6 +150,23 @@ export class WorldState implements Persistable {
     return applied;
   }
 
+  /**
+   * v0.9 item 6: copies the five tracks to flags `favour.snapshot.<id>.<track>` and sets `favour.snapshot.<id>.taken`.
+   * The first call per id wins: later calls change nothing and return false. Flags save with the world state, so a snapshot
+   * survives a load. `id` is one flag segment (ACT5_SNAPSHOTS: 'm52', 'd09', 'm56').
+   */
+  snapshotFavour(id: string): boolean {
+    const base = `favour.snapshot.${id}`;
+    if (!FLAG_KEY.test(`${base}.taken`) || id.includes('.')) {
+      this.warn(`WorldState: invalid favour snapshot id "${id}"`);
+      return false;
+    }
+    if (this.flags.get(`${base}.taken`) === true) return false;
+    for (const t of FAVOUR_TRACKS) this.setFlag(`${base}.${t}`, this.favourValues[t]);
+    this.setFlag(`${base}.taken`, true);
+    return true;
+  }
+
   // ---- mercy ----
 
   recordMercy(e: MercyEvent): { applied: number; capped: boolean } {

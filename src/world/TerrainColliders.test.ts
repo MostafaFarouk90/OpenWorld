@@ -3,6 +3,7 @@ import { PhysicsWorld, type HeightfieldDesc } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { buildPhysicsHeightfield } from '../terrain/physicsHeightfield';
 import { TerrainColliders, type TerrainCollidersOptions } from './TerrainColliders';
+import { cpuMs, cpuNowMs } from '../testing/cpuClock';
 
 const DOWN = { x: 0, y: -1, z: 0 };
 const SMALL = { patchSize: 20, cells: 8 };
@@ -508,19 +509,20 @@ describe('TerrainColliders edge cases', () => {
 });
 
 describe('TerrainColliders performance', () => {
+  // Timed in CPU milliseconds (src/testing/cpuClock.ts), and the draining instance's budget clock is the same CPU clock:
+  // on a loaded runner a wall-clock budget is overrun whenever the worker is descheduled mid-column, which charged the
+  // wait to update() and failed the 25 ms ceiling. With CPU time the guard still catches an update that does too much work.
   it('logs full-patch build cost and the max update time while draining a crossing', async () => {
     const physics = await makeWorld();
 
     const full = new TerrainColliders(physics, { radius: 0, budgetMs: BIG });
-    const t0 = performance.now();
-    full.update(100, 100);
-    const buildMs = performance.now() - t0;
+    const buildMs = cpuMs(() => full.update(100, 100));
     expect(full.count).toBe(1);
     full.dispose();
-    console.log(`TerrainColliders: sync build+add of one 200 m / 128-cell patch: ${buildMs.toFixed(2)} ms`);
+    console.log(`TerrainColliders: sync build+add of one 200 m / 128-cell patch: ${buildMs.toFixed(2)} CPU ms`);
     expect(buildMs).toBeLessThan(1000);
 
-    const tc = new TerrainColliders(physics);
+    const tc = new TerrainColliders(physics, { now: cpuNowMs });
     tc.update(100, 100);
     let guard = 0;
     while (tc.pendingKeys.length > 0 && guard++ < 10000) tc.update(100, 100);
@@ -529,14 +531,12 @@ describe('TerrainColliders performance', () => {
     let maxMs = 0;
     let updates = 0;
     while (guard++ < 20000) {
-      const s = performance.now();
-      tc.update(300, 100);
-      maxMs = Math.max(maxMs, performance.now() - s);
+      maxMs = Math.max(maxMs, cpuMs(() => tc.update(300, 100)));
       updates++;
       if (tc.pendingKeys.length === 0) break;
     }
     console.log(
-      `TerrainColliders: boundary crossing drained in ${updates} updates, max update() ${maxMs.toFixed(2)} ms (budget 2 ms)`,
+      `TerrainColliders: boundary crossing drained in ${updates} updates, max update() ${maxMs.toFixed(2)} CPU ms (budget 2 ms)`,
     );
     expect(tc.count).toBe(9);
     expect(maxMs).toBeLessThan(25);

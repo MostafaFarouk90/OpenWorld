@@ -13,6 +13,10 @@ import { SKARL_DRAKE_DEF } from './wyrm/drake/def';
 import { RIME_HAWK } from './peak/hawk/def';
 import { CRAG_OGRE } from './peak/ogre/def';
 import { YSMERYTH_DEF } from './wyrm/ysmeryth/def';
+import { WASTE_STRIDER } from './waste/strider/def';
+import { HUSK_KNIGHT_DEF } from './waste/huskKnight/def';
+import { CINDER_GNAT_SWARM } from './waste/gnats/def';
+import { WARHOST_GUARD_DEF, WARHOST_SOLDIER } from './act5/warhost/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -250,6 +254,13 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'rime-hawk': RIME_HAWK,
   'crag-ogre': CRAG_OGRE,
   ysmeryth: YSMERYTH_DEF,
+  // Act 4 (L5): the Ashen Waste's creatures.
+  'waste-strider': WASTE_STRIDER,
+  'husk-knight': HUSK_KNIGHT_DEF,
+  'cinder-gnat-swarm': CINDER_GNAT_SWARM,
+  // Act 5 (N5): Vey's warhost.
+  'warhost-soldier': WARHOST_SOLDIER,
+  'warhost-guard': WARHOST_GUARD_DEF,
 };
 
 /**
@@ -285,6 +296,13 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'rime-hawk': { part: 'wing', color: 0xffffff },
   'crag-ogre': { part: 'mouth', color: 0xff3020 },
   ysmeryth: { part: 'mouth', color: 0xffb46a },
+  // L5, design 13: the strider's leg draw-back (sand), the Husk Knight's amber chest pulse, the gnats' brightening cloud.
+  'waste-strider': { part: 'hand', color: 0xd8c08a },
+  'husk-knight': { part: 'core', color: 0xffa040 },
+  'cinder-gnat-swarm': { part: 'core', color: 0xffb040 },
+  // N5: the pike's gold-black flash (design 10 row 32); the same for the household guard.
+  'warhost-soldier': { part: 'weapon', color: 0xe0b040 },
+  'warhost-guard': { part: 'weapon', color: 0xe0b040 },
 };
 
 function move(

@@ -51,6 +51,8 @@ interface Slot {
   passed: Set<ActorId>;
   onPass: ((hit: { actorId: ActorId; point: Vec3 }) => void) | null;
   hostileOnly: boolean;
+  /** No step taken yet: the first sweep samples the origin too. */
+  fresh: boolean;
 }
 
 const pos = new THREE.Vector3();
@@ -74,7 +76,7 @@ export class ProjectileSystem {
     this.slots = Array.from({ length: n }, () => ({
       live: false, seq: 0, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0, speed: 0, remaining: 0, radius: 0,
       casterId: '', casterTeam: 'player' as ActorLike['team'], onHit: null,
-      pierce: 0, passed: new Set<ActorId>(), onPass: null, hostileOnly: false,
+      pierce: 0, passed: new Set<ActorId>(), onPass: null, hostileOnly: false, fresh: false,
     }));
   }
 
@@ -108,6 +110,7 @@ export class ProjectileSystem {
     slot.passed.clear();
     slot.onPass = typeof o.onPass === 'function' ? o.onPass : null;
     slot.hostileOnly = o.hostileOnly === true;
+    slot.fresh = true;
     this.live++;
     return true;
   }
@@ -157,9 +160,15 @@ export class ProjectileSystem {
       }
     }
 
-    for (let i = 1; i <= n; i++) {
-      const t = (dist * i) / n;
-      if (t > rayDist) break;
+    // The first step also samples the muzzle itself, and a sample past the ray's hit is pulled back onto it: a bolt loosed at
+    // point-blank range (its muzzle inside, or a hand short of, a foe's body collider, which the ray reports first) still
+    // strikes the foe whose hit cylinder holds that point, instead of ending as a wall hit (L13's Phase H report, M3).
+    const first = s.fresh;
+    s.fresh = false;
+    for (let i = first ? 0 : 1; i <= n; i++) {
+      let t = (dist * i) / n;
+      const atRay = t > rayDist;
+      if (atRay) t = rayDist;
       const x = ox + s.dx * t, y = oy + s.dy * t, z = oz + s.dz * t;
       const actor = this.actorAt(s, x, y, z);
       if (actor) {
@@ -173,6 +182,7 @@ export class ProjectileSystem {
           return;
         }
       }
+      if (atRay) break;
       const ground = this.host.heightAt?.(x, z);
       if (ground !== undefined && Number.isFinite(ground) && y < ground) {
         s.x = x; s.y = ground; s.z = z;
@@ -200,9 +210,12 @@ export class ProjectileSystem {
       if (s.hostileOnly && a.team !== 'hostile' && !isStruckProp(a)) continue;
       a.worldPosition(pos);
       // A wide actor (a boss on a turntable) has its own cylinder: src/actors/hitShapes.ts.
-      const shape = projectileHitShape(a.kind) ?? ACTOR_HIT;
+      const wide = projectileHitShape(a.kind);
+      const shape = wide ?? ACTOR_HIT;
       const d = Math.hypot(pos.x - x, pos.z - z);
       if (d > shape.radius + s.radius) continue;
+      // A bolt leaving a wide cylinder (loosed from inside it, the Last Gong at Cael's back) flies away from it: no hit.
+      if (wide && (pos.x - x) * s.dx + (pos.z - z) * s.dz < 0) continue;
       if (y < pos.y - s.radius || y > pos.y + shape.height + s.radius) continue;
       if (d < bestD) { bestD = d; best = a; }
     }

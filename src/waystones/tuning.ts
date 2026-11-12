@@ -24,6 +24,20 @@ export const WAYSTONE_TUNING = {
 } as const;
 
 /**
+ * Act 4 L14: stones whose stone stands off their anchor (the anchor is where a traveller lands, clear of the stone). The
+ * use point sits on the stone itself, so it is in reach from every side (the Act 3 playthrough found the Wyrmwatch Lodge
+ * stone reachable from one side only). Every Dragonspine stone is built this way (its `waystone` structure 1.8 m south of
+ * the anchor); stoneOffset.l14.test.ts checks each one against the layout.
+ */
+export const WAYSTONE_STONE_OFFSET: Readonly<Record<string, { x: number; z: number }>> = {
+  'wyrmwatch-lodge': { x: 0, z: 1.8 },
+  'rime-pass': { x: 0, z: 1.8 },
+  'last-anvil': { x: 0, z: 1.8 },
+  'wyrms-hearth': { x: 0, z: 1.8 },
+  'frostfang-aerie': { x: 0, z: 1.8 },
+};
+
+/**
  * Stones that refuse the player until a flag is set (waystone id without the `waystone.` prefix -> flag). The South
  * Gate stone stays shut until M06's route is chosen. Read through `ctx.gates`, so a load re-derives it.
  */
@@ -37,6 +51,8 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   'last-anvil': 'shrine.last-anvil.open',
   // Act 3 (K9 PR 2): the Wyrm's Hearth stone opens with M34 (active or completed), `story.m34.complete`, or an already lit shrine.
   'wyrms-hearth': 'shrine.wyrms-hearth.open',
+  // Act 5 (N1): the Inner Gate's stone stands outside the gate and lights only once the gate is open (M53).
+  'inner-gate': 'story.m53.complete',
 };
 
 /**
@@ -45,5 +61,6 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
  * dark from the betrayal (M38); the city stones are found by position (harrowmark/noStrand.ts), this table names the rest.
  */
 export const WAYSTONE_DARK: Readonly<Record<string, FlagCondition>> = {
-  'harrowmark-gate': { all: ['story.m38.complete'] },
+  // v0.9 item 10: lit again in the world after the ending (`world.afterEnding`; HARROWMARK_OCCUPIED_WHEN).
+  'harrowmark-gate': { all: ['story.m38.complete'], none: ['world.afterEnding'] },
 };

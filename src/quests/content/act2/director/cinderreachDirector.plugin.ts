@@ -5,6 +5,7 @@ import { installM12, installR06 } from './m12r06';
 import { installR05 } from './r05';
 import { installM13, installR11 } from './m13r11';
 import { installM14, installM15 } from './m14m15';
+import { installM15ScoutHold } from './m15ScoutHold';
 import { installD03 } from './d03';
 import { ACT2_TRIGGERS } from '../triggers';
 
@@ -33,7 +34,7 @@ const plugin: GamePlugin = {
       offs.push(ctx.triggers.add({ id: t.id, shape: { type: 'sphere', center: at.position, radius: t.radius } }));
     }
 
-    for (const install of [installM11, installM12, installR06, installR05, installM13, installR11, installM14, installM15, installD03]) {
+    for (const install of [installM11, installM12, installR06, installR05, installM13, installR11, installM14, installM15, installM15ScoutHold, installD03]) {
       offs.push(...install(kit));
     }
 

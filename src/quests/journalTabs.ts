@@ -7,9 +7,22 @@ export interface JournalTab {
   render(root: HTMLElement): void;
 }
 
+/** A note drawn above the quests on the Quests tab (Act 4 L9: the act start pointer, the "still needed" lists). */
+export interface JournalNote {
+  id: string;
+  /** Translated text, already final. */
+  title: string;
+  lines?: readonly string[];
+}
+
+/** Read each time the journal draws; null hides it. A throwing provider is skipped. */
+export type JournalNoteProvider = () => JournalNote | null;
+
 export interface JournalService {
   /** Replaces the renderer of the tab with this id (or adds a new tab). Dispose restores the previous one. */
   registerTab(tab: JournalTab): () => void;
+  /** Adds a note provider to the Quests tab (optional: older fakes need not have it). Dispose removes it. */
+  registerNote?(provider: JournalNoteProvider): () => void;
 }
 
 export const TAB_QUESTS = 'quests';
@@ -21,8 +34,34 @@ export const PLACEHOLDER_KEY = 'quest.journal.tab.placeholder';
 export class JournalTabs implements JournalService {
   private readonly tabs: JournalTab[];
   private readonly listeners = new Set<() => void>();
+  private readonly noteProviders: JournalNoteProvider[] = [];
 
   constructor(slots: JournalTab[]) { this.tabs = [...slots]; }
+
+  registerNote(provider: JournalNoteProvider): () => void {
+    this.noteProviders.push(provider);
+    this.notify();
+    let live = true;
+    return () => {
+      if (!live) return;
+      live = false;
+      const i = this.noteProviders.indexOf(provider);
+      if (i >= 0) this.noteProviders.splice(i, 1);
+      this.notify();
+    };
+  }
+
+  /** The notes to draw now, in registration order. */
+  notes(): JournalNote[] {
+    const out: JournalNote[] = [];
+    for (const p of this.noteProviders) {
+      try {
+        const n = p();
+        if (n && typeof n.title === 'string' && n.title !== '') out.push(n);
+      } catch { /* a broken provider never hides the quests */ }
+    }
+    return out;
+  }
 
   registerTab(tab: JournalTab): () => void {
     const i = this.tabs.findIndex((t) => t.id === tab.id);

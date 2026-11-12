@@ -15,9 +15,12 @@ on:
       - '*.md'
       - 'public/assets/**/*.md'
       - 'LICENSE'
+  # By hand (Actions > CI > Run workflow): the build and the whole-phase chains only, never the shards or a deploy.
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # By event too, so a manual run never cancels a merge's run (and its deploy) on main, or the other way round.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -37,6 +40,7 @@ jobs:
       actions: read
     outputs:
       tests: ${{ steps.decide.outputs.tests }}
+      chains: ${{ steps.decide.outputs.chains }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,8 +53,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      chains: ${{ steps.scope.outputs.chains }}
     steps:
+      # Depth 2: the chains scope diffs the checkout against its first parent (a PR's base, or the previous main).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      # Whether the whole-phase chains run (plans/act4-L13.md s.15); any doubt answers run.
+      - name: Chains scope
+        id: scope
+        run: node .github/scripts/chains-scope.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BEFORE_SHA: ${{ github.event.before }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -82,7 +98,7 @@ jobs:
   test:
     needs: [gate]
     # On a PR the gate is skipped and the tests run; on main they are skipped only on an explicit 'skip'.
-    if: ${{ !cancelled() && (github.event_name == 'pull_request' || needs.gate.outputs.tests != 'skip') }}
+    if: ${{ !cancelled() && github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' || needs.gate.outputs.tests != 'skip') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -99,11 +115,51 @@ jobs:
       - run: npm ci
       - run: npx vitest run --shard=${{ matrix.shard }}/3
 
+  # The whole-phase chain tests (vitest.chains.ts), kept out of the shards. They run when the change touches what they play
+  # (the build job's chains scope, the same rule on a PR and on main) or by hand; on main they are also skipped when the PR
+  # run already ran them green on this exact tree (the gate's `chains` output). Three legs keep each under the job limit.
+  chains:
+    needs: [gate, build]
+    # `!= 'skip'`: an empty scope output (the step wrote nothing) runs them, as any doubt does.
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.chains != 'skip' && (github.event_name != 'push' || needs.gate.outputs.chains != 'skip') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: true
+      matrix:
+        leg: [1, 2, 3]
+    name: chains (leg ${{ matrix.leg }}/3)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --config vitest.chains.config.ts --shard=${{ matrix.leg }}/3
+      # The PR run records that the chains ran on its tree, for the main-run gate (a failed leg fails the run, which the gate refuses).
+      - name: Record the chains tree
+        if: github.event_name == 'pull_request' && matrix.leg == 1
+        id: tree
+        run: |
+          tree=$(git rev-parse 'HEAD^{tree}')
+          echo "$tree" > chains-tree.txt
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request' && matrix.leg == 1
+        with:
+          name: chains-ran-${{ steps.tree.outputs.tree }}
+          path: chains-tree.txt
+          retention-days: 7
+          # a "re-run all jobs" uploads the same name again
+          overwrite: true
+
   # Settings > Pages > Source is "GitHub Actions" (set 2026-10-27). PRs never deploy.
   deploy:
-    needs: [gate, build, test]
-    # Waits on the build always, and on the tests whenever they ran (skipped only by the gate's explicit 'skip').
-    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.gate.outputs.tests == 'skip')) }}
+    needs: [gate, build, test, chains]
+    # Waits on the build always, on the tests whenever they ran (skipped only by the gate's explicit 'skip'), and on the
+    # chains whenever they ran (skipped by their scope or the gate).
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.gate.outputs.tests == 'skip')) && (needs.chains.result == 'success' || needs.chains.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # Its own group, never cancelled: a second quick merge must not cut a deploy off half way.

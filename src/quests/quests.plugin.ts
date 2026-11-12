@@ -6,7 +6,7 @@ import { CarrySystem, type Carryable } from './carry';
 import { KILL_FAILSAFE_QUESTS, KillFailsafe, currentKillTargets } from './killFailsafe';
 import { VillagerBody, isModelLoader } from './carryBody';
 import {
-  buildJournalModel, createJournalPanel, createJournalToggleState, toggleJournal,
+  buildJournalModel, createJournalPanel, createJournalToggleState, toggleJournal, closeJournalOnMenu,
 } from './JournalPanel';
 import { validateQuest } from './validate';
 import { questDefs } from './content';
@@ -32,6 +32,8 @@ import { installSideCodex } from './content/side/codex';
 import { SIDE_PROPS, SIDE_CARRY, SIDE_QUEST_NOTES, SIDE_NOTE_LOOKS, SIDE_NOTE_CODEX, SIDE_OBJECTIVE_FLAGS, SIDE_QUEST_CODEX, SIDE_POST_RULES } from './content/side';
 import { ACT3_PROPS, ACT3_CARRY, ACT3_OBJECTIVE_FLAGS, ACT3_QUEST_NOTES, ACT3_NOTE_LOOKS, ACT3_NOTE_CODEX, ACT3_QUEST_ITEM_STRINGS } from './content/act3';
 import { ACT4_PROPS, ACT4_CARRY, ACT4_OBJECTIVE_FLAGS, ACT4_QUEST_NOTES, ACT4_NOTE_LOOKS, ACT4_NOTE_CODEX, ACT4_QUEST_ITEM_STRINGS } from './content/act4';
+// Act 5 (N10, additive): the Rim quests' props, carries, flags and notes.
+import { ACT5_PROPS, ACT5_CARRY, ACT5_OBJECTIVE_FLAGS, ACT5_QUEST_NOTES, ACT5_NOTE_LOOKS, ACT5_NOTE_CODEX, ACT5_QUEST_ITEM_STRINGS } from './content/act5';
 import { QuestLooks, lookSpecs } from './looks';
 import { buildPropLook, disposePropLook } from './propLooks';
 import { codexEntry } from '../codex/entries';
@@ -49,7 +51,7 @@ const plugin: GamePlugin = {
   dependsOn: ['core'],
   setup(ctx) {
     const warn = (m: string): void => console.warn(`[quests] ${m}`);
-    ctx.strings.register('en', { ...questStrings, ...journalStrings, ...ACT2_QUEST_ITEM_STRINGS, ...ACT3_QUEST_ITEM_STRINGS, ...ACT4_QUEST_ITEM_STRINGS, 'quest.prompt.carry': '{key} Carry the villager' });
+    ctx.strings.register('en', { ...questStrings, ...journalStrings, ...ACT2_QUEST_ITEM_STRINGS, ...ACT3_QUEST_ITEM_STRINGS, ...ACT4_QUEST_ITEM_STRINGS, ...ACT5_QUEST_ITEM_STRINGS, 'quest.prompt.carry': '{key} Carry the villager' });
 
     const bus = ctx.events as unknown as BusPort;
     const manager = new QuestManager({
@@ -167,7 +169,7 @@ const plugin: GamePlugin = {
     manager.onChange(() => yard.markDirty());
     offs.push(() => yard.dispose());
     // Story flags set as objectives finish (fires, spawners, walk-offs read them).
-    const objectiveFlags = installObjectiveFlags([...OBJECTIVE_FLAGS, ...SIDE_OBJECTIVE_FLAGS, ...ACT2_OBJECTIVE_FLAGS, ...ACT3_OBJECTIVE_FLAGS, ...ACT4_OBJECTIVE_FLAGS], bus, ctx.state, manager, warn);
+    const objectiveFlags = installObjectiveFlags([...OBJECTIVE_FLAGS, ...SIDE_OBJECTIVE_FLAGS, ...ACT2_OBJECTIVE_FLAGS, ...ACT3_OBJECTIVE_FLAGS, ...ACT4_OBJECTIVE_FLAGS, ...ACT5_OBJECTIVE_FLAGS], bus, ctx.state, manager, warn);
     offs.push(objectiveFlags.dispose);
     objectiveFlags.sync();
     offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); objectiveFlags.sync(); }));
@@ -203,7 +205,7 @@ const plugin: GamePlugin = {
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
       let villagers = 0;
-      for (const item of [...CARRY_ITEMS, ...SIDE_CARRY, ...ACT2_CARRY, ...ACT3_CARRY, ...ACT4_CARRY]) {
+      for (const item of [...CARRY_ITEMS, ...SIDE_CARRY, ...ACT2_CARRY, ...ACT3_CARRY, ...ACT4_CARRY, ...ACT5_CARRY]) {
         // villagers are NPC figures (a capsule until the model loads; the body by item id in townsfolkBodies.ts), cradled across the
         // Knight's arms; buckets are the greybox bucket held low
         const villager = item.look === 'villager' || item.look === 'wounded';
@@ -274,6 +276,9 @@ const plugin: GamePlugin = {
       fixedPhase: 'input',
       order: 20,
       fixedUpdate: () => {
+        // Act 4 L9 (Act 3 playthrough M3): Escape closes the journal too, as it does the map and the codex. Only while the
+        // journal is the open modal and was opened by J, so it never opens one or closes another screen.
+        if (ctx.input.actions.pressed('menu') && closeJournalOnMenu(journalHud, journalState)) return;
         if (!ctx.input.actions.pressed('journal')) return;
         const open = toggleJournal(journalHud, makeJournal, journalState);
         if (open) {
@@ -323,7 +328,7 @@ const plugin: GamePlugin = {
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
     const propEnv = () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn });
-    const props = new QuestProps([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS], {
+    const props = new QuestProps([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS, ...ACT5_PROPS], {
       bus,
       env: propEnv,
       state: ctx.state,
@@ -343,7 +348,7 @@ const plugin: GamePlugin = {
       warn,
     });
     // Readable notes: F opens a short dialogue under the note's own id; the first full read unlocks its codex entry.
-    const notes = new QuestNotes([...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES], {
+    const notes = new QuestNotes([...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES, ...ACT5_QUEST_NOTES], {
       bus,
       env: propEnv,
       anchor: (id) => {
@@ -369,7 +374,7 @@ const plugin: GamePlugin = {
       },
       warn,
     });
-    const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS], [...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES], { ...NOTE_LOOKS, ...SIDE_NOTE_LOOKS, ...ACT2_NOTE_LOOKS, ...ACT3_NOTE_LOOKS, ...ACT4_NOTE_LOOKS }), {
+    const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS, ...ACT5_PROPS], [...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES, ...ACT5_QUEST_NOTES], { ...NOTE_LOOKS, ...SIDE_NOTE_LOOKS, ...ACT2_NOTE_LOOKS, ...ACT3_NOTE_LOOKS, ...ACT4_NOTE_LOOKS, ...ACT5_NOTE_LOOKS }), {
       state: ctx.state,
       quests: manager,
       anchor: (id) => {
@@ -391,11 +396,11 @@ const plugin: GamePlugin = {
       const codex = svc('codex');
       if (codexOff || !codex?.register) return;
       const slug = (id: string) => id.replace(/^lore\./, '');
-      codexOff = codex.register([...Object.values(NOTE_CODEX), ...SIDE_NOTE_CODEX, ...ACT2_NOTE_CODEX, ...ACT3_NOTE_CODEX, ...ACT4_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
+      codexOff = codex.register([...Object.values(NOTE_CODEX), ...SIDE_NOTE_CODEX, ...ACT2_NOTE_CODEX, ...ACT3_NOTE_CODEX, ...ACT4_NOTE_CODEX, ...ACT5_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
     };
     const killFailsafe = new KillFailsafe({
       // the groups are gated on the tutorial's end (M01 is already active during T13 to T15)
-      targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(manager, KILL_FAILSAFE_QUESTS) : []),
+      targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(manager, KILL_FAILSAFE_QUESTS, (f) => ctx.state.getBool(f)) : []),
       live: (tag) => {
         let n = 0;
         for (const a of ctx.actors.all()) if (!a.dead && (a as { spawnTag?: string }).spawnTag === tag) n++;

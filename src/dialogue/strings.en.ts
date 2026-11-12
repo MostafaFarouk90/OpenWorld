@@ -15,7 +15,11 @@ import { SUMMIT_DIALOGUE_STRINGS } from './content/act3/summit';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
 import { GREYFEN_DIALOGUE_STRINGS } from './content/act3/greyfen';
 import { SCENE_ACT3_CAMP } from './content/act3/campScene.dialogue';
+import { SCENE_ACT4_CAMP } from './content/act4/campScene.dialogue';
 import { HARROWMARK_A4_DIALOGUE_STRINGS } from './content/act4/harrowmark';
+import { WASTE_A4_DIALOGUE_STRINGS } from './content/act4/waste';
+import { ACT5_DIALOGUE_STRINGS } from './content/act5';
+import { SIEGE_ORDER_STRINGS } from '../siege/orders.dialogue';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
 
 export const dialogueStrings: Record<string, string> = {
@@ -28,6 +32,7 @@ export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsSide,
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
+  ...SIEGE_ORDER_STRINGS,
   ...ACT3_TRAINER_STRINGS,
   ...ACT4_ROOK_STRINGS,
   ...DRAGONSPINE_DIALOGUE_STRINGS,
@@ -35,8 +40,13 @@ export const dialogueStrings: Record<string, string> = {
   ...ACT3_COMPANION_STRINGS,
   ...GREYFEN_DIALOGUE_STRINGS,
   ...SCENE_ACT3_CAMP.strings,
+  ...SCENE_ACT4_CAMP.strings,
   // Act 4 (L10): the Harrowmark quests
   ...HARROWMARK_A4_DIALOGUE_STRINGS,
+  // Act 4 (L11): the Waste quests
+  ...WASTE_A4_DIALOGUE_STRINGS,
+  // Act 5 (N10, additive)
+  ...ACT5_DIALOGUE_STRINGS,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',
@@ -64,8 +74,8 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-gaut.tut-t06': "Run, {name}! Sprint the lane. Two long runs before the roof falls.",
   'dialogue.npc-gaut.tut-t07': "The lane is blocked. Leap the burning cart and then the fence.",
   'dialogue.npc-gaut.tut-t08': "Slice, chop, then stab: the stab is quick and reaches far. Land each once, then chain four blows.",
-  'dialogue.npc-gaut.tut-t09': "Raise your shield and block his swing three times.",
-  'dialogue.npc-gaut.tut-t10': "That sweep cannot be blocked. Dodge clear with a direction, three times over.",
+  'dialogue.npc-gaut.tut-t09': "Raise your shield and block his swing twice.",
+  'dialogue.npc-gaut.tut-t10': "That sweep cannot be blocked. Dodge clear with a direction, twice over.",
   'dialogue.npc-gaut.tut-t11': "Lock on, flick to switch target, and fell two of the wraiths.",
   'dialogue.npc-gaut.tut-t12': "Into Edda's bakery. Open your pack, equip the sword and tabard, and drink a flask from the barrel.",
   'dialogue.npc-gaut.tut-t13': "You have a skill point. Open your skills, learn one, and put it to use.",

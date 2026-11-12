@@ -16,6 +16,8 @@ import { PartyScreen } from './PartyScreen';
 import { PressureBar } from './PressureBar';
 import { createTemperingScreen } from './TemperingScreen';
 import { act3RecapLines } from './act3/actEndingRecap';
+import { act4RecapLines } from './act4/actEndingRecap';
+import { ACT4_ENDING_STRINGS_EN } from './act4/strings.en';
 import { actEnding, cardSeenFlags } from '../integration/actEndings';
 import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
@@ -251,6 +253,8 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('waves.failed', () => structureBar.reset());
     ctx.events.on('save.loaded', () => structureBar.loaded());
     mount('top-center', structureBar, 2);
+    // v0.9 (Act 5 N9): lets the siege HUD take over the Rim Gate's and the rams' bars.
+    ctx.services.provide('structureBar', { suppress: (pred) => structureBar.suppress(pred) });
 
     // The Party screen: key P (read-only outside the waystone window) or a waystone rest with two companions.
     let closeParty: (() => void) | null = null;
@@ -369,10 +373,31 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending3.onLoaded());
     ctx.gates.flag(row3.gateFlag, (open) => ending3.onGate(open));
     mount('center', ending3, 3);
+    // Act 4's "The Road to the Rim" card (L9), built the same way; its recap rows are exported from hud/act4 (L11 may append).
+    ctx.strings.register('en', ACT4_ENDING_STRINGS_EN);
+    const row4 = actEnding(4)!;
+    const seen4 = cardSeenFlags(row4);
+    const ending4 = new ActEndingCard(doc, {
+      widgetId: 'act-ending-card-a4',
+      ending: { act: row4.act, endingId: row4.endingId, titleKey: row4.cardKey },
+      t,
+      keys: keyTarget,
+      modalOpen: () => ctx.hud.modalOpen !== null,
+      seen: () => seen4.some((f) => ctx.state.getBool(f)),
+      campSeen: () => ctx.state.getBool(row4.campSeenFlag),
+      markSeen: () => ctx.state.setFlag(row4.cardSeenFlag, true),
+      closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
+      recap: () => act4RecapLines((f) => ctx.state.getFlag(f), t),
+    });
+    ctx.events.on('act.ended', (e) => ending4.onActEnded(e));
+    ctx.events.on('save.loaded', () => ending4.onLoaded());
+    ctx.gates.flag(row4.gateFlag, (open) => ending4.onGate(open));
+    mount('center', ending4, 4);
     // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, several are pending).
+    const cards = [ending, ending2, ending3, ending4];
     ctx.services.provide('actEndingCard', {
-      active: () => ending.active || ending2.active || ending3.active,
-      dismiss: () => (ending.active ? ending.dismiss() : ending2.active ? ending2.dismiss() : ending3.dismiss()),
+      active: () => cards.some((c) => c.active),
+      dismiss: () => (cards.find((c) => c.active) ?? ending4).dismiss(),
     });
 
     // The Weeping Bellows' pressure countdown (A9's sim-time clock).

@@ -10,6 +10,22 @@ import { BARLEY_AND_BRAZIER as TRACK, loopSamples } from './tracks';
 const SR = 8000;
 const L = loopSamples(TRACK, SR);
 
+// The placeholder stems are synthesised for real by default (several seconds of audio per stem), and every test here
+// discards them: the fake context's buffers ignore copyToChannel. That synthesis made each test cost about a second,
+// and on a loaded runner a test went past vitest's 5 s timeout. A zero stem of the right length keeps the load path
+// (lengths, the unknown-stem throw) exactly as music.plugin.handover.test.ts does; the synth has its own tests. The SFX
+// placeholders go the same way (samplesToWavUrl is mocked below, so their samples were never used either).
+vi.mock('./sfxSynth', async (orig) => ({ ...(await orig<typeof import('./sfxSynth')>()), synthSfx: () => new Float32Array(1) }));
+vi.mock('./stemSynth', async () => {
+  const { loopSamples } = await import('./tracks');
+  return {
+    synthStem: (track: Parameters<typeof loopSamples>[0] & { stems: readonly string[] }, stem: string, sampleRate: number) => {
+      if (!track.stems.includes(stem)) throw new Error(`No placeholder synth for stem "${stem}"`);
+      return new Float32Array(loopSamples(track, sampleRate));
+    },
+  };
+});
+
 vi.mock('../audio/proceduralSounds', () => ({
   PLACEHOLDER_SAMPLE_RATE: 44100,
   samplesToWavUrl: () => 'blob:fake',
@@ -664,8 +680,11 @@ describe('slice 2 music behaviour', () => {
     const n = cb.mock.calls.length;
     for (let i = 0; i < 120; i++) e.tickTo(e.audio.context.currentTime + 1 / 60);
     expect(cb.mock.calls.length).toBe(n);
-    const t = e.services.get('music')!.toAudioTime(performance.now());
-    expect(t).toBeCloseTo(e.audio.context.currentTime, 1);
+    // performance.now() is pinned: two real reads (the caller's, then the service's own "now") drift apart by however
+    // long the worker was descheduled in between, which on a loaded runner can pass the old 50 ms tolerance.
+    vi.spyOn(performance, 'now').mockReturnValue(5000);
+    expect(e.services.get('music')!.toAudioTime(5000)).toBeCloseTo(e.audio.context.currentTime, 9);
+    expect(e.services.get('music')!.toAudioTime(4900)).toBeCloseTo(e.audio.context.currentTime - 0.1, 9); // 100 ms ago
   });
 
   it('plays the shrine sting once and a discover phrase, deduped with the waystone event', async () => {

@@ -25,6 +25,8 @@ export interface GearService {
   openSmith(): boolean;
   /** Opens the screen in anvil mode; false while m14 is neither active nor completed. */
   openAnvil(): boolean;
+  /** N7: Alric's rim anvil (tier 5 forging and tempering); false (with the cold-forge toast) until M50 is complete. */
+  openRimAnvil?(): boolean;
   forge(itemId: string): ForgeResult | null;
   /**
    * K16 (additive): records that a piece of `tier` has been tempered at the Hushed Anvil, as a real temper there does, so
@@ -98,6 +100,7 @@ const gearPlugin: GamePlugin = {
         makeClock: () => new AdaptiveBeatClock(clockPorts, GEAR_TUNING.rhythm.bpm, GEAR_TUNING.rhythm.divisions),
         anvilUsable: () => ['active', 'completed'].includes(questState('m14')),
         smithUsable: () => questState('m14') === 'completed',
+        rimUsable: () => ctx.state.getBool('story.m50.complete'),
         lessonActive: () => questState('m14') === 'active',
         emitTempered: (p) => ctx.events.emit('gear.tempered', p),
     });
@@ -120,7 +123,7 @@ const gearPlugin: GamePlugin = {
     const openScreen = (mode: SessionMode): boolean => {
       if (screen || session.state !== 'idle') return false;
       if (!session.open(mode)) {
-        toast(t(mode === 'anvil' ? 'gear.anvil.locked' : 'gear.smith.locked'));
+        toast(t(mode === 'anvil' ? 'gear.anvil.locked' : mode === 'rim' ? 'gear.rim.cold' : 'gear.smith.locked'));
         return false;
       }
       unsub?.();
@@ -139,6 +142,7 @@ const gearPlugin: GamePlugin = {
       },
       openSmith: () => openScreen('smith'),
       openAnvil: () => openScreen('anvil'),
+      openRimAnvil: () => openScreen('rim'),
       forge(itemId) {
         if (session.state === 'idle') return null;
         session.forge(itemId);

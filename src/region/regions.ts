@@ -50,6 +50,8 @@ export interface RegionDef {
   weather?: 'ash-storm';
   /** v0.8 (Q4): the Ashmare cannot be summoned in this region (`mount.refused.region`); L3 dismisses it at the edge. */
   mount?: 'refused';
+  /** v0.9: a sky key the environment reads by region ('caldera-orange'); an unknown key keeps the default sky. */
+  sky?: string;
 }
 
 /**
@@ -60,8 +62,11 @@ export interface RegionDef {
  * hold never touches another region.
  */
 export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
-  // v0.8 (Act 4, Q11): Phase G holds the Waste shut behind `fog.waste-edge`; L13 PR 2 empties this entry.
-  'ashen-waste': ['story.phase.wasteOpen'],
+  // v0.8 (Act 4, Q11): Phase G held the Waste shut with `story.phase.wasteOpen`; L13 PR 2 retired it, so the Waste opens on
+  // M42 accepted alone. An old save that still carries the flag loads cleanly: nothing reads it.
+  // v0.9 (Act 5): Phase I held the bowl floor (`hole.caldera.floor`, spread into the hole, not the region's `openWhen`)
+  // with `story.phase.foundryOpen`; N12 PR 2 retired it, so the floor opens on `story.m53.complete` alone and the Foundry
+  // quests on M52 complete alone. An old save that still carries the flag loads cleanly: nothing reads it.
 };
 
 /** The hold flags of one region (empty when it has none). */
@@ -69,15 +74,15 @@ export function phaseHolds(id: RegionId): readonly string[] {
   return PHASE_HOLDS[id] ?? [];
 }
 
-const NEVER: FlagCondition = { any: ['region.never'] };
-
 /** Ambience bed ids a region can name (A14 built the Act 2 ones, K14 the Act 3 ones). */
-export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste';
+export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste' | 'caldera';
 
 /** v0.8: Harrowmark's Act 4 band (design 3, plan 3.1), from `story.gate.a4`; capped at spawn by ACT4_CAP_ABOVE_PLAYER. */
 export const HARROWMARK_ACT4_BAND = { min: 28, max: 33 } as const;
 /** v0.8: the flag that switches Harrowmark to Act 4 (its band, its track variant, the kill XP factor and the cap). */
 export const ACT4_GATE_FLAG = 'story.gate.a4';
+/** v0.9: the flag that opens Act 5 (M46 and D08 complete): the Caldera's region, its band and the kill XP factor. */
+export const ACT5_GATE_FLAG = 'story.gate.a5';
 
 export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   brightwater: {
@@ -144,7 +149,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   },
   // v0.8 (Act 4): engine x 7000..15000, z 4500..11000. A ring around the Caldera: the box includes the Caldera, which
   // stays reserved (and a closed containment hole); `regionAt` answers null inside any reserved box. Opens when Gate of
-  // Ash (M42) is accepted, held shut in Phase G by `story.phase.wasteOpen`. Bands capped at spawn (Q1).
+  // Ash (M42) is accepted (the Phase G hold is retired). Bands capped at spawn (Q1).
   'ashen-waste': {
     box: { x0: 8000, z0: 5500, x1: 16000, z1: 12000 },
     levelBand: { min: 31, max: 35 },
@@ -156,14 +161,21 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     weather: 'ash-storm',
     mount: 'refused',
   },
+  // v0.9 (Act 5): engine x 9500..12500, z 6500..9500, inside the Waste's ring; `regionAt` answers it before the Waste.
+  // Opens on `story.gate.a5` (M46 and D08 complete). Bands are capped at spawn (ACT5_CAP_ABOVE_PLAYER); the bowl's sub-bands
+  // are named-only areas (areas.ts). No storm clock (the siege forces its own); the Ashmare is refused as in the Waste.
+  // The ambience bed is N8's `caldera` (rumble, bubbling lava, ember crackle).
   caldera: {
     box: { x0: 10500, z0: 7500, x1: 13500, z1: 10500 },
-    levelBand: { min: 34, max: 40 },
-    track: 'caldera',
-    bed: null,
-    ground: null,
-    openWhen: NEVER,
-    reserved: true,
+    levelBand: { min: 35, max: 40 },
+    track: 'heart-of-the-anvil',
+    bed: 'caldera',
+    ground: 'caldera',
+    // Phase I's hold (retired by N12 PR 2) held the bowl floor's hole, not the region (act5Containment.ts).
+    openWhen: { all: [ACT5_GATE_FLAG] },
+    reserved: false,
+    mount: 'refused',
+    sky: 'caldera-orange',
   },
 };
 

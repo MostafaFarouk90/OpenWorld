@@ -5,6 +5,7 @@ import { CROWD_LANES, DOORS, HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.
 import { DENSITY_LAYOUT_HM } from '../harrowmark/density.layout';
 import type { LayoutData } from '../region/layoutTypes';
 import { TUTORIAL_ANCHORS } from '../tutorial/beats';
+import { CALDERA_LAYOUT } from '../caldera/caldera.layout';
 import type { KeepOut, KeepOutBox, KeepOutDisc, KeepOutSegment } from './colliders';
 
 /** Anchors keep this clear (metres). */
@@ -33,7 +34,7 @@ export interface KeepOutSources {
 export const EXTRA_KEEP_OUT_BOXES: readonly KeepOutBox[] = [{ cx: -0.25, cz: 266, hx: 3.75, hz: 34, yaw: 0, why: 'lane kettlewick-road' }];
 
 export const DEFAULT_SOURCES: KeepOutSources = {
-  layouts: [BRIGHTWATER_LAYOUT, HARROWMARK_LAYOUT, DENSITY_LAYOUT_HM],
+  layouts: [BRIGHTWATER_LAYOUT, HARROWMARK_LAYOUT, DENSITY_LAYOUT_HM, CALDERA_LAYOUT],
   lanes: CROWD_LANES,
   doors: DOORS,
   anchors: TUTORIAL_ANCHORS,

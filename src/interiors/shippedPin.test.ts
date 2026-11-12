@@ -3,6 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { ACT3_INTERIORS } from './act3';
 import { ACT4_HARROWMARK_INTERIORS } from './harrowmark/act4';
+import { WASTE_INTERIORS } from '../waste/interiors';
+import { CALDERA_INTERIORS } from '../caldera/interiors';
 import { ALL_INTERIORS } from './interiors.plugin';
 import { layoutInterior } from './layout';
 
@@ -43,8 +45,8 @@ const hashOf = (id: string): string => {
 
 describe('shipped interiors are unchanged by the v0.7 interior fields', () => {
   it('pins every Act 1 and Act 2 interior', () => {
-    // Act 3 and Act 4 interiors are pinned by their own tests (Act 4: harrowmark/act4/act4Interiors.test.ts).
-    const act3 = new Set([...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS].map((d) => d.id));
+    // Act 3 and Act 4 interiors are pinned by their own tests (Act 4: harrowmark/act4/act4Interiors.test.ts; the Waste's two by their geometry tests in waste/waste.test.ts).
+    const act3 = new Set([...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS, ...WASTE_INTERIORS, ...CALDERA_INTERIORS].map((d) => d.id));
     const shipped = ALL_INTERIORS.map((d) => d.id).filter((id) => !act3.has(id));
     expect(shipped.sort()).toEqual(Object.keys(PINNED).sort());
   });

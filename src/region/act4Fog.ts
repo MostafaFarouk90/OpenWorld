@@ -6,6 +6,8 @@ import type { FlagCondition } from '../core/flagCondition';
 import { ASH_ROAD_OPEN_WHEN, OCCUPIED_FLAG, WASTE_EDGE_OPEN_WHEN } from './act4Containment';
 import type { FogWallDef } from './fogWall';
 import { GATE_NAMES } from '../harrowmark/city';
+import { ACT5_RIM_FACE_RULES } from './act5Fog';
+import { AFTER_ENDING_FLAG } from './act5Regions';
 
 const NEVER: FlagCondition = { any: ['region.never'] };
 
@@ -34,18 +36,29 @@ export const ACT4_SHIPPED_FACE_RULES = {
   'fog.fen-waste': { toastWhen: ASHGATE_ONLY_TOASTS },
 } as const satisfies Record<string, Partial<Pick<FogWallDef, 'openWhen' | 'toastWhen'>>>;
 
-export type Act4FogFaceId = 'fog.waste-edge' | 'fog.waste-north' | 'fog.caldera-rim.n' | 'fog.caldera-rim.e' | 'fog.caldera-rim.s' | 'fog.caldera-rim.w';
+export type Act4FogFaceId =
+  | 'fog.waste-edge'
+  | 'fog.waste-north'
+  | 'fog.caldera-rim.n'
+  | 'fog.caldera-rim.e'
+  | 'fog.caldera-rim.s'
+  | 'fog.caldera-rim.w'
+  // v0.9 (Act 5 N1): the south rim splits round the Rim Gate's span.
+  | 'fog.caldera-rim.sw'
+  | 'fog.caldera-rim.se';
 export type Act4FogFace = Pick<FogWallDef, 'openWhen' | 'toastKey' | 'toastWhen'> & { id: Act4FogFaceId };
 
-/** Phase G (M41 done, the hold standing) gives the "not yet open" text (ruling C: it never dates itself); before that, Hild's. */
-const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [
-  { when: { any: ['story.m41.complete', 'story.m42.started'], none: ['story.phase.wasteOpen'] }, key: FOG_TOAST_WASTE_PHASE_G },
-];
+/**
+ * The Phase G hold is retired (L13 PR 2): the face opens as M42 is accepted, so a closed face always means Wulfhild has not
+ * given her word yet, and Hild's line says so. The "not yet open" key stays defined for an older reader, and no rule picks it.
+ */
+const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [];
 
 export const ACT4_FOG_FACES: readonly Act4FogFace[] = [
   { id: 'fog.waste-edge', openWhen: WASTE_EDGE_OPEN_WHEN, toastKey: FOG_TOAST_WASTE_HILD, toastWhen: WASTE_EDGE_TOASTS },
   { id: 'fog.waste-north', openWhen: NEVER, toastKey: FOG_TOAST_ASHGATE_ONLY },
-  ...(['n', 'e', 's', 'w'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, openWhen: NEVER, toastKey: FOG_TOAST_CALDERA_RIM })),
+  // v0.9: Act 5's rules (act5Fog.ts): the south face is the Rim Gate; Act 4's own toast stays the default before the gate.
+  ...(['n', 'e', 's', 'w', 'sw', 'se'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, toastKey: FOG_TOAST_CALDERA_RIM, ...ACT5_RIM_FACE_RULES[`fog.caldera-rim.${d}`] })),
 ];
 
 export function act4FogFace(id: Act4FogFaceId): Act4FogFace {
@@ -61,8 +74,11 @@ export function act4FogFace(id: Act4FogFaceId): Act4FogFace {
 export const HARROWMARK_GATES = GATE_NAMES;
 export type HarrowmarkGate = (typeof GATE_NAMES)[number];
 
-/** Closed from the betrayal (M38) until Act 5; one face per working gate, on its outside. */
-export const CITY_HELD_OPEN_WHEN: FlagCondition = { none: [OCCUPIED_FLAG] };
+/**
+ * Closed from the betrayal (M38) until the world after the ending (v0.9 item 10, `world.afterEnding`); one face per
+ * working gate, on its outside. Read as `!harrowmarkOccupied(flags)` (act4Containment.ts).
+ */
+export const CITY_HELD_OPEN_WHEN: FlagCondition = { anyOf: [{ none: [OCCUPIED_FLAG] }, { all: [AFTER_ENDING_FLAG] }] };
 
 export interface CityGateFace extends Pick<FogWallDef, 'id' | 'anchorId' | 'openWhen' | 'toastKey'> {
   gate: HarrowmarkGate;

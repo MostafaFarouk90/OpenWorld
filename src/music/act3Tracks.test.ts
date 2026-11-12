@@ -16,6 +16,7 @@ describe('Act 3 tracks (v0.7 item 23, built by the Act 3 sound pass)', () => {
       expect(RESERVED_TRACK_IDS).not.toContain(id);
     }
     // v0.8 item 19 reserved the two Act 4 ids; L8 built them, so nothing is reserved.
+    // v0.9 item 17 reserves the Caldera's track until N8 builds it.
     expect(RESERVED_TRACK_IDS).toEqual([]);
     expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
   });

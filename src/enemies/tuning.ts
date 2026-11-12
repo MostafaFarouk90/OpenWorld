@@ -151,6 +151,11 @@ export const BOSS_MERCY: Readonly<Record<string, BossMercyRow>> = {
   'thrandil-redmane': { verb: 'spare', track: 'oswin', amount: 3, burn: 0, ledgerId: 'D03' },
   // Act 3 (K8 PR 2, D06): Hunt-Marshal Corvin Skarl is spared at his last break; the dragons -2 (spared) or +2 (killed) is K8's.
   'corvin-skarl': { verb: 'spare', track: 'oswin', amount: 3, burn: 0, ledgerId: 'D06' },
+  // Act 4 (L6 PR 2, D08): Archwraith Eormen is released at his last break (20 Burn, Ashwalkers +6); the pulse frees staggered husks.
+  eormen: { verb: 'release', track: 'ashwalkers', amount: 6, burn: 20, ledgerId: 'D08' },
+  // Act 5 (N6 PR 1, D09): Morcant Vey is spared at his last break (no Burn; Oswin +4 on the ledger). The rest of D09's favour
+  // (Halvard -4 when spared; Halvard +4 and Oswin -2 when struck down) is N11's, read from `boss.vey.outcome`.
+  vey: { verb: 'spare', track: 'oswin', amount: 4, burn: 0, ledgerId: 'D09' },
 };
 
 /** v0.6: boss ids reserved for Act 2 (A8). Act 1's are 'ashen-prior' and 'gaffer-grimtooth'. */

@@ -536,3 +536,16 @@ export const ACT4_BEAT_S = {
 export const STORM_WALK_MPS = 3;
 /** R24's rain-cask cart. Travel, under the 30% cap. */
 export const ESCORT_CART_MPS = 1.5;
+
+/**
+ * Act 5 additions (plan Part 1.3, brief N12), fixed before anything is measured. The Act 1 to 4 tables above are unchanged.
+ */
+export const ACT5_BEAT_S = {
+  ...ACT4_BEAT_S,
+  /** one lava channel crossed: a Surge jump or a vent-timed dash across the crust, with its wait */
+  crossing: 30,
+  /** a boss phase after the first (D10's second and third phases) */
+  bossphase: 180,
+  /** a siege order: a word to an ally post between waves (the brace, the flasks, the archers, the gong) */
+  order: 20,
+} as const;

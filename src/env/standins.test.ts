@@ -7,6 +7,7 @@ import { BUILDERS, MeshBuilder, rng, STANDIN_IDS, toGlb, vnoise } from '../../to
 import { envGlbUrl, EnvModelSource, STANDIN_PREFIX } from './envSource';
 import { PlacementField } from './PlacementField';
 import { resolveModel, resolveStandIn, STANDINS } from './resolve';
+import { CALDERA_STANDIN_IDS } from '../../tools/env-pass/standins/caldera';
 import targets from './targets.json';
 import { envDiskSource } from './testing/envDiskSource';
 
@@ -43,8 +44,10 @@ beforeAll(async () => {
 
 describe('the shipped stand-in glbs', () => {
   it('has one file per stand-in id and no others', () => {
-    expect((fs.readdirSync(DIR) as string[]).sort()).toEqual(STANDIN_IDS.map((id) => `${id}.glb`).sort());
-    expect([...STANDINS].sort()).toEqual([...STANDIN_IDS].sort());
+    // Act 5 N1 PR 2: the Caldera's stand-ins share the folder (src/caldera/env/calderaEnv.test.ts checks them).
+    const all = [...STANDIN_IDS, ...CALDERA_STANDIN_IDS];
+    expect((fs.readdirSync(DIR) as string[]).sort()).toEqual(all.map((id) => `${id}.glb`).sort());
+    expect([...STANDINS].sort()).toEqual([...all].sort());
   });
 
   it.each(STANDIN_IDS)('%s is a valid glb inside the budgets and within 10% of its target size, pivot at the base centre', (id) => {

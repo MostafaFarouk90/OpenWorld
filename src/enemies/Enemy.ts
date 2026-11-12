@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SPAWN_DATA_KEY, type SpawnData } from './spawnData';
 import { COMBAT, FIXED_TIMESTEP } from '../config/constants';
 import { Brain, type BrainHooks, type Senses } from './ai/Brain';
 import { makeBehaviour, type BehaviourOverlay } from './behaviours';
@@ -80,7 +81,13 @@ export interface EnemySpawn {
   slot?: number;
   /** v0.8: the member's skin (enemies/skins.ts), copied to `actor.skin`. */
   skin?: string;
+  /** v0.9: the member's area and role (SpawnRequest), copied to `actor.data.spawn` (SPAWN_DATA_KEY) when either is set. */
+  area?: string;
+  role?: string;
+  /** N5: the shield-line id (`SpawnerDef.line`), copied to `actor.data.spawn.line`. */
+  line?: string;
 }
+
 
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
 
@@ -205,6 +212,10 @@ export class Enemy {
       });
       this.actor.data['audio'] = { material: this.def.material };
       this.actor.data['enemies'] = this.view;
+      if (spawn.area || spawn.role || spawn.line) {
+        const sd: SpawnData = { ...(spawn.area ? { area: spawn.area } : {}), ...(spawn.role ? { role: spawn.role } : {}), ...(spawn.line ? { line: spawn.line } : {}) };
+        this.actor.data[SPAWN_DATA_KEY] = sd;
+      }
       this.actor.mercyState = () => this.mercyState();
 
       this.brain = new Brain(this.def, this.hooks(), {

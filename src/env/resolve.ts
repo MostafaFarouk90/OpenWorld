@@ -154,7 +154,35 @@ const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
  * prompt list (docs/env/environment-needs-prompts.md) keeps asking for the real model. They sit between the runtime copies and the
  * variants; if the file fails to load, `resolveStandIn` still gives the old tinted variant or KayKit line.
  */
-export const STANDINS: ReadonlySet<string> = new Set(['slag-heap', 'ore-pile', 'mine-cart', 'smelter-chimney']);
+export const STANDINS: ReadonlySet<string> = new Set([
+  'slag-heap',
+  'ore-pile',
+  'mine-cart',
+  'smelter-chimney',
+  // Act 5 N1 PR 2: the Caldera's dressing (tools/env-pass/standins/caldera.ts; ids and sizes in src/caldera/env/calderaEnvIds.ts).
+  'caldera-lantern-post-a',
+  'basalt-boulder-a',
+  'lava-glass-shard-a',
+  'rim-wall-a',
+  'foundry-wall-a',
+  'rim-banner-a',
+  'warhost-banner-a',
+  'weapon-rack-a',
+  'forge-gong-frame-a',
+  'cooling-hall-portal-a',
+  'tunnel-portal-a',
+  'foundry-stairhead-a',
+  'wyrm-rib-a',
+  'wyrm-skull-a',
+  'scorched-nest-a',
+  'warhost-tent-a',
+  // Act 5 N1 PR 3: the code-placed pieces (the Anvil island's set, the Lava Stair's gantries).
+  'anvil-of-ages-a',
+  'arena-platform-a',
+  'crack-anvil-a',
+  'spirit-flame-post-a',
+  'lava-gantry-a',
+]);
 export const STANDIN_PREFIX = 'env-standin/';
 
 /** Colour of a tree, bush or clump on the grey east edge: drained toward ash, a little darker. Applies to ids with the suffix `-ashen`. */

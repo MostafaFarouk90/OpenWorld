@@ -21,6 +21,9 @@ import { openRegionAt, REGION_LABEL_WHEN, regionChips, type RegionChip } from '.
 const LABEL_FLAGS = [...new Set(Object.values(REGION_LABEL_WHEN).flatMap((rows) => (rows ?? []).map((r) => r.flag)))];
 import { blockBandAt, blockChips, blockChipsKey, type BlockChip } from './act3/blockChips';
 import { MAP_ACT3_STRINGS_EN } from './act3/strings.en';
+import { MAP_ACT4_STRINGS_EN } from './act4/strings.en';
+import { wasteLabels, wasteLines, wasteShelters, type WastePorts } from './act4/wasteLayer';
+import { calderaLabels, MAP_ACT5_STRINGS_EN } from './act5/calderaLayer';
 import '../region/containment';
 
 
@@ -30,6 +33,8 @@ const map: GamePlugin = {
   setup(ctx) {
     ctx.strings.register('en', MAP_STRINGS_EN);
     ctx.strings.register('en', MAP_ACT3_STRINGS_EN);
+    ctx.strings.register('en', MAP_ACT4_STRINGS_EN);
+    ctx.strings.register('en', MAP_ACT5_STRINGS_EN);
     const bounds = { ...DEFAULT_WORLD_BOUNDS };
     let fog = FogGrid.forBounds(bounds);
     const waystones = () => ctx.services.get('waystones');
@@ -85,7 +90,7 @@ const map: GamePlugin = {
       const quests = ctx.services.get('quests');
       if (!quests) return [];
       const kills = killObjectiveLeads({
-        targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(quests, KILL_FAILSAFE_QUESTS) : []),
+        targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(quests, KILL_FAILSAFE_QUESTS, (f) => ctx.state.getBool(f)) : []),
         nearestLiving: (tag) => {
           const f = ctx.player.feet;
           let best: { x: number; z: number } | undefined;
@@ -183,6 +188,14 @@ const map: GamePlugin = {
       return blocks;
     };
 
+    // Act 4 (L9): the Waste's rope-lines, shelters and place names, read live from the open set, the fog and the flags.
+    const wastePorts = (): WastePorts => ({
+      open: openNow(),
+      isRevealed: (x, z) => fog.isRevealed(x, z),
+      flag: (k) => ctx.state.getBool(k),
+      t: (k) => ctx.strings.t(k),
+    });
+
     const model: MapViewModel = {
       bounds,
       fullBitmap: () => full,
@@ -197,11 +210,13 @@ const map: GamePlugin = {
             return [{ id, x: p.x, z: p.z, state: lit ? ('rekindled' as const) : ('dormant' as const), discovered: lit || fog.isRevealed(p.x, p.z), label: id }];
           }),
           shrines: sources.litShrines(),
-          poi: [...sources.posts((x, z) => fog.isRevealed(x, z)), ...sources.a2Pois()],
+          poi: [...sources.posts((x, z) => fog.isRevealed(x, z)), ...sources.a2Pois(), ...wasteShelters(wastePorts())],
           fog: sources.fogWall(),
           quest: withTutorialLead([...currentLeads(), ...objectiveLeads()], ctx.services.get('tutorial')),
         }),
       regions: currentChips,
+      lines: () => wasteLines(wastePorts()),
+      labels: () => [...wasteLabels(wastePorts()), ...calderaLabels(wastePorts())],
       blocks: currentBlocks,
       regionCaption: () => {
         const id = openRegionAt(ctx.player.feet.x, ctx.player.feet.z, openNow());

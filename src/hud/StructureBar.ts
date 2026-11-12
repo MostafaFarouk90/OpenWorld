@@ -51,6 +51,7 @@ export class StructureBar implements HudWidgetView {
   private readonly rows = new Map<string, Row>();
   private waveActive = false;
   private idle = 0;
+  private skip: ((id: string) => boolean) | null = null;
 
   constructor(
     private readonly doc: DocumentLike,
@@ -63,6 +64,7 @@ export class StructureBar implements HudWidgetView {
 
   /** `structure.damaged`: start tracking (the first event of a structure arrives at full health) and wake the bars. */
   damaged(id: string, health: number): void {
+    if (this.skip?.(id)) return;
     this.idle = 0;
     const row = this.rows.get(id);
     if (row) {
@@ -81,6 +83,17 @@ export class StructureBar implements HudWidgetView {
     this.element.append(root);
     this.rows.set(id, { id, kind, health: Number.isFinite(health) ? health : 0, root, fill });
     this.sortRows();
+    this.update(0);
+  }
+
+  /**
+   * v0.9 (Act 5 N9): another widget draws these structures (the siege HUD draws the Rim Gate and the rams), so this bar
+   * stands down for them. `null` restores the bar. Rows already showing a skipped id are dropped. Additive: with no
+   * predicate the bar behaves as before.
+   */
+  suppress(pred: ((id: string) => boolean) | null): void {
+    this.skip = pred;
+    if (pred) for (const id of [...this.rows.keys()]) if (pred(id)) this.drop(id);
     this.update(0);
   }
 
@@ -180,5 +193,16 @@ export class StructureBar implements HudWidgetView {
   dispose(): void {
     this.element.remove();
     this.rows.clear();
+  }
+}
+
+export interface StructureBarService {
+  suppress(pred: ((id: string) => boolean) | null): void;
+}
+
+declare module '../core/Services' {
+  interface GameServices {
+    /** v0.9 (Act 5 N9): the bar stands down for structures another widget draws. */
+    structureBar: StructureBarService;
   }
 }

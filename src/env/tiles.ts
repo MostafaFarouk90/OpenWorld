@@ -15,6 +15,7 @@ import h3Dressing from './h3.dressing.json';
 import h4 from './h4.placements.json';
 import h4Dressing from './h4.dressing.json';
 import type { PlacementRow } from './PlacementField';
+import { calderaEnvRows } from '../caldera/env/calderaEnv';
 
 export const TILES: Record<string, readonly PlacementRow[]> = {
   b1: [...(b1 as PlacementRow[]), ...(b1Enclosure as PlacementRow[])],
@@ -37,6 +38,10 @@ export const TILES: Record<string, readonly PlacementRow[]> = {
   // H4: Forge Row and the chapel (core x 7720..8440, z 1440..2240; H1 wins the z 1440 edge, H2 and H3 the x 8440 edge). The soot ground is in H3's splat file.
   // Plus the builder's middle-ground dressing at the designer's eye cameras and the enclosure gate closing (tools/env-pass/h4/round2.ts).
   h4: [...(h4 as PlacementRow[]), ...(h4Dressing as PlacementRow[])],
+  // C1 (Act 5 N1 PR 2): the Caldera's dressing, generated deterministically by src/caldera/env/calderaEnv.ts (about 240 rows: the gates'
+  // walls, the door portals, the camp, the stairs' lanterns, the bowl floor, the shore, the terraces and Vey's warhost camp). Eager, so its
+  // walls, boulders, tents and the gong frame get colliders. No TILE_BOUNDS: nothing older stands in the Caldera.
+  c1: calderaEnvRows(),
 };
 
 /**
@@ -49,6 +54,9 @@ export const LAZY_TILES: Record<string, () => Promise<readonly PlacementRow[]>> 
   d1: () => import('./d1.placements.json').then((m) => m.default as PlacementRow[]),
   d2: () => import('./d2.placements.json').then((m) => m.default as PlacementRow[]),
   d3: () => import('./d3.placements.json').then((m) => m.default as PlacementRow[]),
+  // W1 (Act 4 L1 PR 2): the petrified stumps along the Ash Road, the Waste's southern edge and its two stump groves, generated
+  // deterministically by src/waste/stumps.ts (about 600 wood rows; no TILE_BOUNDS, so no older scenery or ground cover is replaced).
+  w1: () => import('../waste/stumps').then((m) => m.wasteStumpRows()),
 };
 
 export interface TileRect {

@@ -101,6 +101,8 @@ function pickChoice(want: Record<string, unknown>, log: string[]): number | null
       s += want[f.setFlag] === (f.value ?? true) ? 10 : -10;
     }
     if (ch.id === 'later') s -= 20;
+    // a hub's list (Wulfhild's errands): the run names the entry it wants as `choice:<id>`
+    if (want[`choice:${ch.id}`] === true) s += 8;
     const p = PREFER.indexOf(ch.id);
     if (p >= 0) s += 5 - p;
     return s;
@@ -122,6 +124,8 @@ export interface PhaseGRun {
   picks: string[];
   /** Props of a multi-prop step already pressed. */
   used: Set<string>;
+  /** The mercy verbs the run offers before a kill (default: `spare` when `c.spare`; Phase H's run B adds `release`). */
+  mercy?: ReadonlySet<string>;
 }
 
 /** Reads whatever dialogue is open (the run's choices picked), counting its nodes into the trail. */
@@ -312,12 +316,17 @@ function mercyFor(h: ChapterHarness, a: ActorLike): string | null {
 }
 
 /** Enemies whose mercy is the Spare (the Footmen, sergeants, veterans, thugs; `kind` is the def's, e.g. blighted-soldier). */
-const spareable = (kind: string): boolean => (ENEMY_DEFS as Readonly<Record<string, EnemyDef>>)[kind]?.mercy?.verb === 'spare';
+const mercyVerb = (kind: string): string | undefined => (ENEMY_DEFS as Readonly<Record<string, EnemyDef>>)[kind]?.mercy?.verb;
+const SPARE_ONLY: ReadonlySet<string> = new Set(['spare']);
+const offers = (r: PhaseGRun, kind: string): boolean => {
+  const v = mercyVerb(kind);
+  return !!v && (r.mercy ?? (r.c.spare ? SPARE_ONLY : new Set<string>())).has(v);
+};
 
 /** Run B's Spare: a blow that leaves him under half health and breaks his poise, then T held beside him on his yield; else the kill. */
 async function spareOrKill(r: PhaseGRun, a: ActorLike): Promise<void> {
   const { h } = r;
-  if (r.c.spare && spareable(a.kind) && a.health && a.maxHealth) {
+  if (offers(r, a.kind) && a.health && a.maxHealth) {
     // Two blows, as a fight would land them: the first takes him under half health, the second (a tick later, once his brain has
     // read the new health) breaks his poise, and a broken Footman under half health yields instead of staggering.
     const blow = (amount: number, poise: number) => h.ctx.damage.apply({
@@ -330,8 +339,21 @@ async function spareOrKill(r: PhaseGRun, a: ActorLike): Promise<void> {
     }
     if (!a.dead) blow(1, 1e5);
     let id: string | null = null;
-    for (let i = 0; i < 12 && !(id = mercyFor(h, a)); i++) h.run(5);
-    if (DEBUG) console.log(`spare ${a.kind} ${a.id}: hp ${Math.round(a.health ?? 0)}/${a.maxHealth} prompt ${id}`);
+    // a Release (wraiths, husks) waits on the stagger the poise break starts, which can land a moment later: wait longer, and
+    // break the poise once more if it has not (Phase G's Spare keeps its one-second look, so its numbers stand)
+    const tries = mercyVerb(a.kind) === 'spare' ? 12 : 36;
+    for (let i = 0; i < tries && !(id = mercyFor(h, a)); i++) {
+      if (i === 12 && !a.dead) blow(1, 1e5);
+      h.run(5);
+    }
+    if (DEBUG) {
+      const at = a.root!.getWorldPosition(new THREE.Vector3());
+      const near = [...interaction(h).items].filter(([k]) => k.startsWith('release:')).map(([k, it]) => {
+        const p = new THREE.Vector3(); it.position(p);
+        return `${k}${it.enabled && !it.enabled() ? '(off)' : ''}@${p.distanceTo(at).toFixed(1)}`;
+      });
+      console.log(`spare ${a.kind} ${a.id}: hp ${Math.round(a.health ?? 0)}/${a.maxHealth} state ${enemyState(h, a.id)} prompt ${id} near ${near.join(' ')}`);
+    }
     if (id && !a.dead) {
       // step to him for the hold, then back to where the fight was held (a wave set waits while its holder is out of radius)
       const back = h.ctx.player.feet.clone();
@@ -351,7 +373,7 @@ const spawnerAnchor = (h: ChapterHarness, spawnerId: string): THREE.Vector3 => {
   ensure(def, `a spawner ${spawnerId}`);
   return h.anchor(def.anchor);
 };
-const aliveIn = (h: ChapterHarness, ids: readonly string[]) => {
+export const aliveIn = (h: ChapterHarness, ids: readonly string[]) => {
   const e = h.ctx.services.get('enemies') as unknown as { alive(id: string): readonly string[] };
   return ids.flatMap((id) => e.alive(id)).filter((a) => !h.ctx.actors.get(a)?.dead);
 };
@@ -382,10 +404,15 @@ export async function fightGroups(r: PhaseGRun, ids: readonly string[], done: ()
 }
 
 /** Fights everything hostile within `radius` of the player as it comes (waves, the chamber's six), until `done()`. */
-export async function holdGround(r: PhaseGRun, done: () => boolean, what: string, radius = 60, seconds = 600): Promise<void> {
+// N12 (additive): `between` runs after each half second's fights (Act 5's tunnel hold puts Cael back inside its 5 m bounds
+// when a Spare's stand-off took him out of them).
+export async function holdGround(
+  r: PhaseGRun, done: () => boolean, what: string, radius = 60, seconds = 600, between?: () => Promise<void>,
+): Promise<void> {
   for (let i = 0; i < seconds * 2 && !done(); i++) {
     await tick(r, 30, what);
     for (const a of hostilesNear(r.h, r.h.ctx.player.feet, radius)) await spareOrKill(r, a);
+    if (between) await between();
     if (DEBUG && i % 60 === 59) {
       const w = r.h.ctx.services.get('waves') as unknown as { current: unknown; wave?: { members: string[]; cursor: number; items: unknown[] }; run?: { phase?: string } };
       const mem = (w.wave?.members ?? []).map((id) => `${id}:${r.h.ctx.actors.get(id)?.dead ? 'dead' : enemyState(r.h, id)}`);
@@ -446,7 +473,7 @@ async function strikeBar(h: ChapterHarness, id: string, tier: number): Promise<v
   h.run(12);
 }
 
-async function playBeat(r: PhaseGRun, id: string, tier: number, done: () => boolean, what: string): Promise<void> {
+export async function playBeat(r: PhaseGRun, id: string, tier: number, done: () => boolean, what: string): Promise<void> {
   let bars = 0;
   await ensureSpace(r.h, ipos(r.h, id)!);
   for (; bars < 6 && !done(); bars++) {
@@ -485,8 +512,11 @@ export async function sitThrough(r: PhaseGRun, done: () => boolean, what: string
 }
 
 // ---- the objectives ----------------------------------------------------------------------------------------------------
-type Handler = (r: PhaseGRun, q: string, o: ObjectiveDef) => Promise<void>;
-const groupOf = (q: string, o: string) => HARROWMARK_A4_GROUPS.find((g) => g.quest === q && g.objective === o);
+export type Handler = (r: PhaseGRun, q: string, o: ObjectiveDef) => Promise<void>;
+type GroupRow = { quest: string; objective: string; groups: readonly string[]; seen: string; down: string };
+/** A phase's objective drivers: hand-written handlers by `quest.objective`, and its group-objective rows. */
+export interface DriverTable { handlers: Readonly<Record<string, Handler>>; groups: readonly GroupRow[] }
+const groupOf = (q: string, o: string, rows: readonly GroupRow[] = HARROWMARK_A4_GROUPS) => rows.find((g) => g.quest === q && g.objective === o);
 
 /** Goes to an anchor (into its space) and waits for the scene the director offers there. */
 const sceneAt = (anchor: string, radius = 4): Handler => async (r, q, o) => {
@@ -619,15 +649,17 @@ const HANDLERS: Record<string, Handler> = {
   'm41.gather': sceneAt('harrowmark.a4.m41.camp', 6),
 };
 
+export const PHASE_G_TABLE: DriverTable = { handlers: HANDLERS, groups: HARROWMARK_A4_GROUPS };
+
 /** One current objective, played. */
-async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef): Promise<void> {
+export async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef, table: DriverTable = PHASE_G_TABLE): Promise<void> {
   const { h } = r;
   const key = `${q}.${o.id}`;
   for (let i = 0; i < 7200 && (h.ctx.input.contexts.top() === 'cutscene' || scenes(h)?.active); i += 30) await tick(r, 30, key);
   await h.runAsync(2);
   readOpen(r, key);
   if (objDone(h, q, o.id)) return;
-  const handler = HANDLERS[key];
+  const handler = table.handlers[key];
   if (handler) return handler(r, q, o);
   const target = arr(o.target);
   const match = (o.match ?? {}) as Record<string, unknown>;
@@ -649,7 +681,7 @@ async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef): Promise<
     await ensureSpace(h, h.anchor(def.doors[0].inside));
     return waitFor(r, () => objDone(h, q, o.id), key, 10);
   }
-  const g = groupOf(q, o.id);
+  const g = groupOf(q, o.id, table.groups);
   if (g) return fightGroups(r, g.groups, () => objDone(h, q, o.id), key, () => flag(h, g.seen));
   if (ev === 'dialogue.ended') {
     const unread = arr(match.npcId).filter((n) => !r.trail.talks.some((t) => t.npc === n || t.dialogueId === n));
@@ -668,14 +700,22 @@ async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef): Promise<
 
 /** Plays one Phase G quest from its giver's offer (or the director's start) to its hand-in. */
 export async function playPhaseGQuest(r: PhaseGRun, q: PhaseGQuest): Promise<void> {
+  return playQuest(r, q, PHASE_G_TABLE, ['m39', 'm41']);
+}
+
+/** Plays one quest with `table`'s drivers, from its giver's offer (or, for `autoStart`, the director's start) to its hand-in. */
+// N12 (additive): `givers` lets Act 5's Phase I driver pass its own table (default Act 4's).
+export async function playQuest(
+  r: PhaseGRun, q: string, table: DriverTable, autoStart: readonly string[] = [], givers: Readonly<Record<string, string>> = ACT4_GIVERS,
+): Promise<void> {
   const { h } = r;
   const quests = qs(h);
   // M39 and M41 follow their quest at once (no offer); the others are offered by their giver
-  for (let i = 0; i < 20 && quests.state(q) === 'inactive' && (q === 'm39' || q === 'm41'); i++) await tick(r, 30, q);
+  for (let i = 0; i < 20 && quests.state(q) === 'inactive' && autoStart.includes(q); i++) await tick(r, 30, q);
   // the sequencer scenes' subtitle lines are read like dialogue nodes (L10's node pins count them the same way)
   const lines0 = h.of('scene.line').length;
   if (quests.state(q) === 'inactive') {
-    const giver = ACT4_GIVERS[q]!;
+    const giver = givers[q]!;
     await talkTo(r, giver);
     ensure(quests.state(q) === 'active', `${q} offered by ${giver} (${describeQuest(h, q)})`);
   }
@@ -683,7 +723,7 @@ export async function playPhaseGQuest(r: PhaseGRun, q: PhaseGQuest): Promise<voi
     const cur = quests.objectives(q).find((v) => v.current && !v.done);
     if (!cur) { await tick(r, 10, q); continue; }
     const before = describeQuest(h, q);
-    await playObjective(r, q, cur.def);
+    await playObjective(r, q, cur.def, table);
     await tick(r, 4, q);
     r.trail.order.push(`${q}.${cur.def.id}`);
     if (describeQuest(h, q) === before && quests.state(q) === 'active') await tick(r, 60, q);

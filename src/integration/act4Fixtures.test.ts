@@ -4,8 +4,9 @@
  * byte-identical and match the committed file). The full drift check is `CHECK_FIXTURES=1` (act4FixturesGen.ts); loads on
  * the real save plugin are in act4Containment.e2e.test.ts.
  */
+import { phaseGEndName } from '../save/__fixtures__/act4';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ACT4_JUMP_IDS, ACT4_PREREQS, ACT4_START_XP, phaseOf, WASTE_OPEN_FLAG } from '../quests/act4Jump';
+import { ACT4_JUMP_IDS, ACT4_PREREQS, ACT4_START_XP, WASTE_OPEN_FLAG } from '../quests/act4Jump';
 import { ACT3_JUMP_IDS } from '../quests/act3Jump';
 import { actEnding } from './actEndings';
 import { ACT4_BASE_NAME, act4FixtureName, type Act4BaseMeta, type Act4FixtureMeta } from './act4FixtureKey';
@@ -51,15 +52,17 @@ describe('the committed Act 4 fixtures', () => {
     for (const q of meta!.injected) expect(f[`story.${q}.complete`], q).toBe(true);
     expect(f[`story.${id}.complete`], 'the target itself is not done').not.toBe(true);
     // The Phase G hold stands for Phase G ids; Phase H ids set it (until PR 2 retires it).
-    expect(meta!.wasteOpen).toBe(phaseOf(id) === 'H');
-    expect(f[WASTE_OPEN_FLAG] === true).toBe(phaseOf(id) === 'H');
+    // the Phase G hold is retired (L13 PR 2): no fixture carries it
+    expect(meta!.wasteOpen).toBe(false);
+    expect(f[WASTE_OPEN_FLAG]).toBeUndefined();
     // Topped up to plan 7.2's full-play start (a base above it would be left alone).
     expect(meta!.xp).toBeGreaterThanOrEqual(ACT4_START_XP);
   });
 
   it('has nothing beyond the base and the 21 ids (stale names are deleted on regeneration)', () => {
     const names = Object.keys(FILES).map((k) => k.split('/').pop()!.replace(/(\.meta)?\.json$/, ''));
-    const want = new Set([ACT4_BASE_NAME, ...ACT4_JUMP_IDS.map(act4FixtureName)]);
+    // plus Phase G's chain end saves, Phase H's start (phaseG.run.ts, SAVE_PHASE_G_END=1)
+    const want = new Set([ACT4_BASE_NAME, ...ACT4_JUMP_IDS.map(act4FixtureName), phaseGEndName('a'), phaseGEndName('b')]);
     expect([...new Set(names)].filter((n) => !want.has(n) && !n.startsWith('act4-extra-') && n !== 'act4-l3-storm')).toEqual([]);
   });
 });

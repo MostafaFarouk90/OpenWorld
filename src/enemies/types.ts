@@ -53,7 +53,14 @@ export type EnemyKind =
   | 'rime-hawk'
   | 'crag-ogre'
   // Act 3 (K6a PR 2): Ysmeryth the Coal-Mother in M31's trial.
-  | 'ysmeryth';
+  | 'ysmeryth'
+  // Act 4 (L5): the Ashen Waste's own kinds.
+  | 'waste-strider'
+  | 'husk-knight'
+  | 'cinder-gnat-swarm'
+  // Act 5 (N5): Vey's warhost.
+  | 'warhost-soldier'
+  | 'warhost-guard';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -75,6 +82,17 @@ export const ACT3_ENEMY_KINDS: readonly Act3EnemyKind[] = ['fen-leech', 'peat-sh
  */
 export type Act4EnemyKind = 'waste-strider' | 'husk-knight' | 'cinder-gnat-swarm';
 export const ACT4_ENEMY_KINDS: readonly Act4EnemyKind[] = ['waste-strider', 'husk-knight', 'cinder-gnat-swarm'];
+
+/**
+ * Act 5 kind ids (v0.9 item 11), reserved the same way: N5 moves `warhost-soldier` into `EnemyKind` with its def. Grisel's
+ * footmen, the stokers and the lava golems are shipped kinds in skins (skins.ts).
+ */
+export type Act5EnemyKind = 'warhost-soldier' | 'warhost-guard';
+export const ACT5_ENEMY_KINDS: readonly Act5EnemyKind[] = ['warhost-soldier', 'warhost-guard'];
+
+/** v0.9: a warhost member's role in its line (`SpawnerDef.role`, carried as `actor.data.spawn.role`). */
+export type WarhostRole = 'shield' | 'pike' | 'torch';
+export const WARHOST_ROLES: readonly WarhostRole[] = ['shield', 'pike', 'torch'];
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -248,12 +266,12 @@ export interface EnemyDef {
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
   /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, the wyrm (wyrm/), or A6b's golem and crawler. */
-  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird';
+  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird' | 'strider' | 'swarm';
   /**
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
    * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless). K6a: `ysmeryth-trial` (wyrm/ysmeryth/overlay.ts).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial' | 'strider' | 'husk-knight' | 'gnats' | 'warhost';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
@@ -322,6 +340,10 @@ export interface SpawnerDef {
   firstArrival?: boolean;
   /** v0.8 item 11: the members' look over their kind's model (enemies/skins.ts); passed to the spawn and set on `actor.skin`. */
   skin?: EnemySkinId;
+  /** v0.9 item 11: the members' role (the warhost's `WarhostRole`), passed to the spawn and set on `actor.data.spawn.role`. */
+  role?: WarhostRole;
+  /** N5: the shield-line id of a Warhost member, `actor.data.spawn.line`; the line is `line ?? tag` (the waves kit keeps `tag` for kill objectives). */
+  line?: string;
   /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).
@@ -371,6 +393,12 @@ export interface SpawnOptions {
   damageScale?: number;
   /** Notice the player at once. */
   aggro?: boolean;
+  /**
+   * v0.9 additive (Act 5 N4), `spawnGroup` only: the members stand round this point instead of the spawner's anchor (the
+   * anchor's yaw, level and area are kept; a member anchor still wins). The siege's foes join their lane in reach of the
+   * gate. Not remembered for refills; ignored when not finite.
+   */
+  at?: { x: number; y: number; z: number };
   tierOffset?: number;
   /** Default: the spawner's `leash`, else true. */
   leash?: boolean;

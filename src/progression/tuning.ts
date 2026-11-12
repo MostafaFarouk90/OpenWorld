@@ -52,6 +52,17 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'bellows-engine': 700 / 2.4,
   // The Crucible's struck steam valves (neutral, immortal) are never a kill.
   'bellows-valve': 0,
+  // Archwraith Eormen, D08 (Act 4 L6 PR 2): the Husk Cathedral floats in the Ashen Waste, whose kill XP factor is 2.4, so 750 at an
+  // even level; the Last Gong (a neutral struck prop) is never a kill.
+  eormen: 750 / 2.4,
+  'eormen-gong': 0,
+  // Morcant Vey, D09 (Act 5 N6 PR 1): the Foundry floats over the Caldera, whose kill XP factor is 3.0, so plan 6.2's 900 at an
+  // even level when he is struck down.
+  'vey-reforged': 900 / 3,
+  // Ulthred, D10 (Act 5 N6 PR 2): he dies on the Anvil of Ages inside the Caldera (factor 3.0), so plan 3's 1,200 at an even level;
+  // M55's trial stand-in is never a kill.
+  'ulthred-ash-king': 1200 / 3,
+  'ulthred-trial': 0,
   // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
@@ -63,6 +74,14 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'crag-ogre': 133,
   // The trial is non-lethal: Ysmeryth is never a kill.
   ysmeryth: 0,
+  // Act 4 L5: stored divided by the Waste's kill XP region factor (2.4, set by the waste plugin), so a Waste kill pays plan
+  // 6.1's 160, 300 and 40 at an even level (67 x 2.4 = 160.8, 125 x 2.4 = 300, 17 x 2.4 = 40.8).
+  'waste-strider': 67,
+  'husk-knight': 125,
+  'cinder-gnat-swarm': 17,
+  // Act 5 (N5): stored at paid / 3.0 (the Caldera factor): 120 and 300 paid at an even level.
+  'warhost-soldier': 40,
+  'warhost-guard': 100,
   dummy: 0,
   scarecrow: 0,
 };

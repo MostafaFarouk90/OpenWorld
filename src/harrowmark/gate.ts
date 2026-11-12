@@ -21,6 +21,36 @@ export const gateStateFor = (started: boolean, route: boolean, held = false): Ga
 /** Act 4 (L2): an optional flag that shuts a gate while it holds, on top of the gate's own rule. */
 export interface GateHold {
   closedWhen?: string;
+  /** Act 5 (N13, v0.9 item 10): once this flag holds the hold no longer shuts the gate (the world after the ending). */
+  reopenWhen?: string;
+}
+
+/** The hold's flags through ctx.gates: `set(true)` while `closedWhen` holds and `reopenWhen` does not. */
+function watchHold(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, hold: GateHold, set: (held: boolean) => void): Array<() => void> {
+  if (!hold.closedWhen) return [];
+  // One watcher over both flags where the gates offer it, so a load never shows a passing shut-then-open state.
+  const closedWhen = hold.closedWhen;
+  const reopenWhen = hold.reopenWhen;
+  if (reopenWhen && gates.watch) {
+    return [gates.watch((s) => Boolean(s.getFlag(closedWhen)) && !s.getFlag(reopenWhen), (on) => set(on), { keys: [closedWhen, reopenWhen] })];
+  }
+  let closed = false;
+  let reopened = false;
+  const offs = [
+    gates.flag(hold.closedWhen, (on) => {
+      closed = !!on;
+      set(closed && !reopened);
+    }),
+  ];
+  if (hold.reopenWhen) {
+    offs.push(
+      gates.flag(hold.reopenWhen, (on) => {
+        reopened = !!on;
+        set(closed && !reopened);
+      }),
+    );
+  }
+  return offs;
 }
 
 export interface SouthGate {
@@ -31,7 +61,7 @@ export interface SouthGate {
 }
 
 /** Derives the South Gate's state from the two flags through ctx.gates, so a loaded save re-derives it. */
-export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: GateState) => void, hold: GateHold = {}): SouthGate {
+export function watchSouthGate(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, apply: (state: GateState) => void, hold: GateHold = {}): SouthGate {
   let started = false;
   let route = false;
   let held = false;
@@ -56,14 +86,10 @@ export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: Ga
       route = on;
       push();
     }),
-    ...(hold.closedWhen
-      ? [
-          gates.flag(hold.closedWhen, (on) => {
-            held = !!on;
-            push();
-          }),
-        ]
-      : []),
+    ...watchHold(gates, hold, (h) => {
+      held = h;
+      push();
+    }),
   ];
   ready = true;
   push();
@@ -85,7 +111,7 @@ export interface RiverGate {
 }
 
 /** Derives the River Gate's shutter from the Act 1 flag through ctx.gates, so a loaded Act 1 save closes it again. `apply` runs once at the start and then only on change. */
-export function watchRiverGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
+export function watchRiverGate(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
   return watchShutter(gates, RIVER_GATE_FLAG, apply, hold);
 }
 
@@ -93,7 +119,7 @@ export function watchRiverGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boo
 export const NORTHWEST_GATE_FLAG = 'story.gate.a3';
 
 /** The North-west Gate's shutter, derived like the River Gate's, so a loaded Act 2 save closes it again. */
-export function watchNorthwestGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
+export function watchNorthwestGate(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
   return watchShutter(gates, NORTHWEST_GATE_FLAG, apply, hold);
 }
 
@@ -107,7 +133,8 @@ export function northeastGateOpen(act4: boolean, occupied: boolean): boolean {
   return act4 && !occupied;
 }
 
-export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+/** N13: the flag that lifts the North-east Gate's shut (the world after the ending); optional, so shipped callers are unchanged. */
+export function watchNortheastGate(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, apply: (open: boolean) => void, reopenWhen?: string): RiverGate {
   let act4 = false;
   let occupied = false;
   let last: boolean | null = null;
@@ -124,8 +151,8 @@ export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open:
       act4 = !!on;
       push();
     }),
-    gates.flag(NORTHEAST_GATE_SHUT_FLAG, (on) => {
-      occupied = !!on;
+    ...watchHold(gates, { closedWhen: NORTHEAST_GATE_SHUT_FLAG, reopenWhen }, (h) => {
+      occupied = h;
       push();
     }),
   ];
@@ -138,7 +165,7 @@ export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open:
  * A shutter open while one flag holds and, with `hold.closedWhen`, that flag does not. `apply` runs once at the start
  * and then only on change.
  */
-export function watchShutter(gates: Pick<FlagGates, 'flag'>, flag: string, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
+export function watchShutter(gates: Pick<FlagGates, 'flag'> & Partial<Pick<FlagGates, 'watch'>>, flag: string, apply: (open: boolean) => void, hold: GateHold = {}): RiverGate {
   let on = false;
   let held = false;
   let ready = false;
@@ -154,14 +181,10 @@ export function watchShutter(gates: Pick<FlagGates, 'flag'>, flag: string, apply
       on = !!v;
       push();
     }),
-    ...(hold.closedWhen
-      ? [
-          gates.flag(hold.closedWhen, (v) => {
-            held = !!v;
-            push();
-          }),
-        ]
-      : []),
+    ...watchHold(gates, hold, (h) => {
+      held = h;
+      push();
+    }),
   ];
   ready = true;
   push();

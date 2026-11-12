@@ -9,6 +9,8 @@ export const MAP_CANVAS_SIZE = 640;
 export const MAP_MODAL_REDRAW_HZ = 10;
 
 const EMBER = '#ff8a3d';
+/** Act 4 (L9): the Waste's rope-lines on the map. */
+const ROPE_COLOR = '#d8c08a';
 /** Block chip text by tone (design 5.9): gold at or under the player's level, orange up to three over, red beyond. */
 const TONE_COLOR: Readonly<Record<BlockTone, string>> = { gold: '#e8c860', orange: '#f0902c', red: '#e0483c' };
 
@@ -159,6 +161,41 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
     }
   }
 
+  /** Act 4 (L9): the Waste's rope-lines (dashed tan) and place names, over the fog and under the markers. */
+  function drawLinesAndLabels(): void {
+    if (!ctx) return;
+    const lines = model.lines?.() ?? [];
+    if (lines.length) {
+      ctx.save();
+      ctx.strokeStyle = ROPE_COLOR;
+      ctx.lineWidth = 2;
+      ctx.setLineDash?.([5, 4]);
+      for (const l of lines) {
+        if (l.points.length < 2) continue;
+        ctx.beginPath();
+        l.points.forEach((pt, i) => {
+          const p = worldToMap(pt.x, pt.z, model.bounds, size);
+          if (i === 0) ctx!.moveTo(p.u, p.v);
+          else ctx!.lineTo(p.u, p.v);
+        });
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    const labels = model.labels?.() ?? [];
+    if (!labels.length || typeof ctx.fillText !== 'function') return;
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const l of labels) {
+      const p = worldToMap(l.x, l.z, model.bounds, size);
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillText(l.text, p.u + 9, p.v + 1);
+      ctx.fillStyle = '#e8dfc8';
+      ctx.fillText(l.text, p.u + 8, p.v);
+    }
+  }
+
   function drawMarker(m: MapMarker, selected: boolean): void {
     if (!ctx) return;
     const p = worldToMap(m.x, m.z, model.bounds, size);
@@ -279,6 +316,7 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
     if (terrainLayer) ctx.drawImage(terrainLayer, 0, 0, extent.width, extent.height);
     if (fogLayer) ctx.drawImage(fogLayer, 0, 0, extent.width, extent.height);
     drawRegions();
+    drawLinesAndLabels();
     for (const m of model.markers()) drawMarker(m, m.id === selectedId);
     const pl = model.player();
     const a = playerArrowPosition(pl.x, pl.z, model.bounds, size);

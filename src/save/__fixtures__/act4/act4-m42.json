@@ -63,7 +63,12 @@
           "lore.rubbing.anvil-6",
           "howto.gliding",
           "lore.place.frostfang-aerie",
-          "corvin-skarl"
+          "corvin-skarl",
+          "howto.escorts",
+          "lore.place.crucible",
+          "lore.place.council-chamber",
+          "lore.person.vey",
+          "lore.person.gaut"
         ]
       },
       "version": 1
@@ -76,16 +81,16 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 9998.0577,
+            "x": 9997.4423,
             "y": 45,
-            "yaw": -1.0047,
-            "z": 4451.2342
+            "yaw": 2.1369,
+            "z": 4459.966
           },
           "hrolf": {
-            "x": 10000.8625,
+            "x": 9994.6375,
             "y": 45,
-            "yaw": 0.2799,
-            "z": 4453
+            "yaw": -2.8616,
+            "z": 4458.2002
           },
           "tobb": {
             "x": 9690,
@@ -1044,7 +1049,7 @@
     },
     "map": {
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AOA9wAMAPX4APeAHAD1+AD3gBwA9PADNNDwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF4AcAEvgBACKAAwAFfgASgB8AKeAHABLwACp+AD3AAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8APf4BADzAHwAC8AMAOfgAAoB/AD38BwA8wH8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AOA9gAEAPT4APeAHAD1+AD3gBwA9PADNNDwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF4AcAEvgBACKAAwAFfgASgB8AKeAHABLwACp+AD3AAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8APf4BADzAHwAC8AMAOfgAAoB/AD38BwA8wH8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
       },
       "version": 2
     },
@@ -1075,10 +1080,10 @@
     },
     "player-position": {
       "data": {
-        "x": 10000,
+        "x": 9995.5,
         "y": 45.0101,
-        "yaw": 0,
-        "z": 4450
+        "yaw": 3.1416,
+        "z": 4461.2002
       },
       "version": 1
     },
@@ -2242,7 +2247,6 @@
           "story.m40.started": true,
           "story.m41.complete": true,
           "story.m41.started": true,
-          "story.phase.wasteOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,

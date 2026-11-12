@@ -8,6 +8,11 @@ export interface FlagCondition {
   any?: readonly string[];
   /** Every flag falsy. */
   none?: readonly string[];
+  /**
+   * v0.9: at least one sub-condition holds (an empty or missing list is no constraint), ANDed with the lists above. For
+   * the one rule flat lists cannot say: Harrowmark's gates open when the city is not held OR the world is after the ending.
+   */
+  anyOf?: readonly FlagCondition[];
 }
 
 export interface FlagReader {
@@ -20,10 +25,11 @@ export function flagConditionHolds(cond: FlagCondition, state: FlagReader): bool
   if (cond.all && !cond.all.every(on)) return false;
   if (cond.any && cond.any.length > 0 && !cond.any.some(on)) return false;
   if (cond.none && cond.none.some(on)) return false;
+  if (cond.anyOf && cond.anyOf.length > 0 && !cond.anyOf.some((c) => flagConditionHolds(c, state))) return false;
   return true;
 }
 
 /** Every flag key the condition reads, once each (for `gates.watch` keys). */
 export function conditionKeys(cond: FlagCondition): string[] {
-  return [...new Set([...(cond.all ?? []), ...(cond.any ?? []), ...(cond.none ?? [])])];
+  return [...new Set([...(cond.all ?? []), ...(cond.any ?? []), ...(cond.none ?? []), ...(cond.anyOf ?? []).flatMap(conditionKeys)])];
 }

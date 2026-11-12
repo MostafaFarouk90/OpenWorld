@@ -20,14 +20,46 @@ export interface CorridorDef {
   openWhen: FlagCondition;
 }
 
+/** v0.9: an engine-space circle (centre and radius in metres; the edge itself is inside). */
+export interface CircleXZ {
+  x: number;
+  z: number;
+  r: number;
+}
+
 /**
  * v0.7: a closed sub-area inside an open region (the Dragonspine summit): while `openWhen` fails, the box is cut out of
  * the open area. Engine box, min inclusive, max exclusive. A hole never opens land outside the open regions.
+ * v0.9: a hole is a box or (exclusive) a circle (the Caldera's bowl floor, `hole.caldera.floor`).
  */
-export interface ContainmentHoleDef {
-  id: string;
-  box: { x0: number; z0: number; x1: number; z1: number };
-  openWhen: FlagCondition;
+export type ContainmentHoleDef =
+  | { id: string; box: { x0: number; z0: number; x1: number; z1: number }; circle?: undefined; openWhen: FlagCondition }
+  | { id: string; circle: CircleXZ; box?: undefined; openWhen: FlagCondition };
+
+/**
+ * v0.9: a keep-in (the siege's soft boundary): while `liveWhen` holds, every point outside the shape reads closed, so
+ * the shipped push-back holds the player in, with `toastKey` as the toast. Re-derived from flags on every query (a load
+ * is right on its first tick). Live keep-ins are a union: inside any live one is open (holes and regions still apply).
+ */
+export type ContainmentKeepInDef =
+  | { id: string; box: { x0: number; z0: number; x1: number; z1: number }; circle?: undefined; liveWhen: FlagCondition; toastKey: string }
+  | { id: string; circle: CircleXZ; box?: undefined; liveWhen: FlagCondition; toastKey: string };
+
+type ShapeDef = { box?: { x0: number; z0: number; x1: number; z1: number }; circle?: CircleXZ };
+
+function inShape(d: ShapeDef, x: number, z: number): boolean {
+  if (d.circle) return Math.hypot(x - d.circle.x, z - d.circle.z) <= d.circle.r;
+  const b = d.box!;
+  return x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1;
+}
+
+function validShape(d: ShapeDef): boolean {
+  if (d.circle) {
+    const c = d.circle;
+    return !d.box && Number.isFinite(c.x) && Number.isFinite(c.z) && Number.isFinite(c.r) && c.r > 0;
+  }
+  const b = d.box;
+  return !!b && b.x1 > b.x0 && b.z1 > b.z0;
 }
 
 export interface XZ {
@@ -48,6 +80,15 @@ export interface ContainmentService {
   addHole(def: ContainmentHoleDef): () => void;
   /** v0.7: the ids of the holes closed right now, registration order. */
   closedHoles(): string[];
+  /** v0.9: adds a keep-in (box or circle). Throws on a duplicate id or an empty shape; returns the undo. */
+  addKeepIn(def: ContainmentKeepInDef): () => void;
+  /** v0.9: the ids of the keep-ins live right now, registration order. */
+  liveKeepIns(): string[];
+  /**
+   * v0.9: the toast for a push from (x, z): the first live keep-in's `toastKey` when the point is outside every live
+   * keep-in, else null (the caller's generic toast).
+   */
+  pushToastKey(x: number, z: number): string | null;
   /** The regions open right now, registry order. */
   openRegions(): RegionId[];
   /** Distance (m) from an open point to the nearest closed one, capped at `limit` (the mount's soft cap). */
@@ -80,6 +121,7 @@ function closestOnSegment(px: number, pz: number, ax: number, az: number, bx: nu
 export class Containment implements ContainmentService {
   private readonly corridors = new Map<string, CorridorDef>();
   private readonly holes = new Map<string, ContainmentHoleDef>();
+  private readonly keepIns = new Map<string, ContainmentKeepInDef>();
 
   constructor(
     private readonly state: FlagReader,
@@ -92,8 +134,7 @@ export class Containment implements ContainmentService {
 
   addHole(def: ContainmentHoleDef): () => void {
     if (this.holes.has(def.id)) throw new Error(`containment: hole "${def.id}" is already registered`);
-    const b = def.box;
-    if (!(b.x1 > b.x0 && b.z1 > b.z0)) throw new Error(`containment: hole "${def.id}" has an empty box`);
+    if (!validShape(def)) throw new Error(`containment: hole "${def.id}" has an empty box`);
     this.holes.set(def.id, def);
     return () => {
       if (this.holes.get(def.id) === def) this.holes.delete(def.id);
@@ -109,8 +150,35 @@ export class Containment implements ContainmentService {
   }
 
   private inClosedHole(x: number, z: number, closed: readonly ContainmentHoleDef[]): ContainmentHoleDef | null {
-    for (const h of closed) if (x >= h.box.x0 && x < h.box.x1 && z >= h.box.z0 && z < h.box.z1) return h;
+    for (const h of closed) if (inShape(h, x, z)) return h;
     return null;
+  }
+
+  addKeepIn(def: ContainmentKeepInDef): () => void {
+    if (this.keepIns.has(def.id)) throw new Error(`containment: keep-in "${def.id}" is already registered`);
+    if (!validShape(def)) throw new Error(`containment: keep-in "${def.id}" has an empty shape`);
+    this.keepIns.set(def.id, def);
+    return () => {
+      if (this.keepIns.get(def.id) === def) this.keepIns.delete(def.id);
+    };
+  }
+
+  liveKeepIns(): string[] {
+    return this.liveKeepInDefs().map((k) => k.id);
+  }
+
+  private liveKeepInDefs(): ContainmentKeepInDef[] {
+    return [...this.keepIns.values()].filter((k) => flagConditionHolds(k.liveWhen, this.state));
+  }
+
+  /** Outside every live keep-in (false when none is live). */
+  private outsideKeepIns(x: number, z: number, live: readonly ContainmentKeepInDef[]): boolean {
+    return live.length > 0 && !live.some((k) => inShape(k, x, z));
+  }
+
+  pushToastKey(x: number, z: number): string | null {
+    const live = this.liveKeepInDefs();
+    return this.outsideKeepIns(x, z, live) ? live[0].toastKey : null;
   }
 
   addCorridor(def: CorridorDef): () => void {
@@ -132,6 +200,7 @@ export class Containment implements ContainmentService {
 
   isOpen(x: number, z: number): boolean {
     if (!Number.isFinite(x) || !Number.isFinite(z) || !inBounds(x, z)) return false;
+    if (this.outsideKeepIns(x, z, this.liveKeepInDefs())) return false;
     if (this.inClosedHole(x, z, this.closedHoleDefs())) return false;
     return this.inOpenArea(x, z);
   }
@@ -168,6 +237,24 @@ export class Containment implements ContainmentService {
       }
     };
     const k = CONTAINMENT_INSET;
+    // v0.9: outside a live keep-in, the answer is the nearest open point inside one (inset k), when there is one.
+    const live = this.liveKeepInDefs();
+    if (this.outsideKeepIns(px, pz, live)) {
+      for (const d of live) {
+        let q: XZ;
+        if (d.circle) {
+          const c = d.circle;
+          const dd = Math.hypot(px - c.x, pz - c.z) || 1;
+          const rr = Math.max(0, c.r - k);
+          q = { x: c.x + ((px - c.x) / dd) * rr, z: c.z + ((pz - c.z) / dd) * rr };
+        } else {
+          const b = d.box!;
+          q = { x: Math.min(Math.max(px, b.x0 + k), b.x1 - k), z: Math.min(Math.max(pz, b.z0 + k), b.z1 - k) };
+        }
+        if (this.isOpen(q.x, q.z)) consider(q);
+      }
+      if (best) return best;
+    }
     const closed = this.closedHoleDefs();
     // v0.7: a candidate inside a closed hole moves to that hole's nearest edge, just outside it, when that point is open.
     const considerOutsideHoles = (q: XZ) => {
@@ -176,7 +263,17 @@ export class Containment implements ContainmentService {
         consider(q);
         return;
       }
-      const b = h.box;
+      if (h.circle) {
+        // v0.9: a circle hole moves the candidate radially to just outside its edge.
+        const c = h.circle;
+        const dd = Math.hypot(q.x - c.x, q.z - c.z);
+        const ux = dd > 0 ? (q.x - c.x) / dd : 1;
+        const uz = dd > 0 ? (q.z - c.z) / dd : 0;
+        const e = { x: c.x + ux * (c.r + k), z: c.z + uz * (c.r + k) };
+        if (this.isOpen(e.x, e.z)) consider(e);
+        return;
+      }
+      const b = h.box!;
       for (const e of [
         { x: b.x0 - k, z: q.z },
         { x: b.x1 + k, z: q.z },

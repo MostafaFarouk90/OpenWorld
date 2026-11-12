@@ -23,8 +23,14 @@ import { ACT2_QUEST_NOTES, ACT2_PROPS, ACT2_CARRY } from '../content/act2';
 import { ACT3_QUEST_NOTES, ACT3_PROPS, ACT3_CARRY } from '../content/act3';
 import { GREYFEN_QUEST_LAYOUT } from '../content/act3/greyfen/extraAnchors';
 import { ACT4_QUEST_NOTES, ACT4_PROPS, ACT4_CARRY } from '../content/act4';
+import { ACT5_QUEST_NOTES, ACT5_PROPS, ACT5_CARRY } from '../content/act5';
 import { harrowmarkA4InteriorExtras, harrowmarkA4QuestLayout } from '../content/act4/harrowmark/layout';
 import { HARROWMARK_A4_Q_NPCS } from '../content/act4/harrowmark/npcs';
+import { wasteA4InteriorExtras, wasteA4QuestLayout } from '../content/act4/waste/layout';
+// Act 5 (N10, additive)
+import { rimA5InteriorExtras, rimA5QuestLayout } from '../content/act5/rim/layout';
+import { foundryA5InteriorExtras, foundryA5QuestLayout } from '../content/act5/foundry/layout';
+import { WASTE_A4_NPCS } from '../content/act4/waste/npcs';
 import type { QuestNoteSpec } from '../notes';
 import { ACT3_POI_LAYOUT } from '../../world/poi/act3/place';
 
@@ -110,13 +116,14 @@ export function shippedNoteInput(): NoteLintInput {
     ...[...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT].flatMap((l) => l.npcs.map((n) => ({ id: `npc:${n.id}`, kind: 'npc' as const, anchorId: n.post }))),
     ...TUTORIAL_ANCHORS.map((a) => ({ id: `npc:${a.id}`, kind: 'npc' as const, anchorId: a.id })),
     ...HARROWMARK_A4_Q_NPCS.map((n) => ({ id: `npc:${n.id}`, kind: 'npc' as const, anchorId: n.post })),
+    ...WASTE_A4_NPCS.map((n) => ({ id: `npc:${n.id}`, kind: 'npc' as const, anchorId: n.post })),
   ];
-  const props = [...QUEST_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS].map((p) => ({ id: p.interactableId, kind: 'prop' as const, anchorId: p.anchorId }));
-  const carry = [...CARRY_ITEMS, ...ACT2_CARRY, ...ACT3_CARRY, ...ACT4_CARRY].map((c) => ({ id: c.interactableId, kind: 'carry' as const, anchorId: c.homeAnchor }));
+  const props = [...QUEST_PROPS, ...ACT2_PROPS, ...ACT3_PROPS, ...ACT4_PROPS, ...ACT5_PROPS].map((p) => ({ id: p.interactableId, kind: 'prop' as const, anchorId: p.anchorId }));
+  const carry = [...CARRY_ITEMS, ...ACT2_CARRY, ...ACT3_CARRY, ...ACT4_CARRY, ...ACT5_CARRY].map((c) => ({ id: c.interactableId, kind: 'carry' as const, anchorId: c.homeAnchor }));
   return {
-    notes: [...QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES],
+    notes: [...QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES, ...ACT5_QUEST_NOTES],
     occupants: [...npcs, ...props, ...carry],
-    anchors: resolveAnchors([...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT, harrowmarkA4QuestLayout()], [...ALL_INTERIORS, ...harrowmarkA4InteriorExtras()]),
+    anchors: resolveAnchors([...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT, harrowmarkA4QuestLayout(), wasteA4QuestLayout(), rimA5QuestLayout(), foundryA5QuestLayout()], [...ALL_INTERIORS, ...harrowmarkA4InteriorExtras(), ...wasteA4InteriorExtras(), ...rimA5InteriorExtras(), ...foundryA5InteriorExtras()]),
   };
 }
 

@@ -17,6 +17,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import type { AssetLoader } from '../assets/AssetLoader';
 import { KnightAvatar } from '../characters/KnightAvatar';
 import { ASSETS } from '../assets/AssetManifest';
+import { QUIET_ENV_PROPS } from '../enemies/envProp';
 
 /**
  * A headless game with EVERY real plugin (`PLUGIN_MODULES`), the `dummies` core service wired the way
@@ -82,6 +83,12 @@ export interface ChapterBootOptions {
    * wall-clock-judged mechanics (the wardstone metronome) can be played on the beat. Restored on dispose.
    */
   virtualClock?: boolean;
+  /**
+   * N12 (additive): terrain collider patches streamed round the player (TerrainColliders' default when unset). Act 5's siege
+   * needs 4 (as src/siege/testKit.ts): a foe on an unbuilt patch sleeps with its brain frozen, and the siege's join point
+   * stands 67 m from the gate's lee.
+   */
+  colliderRadius?: number;
 }
 
 const gltfCache = new Map<string, Promise<GLTF>>();
@@ -128,6 +135,8 @@ export async function diskAssets(gate: Promise<void> = Promise.resolve()): Promi
     instantiate: (id: string) => cloneSkinned(get(id).scene),
     animations: (id: string) => get(id).animations,
     dispose: () => {},
+    // No `env/` glb loads by url here: the enemies' env props keep their fallback without a warning (L5).
+    [QUIET_ENV_PROPS]: true,
   } as unknown as AssetLoader;
 }
 
@@ -149,7 +158,7 @@ export async function bootChapter(opts: ChapterBootOptions = {}): Promise<Chapte
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, {
-    colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16 }),
+    colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16, ...(opts.colliderRadius ? { radius: opts.colliderRadius } : {}) }),
     moveModifier: () => moveModifiers.state(),
   });
   const win = new EventTarget();

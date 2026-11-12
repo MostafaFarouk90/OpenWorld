@@ -48,14 +48,14 @@ const ACT3_DONE: Flags = {
 const STATES = {
   actStart: ACT3_DONE,
   occupied: { ...ACT3_DONE, [OCCUPIED_FLAG]: true },
-  phaseG: { ...ACT3_DONE, [OCCUPIED_FLAG]: true, 'story.m41.complete': true, 'story.m42.started': true },
-  phaseH: { ...ACT3_DONE, [OCCUPIED_FLAG]: true, 'story.m41.complete': true, 'story.m42.started': true, 'story.phase.wasteOpen': true },
+  // Phase G's end: M41 done, M42 not yet accepted (L13 PR 2 retired the hold; the Waste opens on M42 alone)
+  phaseG: { ...ACT3_DONE, [OCCUPIED_FLAG]: true, 'story.m41.complete': true },
+  phaseH: { ...ACT3_DONE, [OCCUPIED_FLAG]: true, 'story.m41.complete': true, 'story.m42.started': true },
   actComplete: {
     ...ACT3_DONE,
     [OCCUPIED_FLAG]: true,
     'story.m41.complete': true,
     'story.m42.started': true,
-    'story.phase.wasteOpen': true,
     'story.m46.complete': true,
     'story.d08.complete': true,
     'story.gate.a5': true,
@@ -89,19 +89,22 @@ describe('Act 4 containment over the states', () => {
     }
   });
 
-  it('the Waste opens only in Phase H (M42 accepted and the Phase G hold retired), never on M42 alone', () => {
-    expect(PHASE_HOLDS['ashen-waste']).toEqual(['story.phase.wasteOpen']);
+  it('the Waste opens on M42 accepted alone (L13 PR 2 retired the Phase G hold); the old hold flag opens nothing', () => {
+    expect(PHASE_HOLDS['ashen-waste']).toBeUndefined();
     const deep = { x: 9000, z: 7000 };
     for (const [name, flags] of Object.entries(STATES)) {
-      const open = Boolean((flags as Flags)['story.phase.wasteOpen'] && (flags as Flags)['story.m42.started']);
-      expect(containment(flags).isOpen(deep.x, deep.z), name).toBe(open);
+      expect(containment(flags).isOpen(deep.x, deep.z), name).toBe(Boolean((flags as Flags)['story.m42.started']));
     }
-    expect(containment({ ...STATES.phaseG, 'story.phase.wasteOpen': false }).isOpen(deep.x, deep.z)).toBe(false);
+    // an old Phase G save that still carries the flag, M42 not accepted: still shut
+    expect(containment({ ...STATES.phaseG, 'story.phase.wasteOpen': true }).isOpen(deep.x, deep.z)).toBe(false);
+    expect(containment({ ...STATES.phaseG, 'story.m42.started': true }).isOpen(deep.x, deep.z)).toBe(true);
   });
 
   it('the Caldera stays a closed hole in every Act 4 state, with its rim ground open around it in Phase H', () => {
     expect(CALDERA_HOLE.box).toEqual(CALDERA);
     for (const [name, flags] of Object.entries(STATES)) {
+      // v0.9: the Act 4 ending writes `story.gate.a5`, which opens the Caldera (act5Containment.test.ts has that grid).
+      if (name === 'actComplete') continue;
       const c = containment(flags);
       expect(c.isOpen((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2), name).toBe(false);
       expect(flagConditionHolds(CALDERA_HOLE.openWhen, reader(flags)), name).toBe(false);
@@ -111,7 +114,11 @@ describe('Act 4 containment over the states', () => {
     // A player inside the Caldera is placed back on Waste ground.
     const back = h.nearestOpen((CALDERA.x0 + CALDERA.x1) / 2, CALDERA.z0 + 10);
     expect(h.isOpen(back.x, back.z)).toBe(true);
-    expect(regionAt((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2)).toBeNull();
+    // v0.9: the Caldera is built, so regionAt names it (containment, not the region table, keeps Act 4 out).
+    expect(regionAt((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2)?.id).toBe('caldera');
+    const done = containment(STATES.actComplete);
+    expect(flagConditionHolds(CALDERA_HOLE.openWhen, reader(STATES.actComplete))).toBe(true);
+    expect(done.isOpen(11000, 6750)).toBe(true);
   });
 
   it("L1's north band: the Waste's north edge is closed both ways in every state, so the only way in is Ashgate", () => {
@@ -154,10 +161,11 @@ describe('Act 4 fog faces', () => {
     }
   });
 
-  it('fog.waste-edge: Hild before M41, the "not yet open" text in Phase G, open in Phase H', () => {
+  it('fog.waste-edge: Hild\'s line while it is shut (the hold is retired, so shut means no word from Wulfhild yet), open in Phase H', () => {
     const def = ACT4_FOG_WALLS.find((w) => w.id === 'fog.waste-edge')!;
     expect(fogToastKey(def, reader(STATES.occupied))).toBe(FOG_TOAST_WASTE_HILD);
-    expect(fogToastKey(def, reader(STATES.phaseG))).toBe(FOG_TOAST_WASTE_PHASE_G);
+    expect(fogToastKey(def, reader(STATES.phaseG))).toBe(FOG_TOAST_WASTE_HILD);
+    expect(fogToastKey(def, reader({ ...STATES.phaseG, 'story.phase.wasteOpen': true }))).toBe(FOG_TOAST_WASTE_HILD);
     expect(flagConditionHolds(def.openWhen, reader(STATES.phaseG))).toBe(false);
     expect(flagConditionHolds(def.openWhen, reader(STATES.phaseH))).toBe(true);
   });

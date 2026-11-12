@@ -33,6 +33,7 @@ import { makeLineOfSight } from './ai/perception';
 import { drainPlayer } from './fen/drain';
 import { makeLeechBody } from './fen/leech/body';
 import { makeHawkBody } from './peak/hawk/body';
+import { makeStriderBody, makeSwarmBody } from './waste/bodies';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import type { PerksService } from '../perks/types';
@@ -84,6 +85,13 @@ export interface EnemiesService {
   };
   /** Target choice: a taunter (the Iron Familiar) registers here and nearby enemies target it for its duration. */
   taunts: TauntService;
+  /**
+   * v0.9 additive (Act 5 N4): a provider names a longer dormancy range for some enemies (the siege's marching foes stay
+   * awake up to its range from the player, so a wave walks to the gate while Cael stands back in the court). The longest
+   * range any provider gives wins; undefined everywhere keeps `WORLD_AI.dormantDistance`. The `maxAwake` rank and the
+   * resident-ground check still apply. Returns the remover.
+   */
+  dormancy: { extend(provider: (actorId: ActorId) => number | undefined): Unregister };
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
@@ -211,6 +219,12 @@ export class EnemyManager {
       calmByThrow: (id) => this.calmByThrow(id),
     },
     taunts: { register: (s) => this.tauntRegistry.register(s) },
+    dormancy: {
+      extend: (provider) => {
+        this.dormancyProviders.add(provider);
+        return () => void this.dormancyProviders.delete(provider);
+      },
+    },
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
@@ -233,6 +247,17 @@ export class EnemyManager {
   }
 
   readonly tauntRegistry = new TauntRegistry();
+  private readonly dormancyProviders = new Set<(actorId: ActorId) => number | undefined>();
+
+  /** The dormancy range for `e`: the longest a provider names, never under the shipped one. */
+  private dormantDistanceFor(e: Enemy): number {
+    let d: number = WORLD_AI.dormantDistance;
+    for (const p of this.dormancyProviders) {
+      const r = p(e.id);
+      if (r !== undefined && Number.isFinite(r) && r > d) d = r;
+    }
+    return d;
+  }
 
   /** True for a registered boss actor (the core registry knows them). */
   private isBoss(actorId: ActorId): boolean {
@@ -342,6 +367,9 @@ export class EnemyManager {
         options: req.options,
         slot: req.slot,
         skin: req.skin,
+        ...(req.area ? { area: req.area } : {}),
+        ...(req.role ? { role: req.role } : {}),
+        ...(req.line ? { line: req.line } : {}),
       };
       const body = this.makeBody(def, req.skin);
       // Humanoid bodies draw the skin in the model builder (makeBody); the others (golem, crawler, quadruped, wyrm) take
@@ -399,6 +427,9 @@ export class EnemyManager {
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'leech') return makeLeechBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'bird') return makeHawkBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    // Act 4 L5: the Waste Strider (feet on the heightfield) and the Cinder Gnat cloud.
+    if (def.body === 'strider') return makeStriderBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), groundAt: (x, z) => this.host.heightAt(x, z) });
+    if (def.body === 'swarm') return makeSwarmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality: this.host.services.get('vfx')?.quality === 'low' });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
@@ -770,7 +801,7 @@ export class EnemyManager {
       const opt = self.def.tauntable;
       if (opt === false || (opt !== true && this.isBoss(self.id))) return null;
       if (self.spawnerId && this.spawners.defOf(self.spawnerId)?.untauntable) return null;
-      return this.tauntRegistry.pick(self.feet, self.tauntTarget);
+      return this.tauntRegistry.pick(self.feet, self.tauntTarget, self.id);
     },
     perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
@@ -1038,10 +1069,11 @@ export class EnemyManager {
       .map((e) => ({ e, d: e.feet.distanceTo(p) }))
       .sort((a, b) => a.d - b.d);
     ranked.forEach(({ e, d }, i) => {
+      const range = this.dormancyProviders.size > 0 ? this.dormantDistanceFor(e) : WORLD_AI.dormantDistance;
       // Hysteresis, so an enemy on the edge does not flip between sleep and wake every tick.
-      if (d > WORLD_AI.dormantDistance || i >= WORLD_AI.maxAwake) e.sleep();
+      if (d > range || i >= WORLD_AI.maxAwake) e.sleep();
       else if (!this.groundReady(e)) e.sleep();
-      else if (d < WORLD_AI.dormantDistance - WORLD_AI.wakeMargin && i < WORLD_AI.maxAwake - WORLD_AI.wakeRankMargin) e.wake();
+      else if (d < range - WORLD_AI.wakeMargin && i < WORLD_AI.maxAwake - WORLD_AI.wakeRankMargin) e.wake();
     });
   }
 

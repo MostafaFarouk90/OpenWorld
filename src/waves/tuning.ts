@@ -26,6 +26,9 @@ export const CART = {
   vanishSeconds: 0.6,
 } as const;
 
+/** N4 (Act 5): the siege's ram strikes again every `cycleSeconds` (the 1.0 s wind-back inside it) while the gate stands. */
+export const RAM = { cycleSeconds: 2.5 } as const;
+
 /** The barricade keeps one value: 400 health, so one leaked cart (250) is survivable and two fail. */
 export const BARRICADE = { maxHealth: 400 } as const;
 
@@ -72,6 +75,8 @@ export const DIRECTOR = {
   restartBeatSeconds: 3,
   /** The director runs only while the player is within this many metres of the barricade (and outdoors, not travelling). */
   activeRadius: 160,
+  /** N4: metres across the line between neighbouring lanes' join points (a set's `join` knob). */
+  joinSpacing: 1.5,
 } as const;
 
 /** Stable structure ids: `<defId>.cart.<wave>.<n>` (wave is the 0-based index, n counts from 1) and the def's barricade id. */

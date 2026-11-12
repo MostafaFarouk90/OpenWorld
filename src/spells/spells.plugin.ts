@@ -152,6 +152,12 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       zone: (): BurnZone => burn.zone(),
       feetY: () => ctx.player.feet.y,
       startLeap: (o) => ctx.player.leap(o),
+      // Act 5 N3: aimed at the far lip of a Surge crossing when one is near and faced (the lava service, if present).
+      aim: () => {
+        const lava = (ctx.services as { get?(n: string): unknown }).get?.('lava') as { aim?(feet: { x: number; z: number }, yaw: number): { yaw: number; distance: number } | null } | undefined;
+        const f = ctx.player.feet;
+        return lava?.aim?.({ x: f.x, z: f.z }, ctx.player.facingYaw) ?? null;
+      },
       useShard: (g, s, scarred) => void useShard(g, s, scarred),
       onLaunch() {
         const f = ctx.player.feet;

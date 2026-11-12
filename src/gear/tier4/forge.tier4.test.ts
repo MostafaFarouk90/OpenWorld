@@ -71,9 +71,9 @@ describe('forging tier 4', () => {
       expect(snap(inv)).toBe(before);
       expect(inv.spent).toEqual([]);
     });
-    it('no-recipe for a tier 4 piece', () => {
-      const inv = testInventory({ 'wyrm-tempered-oathblade': 1 }, 999);
-      expect(forgeItem(inv, 'wyrm-tempered-oathblade')).toEqual({ ok: false, reason: 'no-recipe' });
+    it('no-recipe for a tier 5 piece', () => {
+      const inv = testInventory({ 'sunforged-dawnbrand': 1 }, 999);
+      expect(forgeItem(inv, 'sunforged-dawnbrand')).toEqual({ ok: false, reason: 'no-recipe' });
     });
     it('gems when its shard-gems would not fit back', () => {
       const base = testInventory({ ...KNIGHT }, 500);

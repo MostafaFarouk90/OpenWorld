@@ -8,6 +8,12 @@ const range = (prefix: string, from: number, to: number): string[] => Array.from
 const common = { band: 'cinderreach', respawn: 'never' as const };
 /** R05's fog hounds: levels 9 to 11 (the Knight is 11 when R05 starts on the headless chain). */
 export const R05_FOG_BAND: LevelBand = { min: 9, max: 11 };
+/**
+ * Act 4 L14 (taste call, changes-applied "Act 4 L14"): R05's three fog hounds hit at 70% and carry 60% of their health.
+ * The headless fight (src/integration/r05Hounds.sim.test.ts) had a level 9 Knight dead 12 of 12 times without dodging and
+ * 5 of 12 dodging two pounces in three; with these, 3 of 12 and 0 of 12. Only this group: every other hound is unchanged.
+ */
+export const R05_FOG_OPTIONS = { damageScale: 0.7, healthScale: 0.6 } as const;
 
 /** Quest-scoped ground groups (the ambient ones are A6b's, src/enemies/act2Spawners.ts). Anchors are A3's. */
 export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
@@ -26,7 +32,7 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
   {
     id: 'q12.r05.fog', tag: 'r05.fog', enemy: 'ember-hound', count: 3, anchor: 'cinderreach.r05.track.1',
     memberAnchors: range('cinderreach.r05.track.', 1, 3), activation: { quest: 'r05', flag: 'story.r05.tracksFound' }, leash: true,
-    ...common, band: R05_FOG_BAND,
+    ...common, band: R05_FOG_BAND, options: R05_FOG_OPTIONS,
   },
   // R06: Pennard's rite draws two waves of wraiths from the well (manual, the director starts each)
   ...[1, 2].map((n): SpawnerDef => ({

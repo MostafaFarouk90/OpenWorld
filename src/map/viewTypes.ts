@@ -25,12 +25,31 @@ export interface MapViewModel {
   regions?(): RegionChip[];
   /** Act 3 block level chips (drawn under the region labels, and the legend warning); omitted when the view has no block data. */
   blocks?(): BlockChip[];
+  /** Act 4 (L9): lines drawn over the terrain under the markers (the Waste's rope-lines, revealed segments only). */
+  lines?(): MapLine[];
+  /** Act 4 (L9): small place names drawn beside their point (the Waste's places, once found). */
+  labels?(): MapLabel[];
   /** Caption for the minimap: the open region the player stands in, or null between regions. */
   regionCaption?(): string | null;
   travelBlockedReason(): string | null;
   /** Fast travel to a waystone id (without `waystone.` prefix). */
   travel(id: string): void;
   t(key: string, params?: Record<string, string | number>): string;
+}
+
+/** A polyline in engine metres; `style` picks the stroke (only `rope` today). */
+export interface MapLine {
+  id: string;
+  points: readonly { x: number; z: number }[];
+  style: 'rope';
+}
+
+/** A place name at a point (engine metres), already translated. */
+export interface MapLabel {
+  id: string;
+  x: number;
+  z: number;
+  text: string;
 }
 
 export interface MapViewDeps {

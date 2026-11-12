@@ -68,7 +68,8 @@ export function classOf(id: string): PlacementClass {
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
   if (/^(grass|flower)/.test(id)) return 'ground';
-  if (/^(hedge|picket|wattle|stonewall|fence_stone|scorched-fence)/.test(id)) return 'hedge';
+  // The Caldera's gate walls and door pieces (Act 5 N1 PR 2) are never thinned: a gap in a gate's wall or a missing portal at a door reads as a bug.
+  if (/^(hedge|picket|wattle|stonewall|fence_stone|scorched-fence|rim-wall|foundry-wall|cooling-hall-portal|tunnel-portal|foundry-stairhead|forge-gong-frame)/.test(id)) return 'hedge';
   return 'prop';
 }
 

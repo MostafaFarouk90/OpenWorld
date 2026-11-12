@@ -1,0 +1,1786 @@
+{
+  "fixture": "act5-phase-i-end-a.json",
+  "run": "a",
+  "preset": "marshal",
+  "chain": "N12 Phase I run A (marshal) on act5-carried-chain-a: M47 to M52 with R26 and R29, the Rim card",
+  "level": 34,
+  "xp": 111979,
+  "gold": 350,
+  "scars": 0,
+  "deaths": 0,
+  "favour": {
+    "halvard": 71,
+    "oswin": 20,
+    "grisel": 25,
+    "dragons": 10,
+    "ashwalkers": 19
+  },
+  "choices": {
+    "story.r26.choice": "long",
+    "siege.m52.wounded": "aelfreda",
+    "story.m52.gateHeld": true,
+    "story.m52.stood.halvard": true,
+    "story.m52.stood.grisel": false,
+    "story.m52.stood.ashwalker": false,
+    "story.m52.stood.dragons": true,
+    "story.m52.stood.supply": false
+  },
+  "phaseIQuestDefs": [
+    "m47",
+    "m48",
+    "m49",
+    "m50",
+    "m51",
+    "m52",
+    "r26",
+    "r29"
+  ],
+  "trails": {
+    "m47": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 5
+        },
+        {
+          "npc": "note-m47-journal",
+          "dialogueId": "note-m47-journal",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m47-inscription",
+          "dialogueId": "note-m47-inscription",
+          "nodes": 2
+        },
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 9
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 4
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 4
+        },
+        {
+          "npc": "note-m47-bell",
+          "dialogueId": "note-m47-bell",
+          "nodes": 2
+        },
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 6
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 4
+        }
+      ],
+      "scripted": [
+        "m47.sight: the scene played, 19 s"
+      ],
+      "order": [
+        "m47.wulfhild",
+        "m47.knot1",
+        "m47.hairpin",
+        "m47.journal",
+        "m47.knot2",
+        "m47.inscription",
+        "m47.winch",
+        "m47.alric",
+        "m47.sight",
+        "m47.edric",
+        "m47.rook",
+        "m47.brazier",
+        "m47.lamp",
+        "m47.bell",
+        "m47.stone",
+        "m47.report"
+      ]
+    },
+    "m48": {
+      "talks": [
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 10
+        },
+        {
+          "npc": "note-m48-marks",
+          "dialogueId": "note-m48-marks",
+          "nodes": 2
+        },
+        {
+          "npc": "m48-stoker-ghost",
+          "dialogueId": "npc-m48-stoker-ghost",
+          "nodes": 9
+        },
+        {
+          "npc": "note-m48-tally",
+          "dialogueId": "note-m48-tally",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m48-cache",
+          "dialogueId": "note-m48-cache",
+          "nodes": 2
+        },
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 9
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 3
+        }
+      ],
+      "scripted": [
+        "m48 channel 1: crossed by entering the far lip's trigger (no Leap or crust walk played)",
+        "m48 channel 2: crossed by entering the far lip's trigger (no Leap or crust walk played)",
+        "m48 channel 3: crossed by entering the far lip's trigger (no Leap or crust walk played)",
+        "m48 channel 4: crossed by entering the far lip's trigger (no Leap or crust walk played)",
+        "m48 channel 5: crossed by entering the far lip's trigger (no Leap or crust walk played)",
+        "m48.roar: the scene played, 14 s",
+        "m48 channel 6: crossed by entering the far lip's trigger (no Leap or crust walk played)"
+      ],
+      "order": [
+        "m48.vent1",
+        "m48.chan1",
+        "m48.marks",
+        "m48.lever1",
+        "m48.chan2",
+        "m48.golems",
+        "m48.vent2",
+        "m48.chan3",
+        "m48.ghost",
+        "m48.vent3",
+        "m48.chan4",
+        "m48.tally",
+        "m48.lever2",
+        "m48.chan5",
+        "m48.gnats",
+        "m48.vent4",
+        "m48.roar",
+        "m48.chan6",
+        "m48.cache",
+        "m48.report"
+      ]
+    },
+    "m49": {
+      "talks": [
+        {
+          "npc": "hrolf",
+          "dialogueId": "npc-hrolf",
+          "nodes": 6
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 6
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 6
+        },
+        {
+          "npc": "wenna",
+          "dialogueId": "npc-wenna",
+          "nodes": 6
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 6
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 6
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 6
+        },
+        {
+          "npc": "maud",
+          "dialogueId": "npc-maud",
+          "nodes": 4
+        },
+        {
+          "npc": "note-m49-plan",
+          "dialogueId": "note-m49-plan",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m49-tally",
+          "dialogueId": "note-m49-tally",
+          "nodes": 2
+        },
+        {
+          "npc": "scene.m49.table",
+          "dialogueId": "scene-m49-table",
+          "nodes": 11
+        },
+        {
+          "npc": "hrolf",
+          "dialogueId": "npc-hrolf",
+          "nodes": 4
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 9
+        }
+      ],
+      "scripted": [
+        "m49.rise: the scene played, 11 s"
+      ],
+      "order": [
+        "m49.signal",
+        "m49.arrive",
+        "m49.wystan",
+        "m49.merrin",
+        "m49.wenna",
+        "m49.wulfhild",
+        "m49.rook",
+        "m49.edric",
+        "m49.maud",
+        "m49.plan",
+        "m49.tally",
+        "m49.banners",
+        "m49.rise",
+        "m49.table",
+        "m49.post-brace",
+        "m49.post-crates",
+        "m49.post-wall",
+        "m49.report"
+      ]
+    },
+    "r26": {
+      "talks": [
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 6
+        },
+        {
+          "npc": "r26-guard-1",
+          "dialogueId": "npc-r26-guard-1",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r26-manifest",
+          "dialogueId": "note-r26-manifest",
+          "nodes": 2
+        },
+        {
+          "npc": "r26-convoy-master",
+          "dialogueId": "npc-r26-convoy-master",
+          "nodes": 7
+        },
+        {
+          "npc": "note-r26-waybill",
+          "dialogueId": "note-r26-waybill",
+          "nodes": 2
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 5
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 2
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "r26.guard",
+        "r26.manifest",
+        "r26.master",
+        "r26.load",
+        "r26.halt1",
+        "r26.halt2",
+        "r26.road",
+        "r26.in",
+        "r26.unload",
+        "r26.waybill",
+        "r26.report"
+      ]
+    },
+    "r29": {
+      "talks": [
+        {
+          "npc": "ansgar",
+          "dialogueId": "npc-ansgar",
+          "nodes": 6
+        },
+        {
+          "npc": "r29-stoker-1",
+          "dialogueId": "npc-r29-stoker-1",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r29-post-1",
+          "dialogueId": "note-r29-post-1",
+          "nodes": 2
+        },
+        {
+          "npc": "r29-stoker-2",
+          "dialogueId": "npc-r29-stoker-2",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r29-post-2",
+          "dialogueId": "note-r29-post-2",
+          "nodes": 2
+        },
+        {
+          "npc": "r29-stoker-3",
+          "dialogueId": "npc-r29-stoker-3",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r29-post-3",
+          "dialogueId": "note-r29-post-3",
+          "nodes": 2
+        },
+        {
+          "npc": "ansgar",
+          "dialogueId": "npc-ansgar",
+          "nodes": 6
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 3
+        }
+      ],
+      "scripted": [
+        "r29.strike: 1 bar struck on the beat"
+      ],
+      "order": [
+        "r29.ghost1",
+        "r29.search1",
+        "r29.dead1",
+        "r29.carry1",
+        "r29.ghost2",
+        "r29.search2",
+        "r29.dead2",
+        "r29.carry2",
+        "r29.ghost3",
+        "r29.search3",
+        "r29.dead3",
+        "r29.carry3",
+        "r29.hang",
+        "r29.strike",
+        "r29.sound",
+        "r29.report"
+      ]
+    },
+    "m50": {
+      "talks": [
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 9
+        },
+        {
+          "npc": "m50-keeper-ghost",
+          "dialogueId": "npc-m50-keeper-ghost",
+          "nodes": 9
+        },
+        {
+          "npc": "note-m50-chart",
+          "dialogueId": "note-m50-chart",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m50-key",
+          "dialogueId": "note-m50-key",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m50-mark",
+          "dialogueId": "note-m50-mark",
+          "nodes": 2
+        },
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 8
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 2
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m50.keeper",
+        "m50.chart",
+        "m50.chan1",
+        "m50.golems2",
+        "m50.key",
+        "m50.chan2",
+        "m50.golems3",
+        "m50.chan3",
+        "m50.cool",
+        "m50.golems4",
+        "m50.mark",
+        "m50.report"
+      ]
+    },
+    "m51": {
+      "talks": [
+        {
+          "npc": "scene.m51.call",
+          "dialogueId": "scene-m51-call",
+          "nodes": 6
+        },
+        {
+          "npc": "alric",
+          "dialogueId": "npc-alric",
+          "nodes": 6
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 5
+        },
+        {
+          "npc": "ysmeryth",
+          "dialogueId": "npc-ysmeryth",
+          "nodes": 9
+        },
+        {
+          "npc": "orsk",
+          "dialogueId": "npc-orsk",
+          "nodes": 5
+        },
+        {
+          "npc": "hathren",
+          "dialogueId": "npc-hathren",
+          "nodes": 5
+        },
+        {
+          "npc": "m51-scout-captain",
+          "dialogueId": "npc-m51-scout-captain",
+          "nodes": 5
+        },
+        {
+          "npc": "note-m51-orders",
+          "dialogueId": "note-m51-orders",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m51-bones",
+          "dialogueId": "note-m51-bones",
+          "nodes": 2
+        },
+        {
+          "npc": "ysmeryth",
+          "dialogueId": "npc-ysmeryth",
+          "nodes": 4
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 6
+        }
+      ],
+      "scripted": [
+        "m51.fires: the scene played, 12 s"
+      ],
+      "order": [
+        "m51.alric",
+        "m51.edric",
+        "m51.stone",
+        "m51.landed",
+        "m51.ysmeryth",
+        "m51.orsk",
+        "m51.hathren",
+        "m51.fires",
+        "m51.scouts",
+        "m51.captain",
+        "m51.orders",
+        "m51.bones",
+        "m51.report"
+      ]
+    },
+    "m52": {
+      "talks": [
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 6
+        },
+        {
+          "npc": "aelfreda",
+          "dialogueId": "npc-aelfreda-companion",
+          "nodes": 2
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 9
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 7
+        }
+      ],
+      "scripted": [
+        "m52.stairs: the scene played, 12 s"
+      ],
+      "order": [
+        "m52.stairs",
+        "m52.start",
+        "m52.wave1",
+        "m52.wave2",
+        "m52.wave3",
+        "m52.guard",
+        "m52.wave4",
+        "m52.holds",
+        "m52.wounded-aelfreda",
+        "m52.report"
+      ]
+    }
+  },
+  "act4Trails": {
+    "m35": {
+      "talks": [
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 7
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 3
+        },
+        {
+          "npc": "vey-guard-counting-1",
+          "dialogueId": "npc-vey-guard-counting-1",
+          "nodes": 2
+        },
+        {
+          "npc": "aldric-cole",
+          "dialogueId": "npc-aldric-cole",
+          "nodes": 3
+        },
+        {
+          "npc": "vey-guard-keep-road-s-1",
+          "dialogueId": "npc-vey-guard-keep-road-s-1",
+          "nodes": 2
+        },
+        {
+          "npc": "grisel-steward",
+          "dialogueId": "npc-grisel-steward",
+          "nodes": 4
+        },
+        {
+          "npc": "vey-guard-river-gate-1",
+          "dialogueId": "npc-vey-guard-river-gate-1",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m35-ledger",
+          "dialogueId": "note-m35-ledger",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m35-mask",
+          "dialogueId": "note-m35-mask",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m35-orders",
+          "dialogueId": "note-m35-orders",
+          "nodes": 2
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 6
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m35.oswin",
+        "m35.oswinPass",
+        "m35.oswinIn",
+        "m35.halvard",
+        "m35.halvardPass",
+        "m35.halvardIn",
+        "m35.grisel",
+        "m35.chain",
+        "m35.griselPass",
+        "m35.ambush",
+        "m35.search",
+        "m35.search",
+        "m35.search",
+        "m35.griselIn",
+        "m35.entered",
+        "m35.report"
+      ]
+    },
+    "m36": {
+      "talks": [
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 9
+        },
+        {
+          "npc": "note-m36-ledger",
+          "dialogueId": "note-m36-ledger",
+          "nodes": 2
+        },
+        {
+          "npc": "aldric-cole",
+          "dialogueId": "npc-aldric-cole",
+          "nodes": 6
+        },
+        {
+          "npc": "note-m36-page",
+          "dialogueId": "note-m36-page",
+          "nodes": 2
+        },
+        {
+          "npc": "wilmot-penn",
+          "dialogueId": "npc-wilmot-penn",
+          "nodes": 6
+        },
+        {
+          "npc": "scene.m36.daggerman",
+          "dialogueId": "scene-m36-daggerman",
+          "nodes": 5
+        },
+        {
+          "npc": "note-m36-drop",
+          "dialogueId": "note-m36-drop",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m36-letters",
+          "dialogueId": "note-m36-letters",
+          "nodes": 2
+        },
+        {
+          "npc": "wenna",
+          "dialogueId": "npc-wenna",
+          "nodes": 3
+        },
+        {
+          "npc": "grisel-steward",
+          "dialogueId": "npc-grisel-steward",
+          "nodes": 7
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 5
+        }
+      ],
+      "scripted": [
+        "m36 rooftops: teleported checkpoint to checkpoint (the watch loop not played)"
+      ],
+      "order": [
+        "m36.ledger",
+        "m36.halvard",
+        "m36.page",
+        "m36.oswin",
+        "m36.rooftops",
+        "m36.dagger",
+        "m36.daggerman",
+        "m36.drop",
+        "m36.letters",
+        "m36.grisel",
+        "m36.chalk",
+        "m36.report"
+      ]
+    },
+    "r19": {
+      "talks": [
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 7
+        },
+        {
+          "npc": "note-r19-roll",
+          "dialogueId": "note-r19-roll",
+          "nodes": 2
+        },
+        {
+          "npc": "captain-hesketh",
+          "dialogueId": "npc-captain-hesketh",
+          "nodes": 4
+        },
+        {
+          "npc": "captain-morwen",
+          "dialogueId": "npc-captain-morwen",
+          "nodes": 4
+        },
+        {
+          "npc": "captain-bran",
+          "dialogueId": "npc-captain-bran",
+          "nodes": 3
+        },
+        {
+          "npc": "captain-bran",
+          "dialogueId": "npc-captain-bran",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r19-letter",
+          "dialogueId": "note-r19-letter",
+          "nodes": 2
+        },
+        {
+          "npc": "captain-tolly",
+          "dialogueId": "npc-captain-tolly",
+          "nodes": 4
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 5
+        }
+      ],
+      "scripted": [
+        "r19 bout: won in 17 blows, 6 s"
+      ],
+      "order": [
+        "r19.roll",
+        "r19.archers",
+        "r19.pikes",
+        "r19.deserters",
+        "r19.bout",
+        "r19.horse",
+        "r19.letter",
+        "r19.engineers",
+        "r19.banners",
+        "r19.banners",
+        "r19.horn",
+        "r19.report"
+      ]
+    },
+    "r20": {
+      "talks": [
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 11
+        },
+        {
+          "npc": "note-r20-manifest",
+          "dialogueId": "note-r20-manifest",
+          "nodes": 2
+        },
+        {
+          "npc": "r20-sergeant-1",
+          "dialogueId": "npc-r20-sergeant-1",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r20-tally-1",
+          "dialogueId": "note-r20-tally-1",
+          "nodes": 2
+        },
+        {
+          "npc": "r20-sergeant-2",
+          "dialogueId": "npc-r20-sergeant-2",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r20-tally-2",
+          "dialogueId": "note-r20-tally-2",
+          "nodes": 2
+        },
+        {
+          "npc": "r20-sergeant-3",
+          "dialogueId": "npc-r20-sergeant-3",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r20-tally-3",
+          "dialogueId": "note-r20-tally-3",
+          "nodes": 2
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 5
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "r20.manifest",
+        "r20.load",
+        "r20.cp1",
+        "r20.tally1",
+        "r20.cp2",
+        "r20.tally2",
+        "r20.cp3",
+        "r20.tally3",
+        "r20.through",
+        "r20.report"
+      ]
+    },
+    "r21": {
+      "talks": [
+        {
+          "npc": "wenna",
+          "dialogueId": "npc-wenna",
+          "nodes": 8
+        },
+        {
+          "npc": "cellar-keeper",
+          "dialogueId": "npc-cellar-keeper",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r21-cellar",
+          "dialogueId": "note-r21-cellar",
+          "nodes": 2
+        },
+        {
+          "npc": "note-r21-chalk",
+          "dialogueId": "note-r21-chalk",
+          "nodes": 2
+        },
+        {
+          "npc": "wenna",
+          "dialogueId": "npc-wenna",
+          "nodes": 5
+        }
+      ],
+      "scripted": [
+        "r21 lanes: teleported checkpoint to checkpoint (the watch loop not played)"
+      ],
+      "order": [
+        "r21.keeper",
+        "r21.door",
+        "r21.cellar",
+        "r21.lanes",
+        "r21.patrol",
+        "r21.chalk",
+        "r21.grate",
+        "r21.out",
+        "r21.report"
+      ]
+    },
+    "r22": {
+      "talks": [
+        {
+          "npc": "dunstan",
+          "dialogueId": "npc-dunstan",
+          "nodes": 7
+        },
+        {
+          "npc": "note-r22-drawing",
+          "dialogueId": "note-r22-drawing",
+          "nodes": 2
+        },
+        {
+          "npc": "r22-local-cinderreach",
+          "dialogueId": "npc-r22-local-cinderreach",
+          "nodes": 3
+        },
+        {
+          "npc": "r22-local-greyfen",
+          "dialogueId": "npc-r22-local-greyfen",
+          "nodes": 3
+        },
+        {
+          "npc": "r22-local-dragonspine",
+          "dialogueId": "npc-r22-local-dragonspine",
+          "nodes": 3
+        },
+        {
+          "npc": "dunstan",
+          "dialogueId": "npc-dunstan",
+          "nodes": 5
+        },
+        {
+          "npc": "dunstan",
+          "dialogueId": "npc-dunstan",
+          "nodes": 8
+        }
+      ],
+      "scripted": [
+        "r22.forge1: 1 bar struck on the beat",
+        "r22.forge2: 1 bar struck on the beat"
+      ],
+      "order": [
+        "r22.drawing",
+        "r22.star-ironTalk",
+        "r22.star-ironGuards",
+        "r22.star-ironFind",
+        "r22.bog-oakTalk",
+        "r22.bog-oakGuards",
+        "r22.bog-oakFind",
+        "r22.rime-ironTalk",
+        "r22.rime-ironGuards",
+        "r22.rime-ironFind",
+        "r22.bring",
+        "r22.bellows",
+        "r22.forge1",
+        "r22.quench",
+        "r22.forge2",
+        "r22.hilt",
+        "r22.choose"
+      ]
+    },
+    "r23": {
+      "talks": [
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 6
+        },
+        {
+          "npc": "witness-barracks",
+          "dialogueId": "npc-witness-barracks",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r23-order-1",
+          "dialogueId": "note-r23-order-1",
+          "nodes": 2
+        },
+        {
+          "npc": "witness-gatehouse",
+          "dialogueId": "npc-witness-gatehouse",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r23-order-2",
+          "dialogueId": "note-r23-order-2",
+          "nodes": 2
+        },
+        {
+          "npc": "witness-stables",
+          "dialogueId": "npc-witness-stables",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r23-order-3",
+          "dialogueId": "note-r23-order-3",
+          "nodes": 2
+        },
+        {
+          "npc": "witness-chapel",
+          "dialogueId": "npc-witness-chapel",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r23-order-4",
+          "dialogueId": "note-r23-order-4",
+          "nodes": 2
+        },
+        {
+          "npc": "witness-anvil",
+          "dialogueId": "npc-witness-anvil",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r23-order-5",
+          "dialogueId": "note-r23-order-5",
+          "nodes": 2
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 5
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 4
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "r23.w1",
+        "r23.o1",
+        "r23.w2",
+        "r23.o2",
+        "r23.w3",
+        "r23.o3",
+        "r23.forger",
+        "r23.w4",
+        "r23.o4",
+        "r23.w5",
+        "r23.o5",
+        "r23.choose",
+        "r23.expose",
+        "r23.report"
+      ]
+    },
+    "d07": {
+      "talks": [
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 6
+        },
+        {
+          "npc": "crucible-captive",
+          "dialogueId": "npc-crucible-captive",
+          "nodes": 6
+        },
+        {
+          "npc": "note-d07-stamp",
+          "dialogueId": "note-d07-stamp",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d07-tally",
+          "dialogueId": "note-d07-tally",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d07-ledgers",
+          "dialogueId": "note-d07-ledgers",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d07-log",
+          "dialogueId": "note-d07-log",
+          "nodes": 2
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 5
+        }
+      ],
+      "scripted": [
+        "d07 Bellows-Engine: beaten through L6's winBellowsForTest (each phase's live valve shut after a full bar), 36 s"
+      ],
+      "order": [
+        "d07.enter",
+        "d07.captive",
+        "d07.halls",
+        "d07.stamp",
+        "d07.tally",
+        "d07.forge",
+        "d07.ledgers",
+        "d07.log",
+        "d07.valves",
+        "d07.boss",
+        "d07.report"
+      ]
+    },
+    "m37": {
+      "talks": [
+        {
+          "npc": "tobb",
+          "dialogueId": "npc-tobb",
+          "nodes": 7
+        },
+        {
+          "npc": "scene.m37.tobb",
+          "dialogueId": "scene-m37-tobb",
+          "nodes": 7
+        },
+        {
+          "npc": "scene.m37.hrolf",
+          "dialogueId": "scene-m37-hrolf",
+          "nodes": 7
+        },
+        {
+          "npc": "scene.m37.aelfreda",
+          "dialogueId": "scene-m37-aelfreda",
+          "nodes": 7
+        },
+        {
+          "npc": "gaut",
+          "dialogueId": "npc-gaut",
+          "nodes": 7
+        },
+        {
+          "npc": "scene.m37.toast",
+          "dialogueId": "scene-m37-toast",
+          "nodes": 8
+        }
+      ],
+      "scripted": [
+        "m37.song: 1 bar struck on the beat"
+      ],
+      "order": [
+        "m37.feast",
+        "m37.tobb",
+        "m37.hrolf",
+        "m37.aelfreda",
+        "m37.song",
+        "m37.gaut",
+        "m37.toast"
+      ]
+    },
+    "m38": {
+      "talks": [
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 5
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 10
+        },
+        {
+          "npc": "merrin",
+          "dialogueId": "npc-merrin",
+          "nodes": 10
+        },
+        {
+          "npc": "wenna",
+          "dialogueId": "npc-wenna",
+          "nodes": 9
+        },
+        {
+          "npc": "scene.m38.case",
+          "dialogueId": "scene-m38-case",
+          "nodes": 14
+        },
+        {
+          "npc": "note-m38-list",
+          "dialogueId": "note-m38-list",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m38-seal",
+          "dialogueId": "note-m38-seal",
+          "nodes": 2
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 8
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 8
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m38.enter",
+        "m38.wystan",
+        "m38.merrin",
+        "m38.wenna",
+        "m38.evidence",
+        "m38.turn",
+        "m38.fight",
+        "m38.search",
+        "m38.search",
+        "m38.rally"
+      ]
+    },
+    "m39": {
+      "talks": [
+        {
+          "npc": "gaut",
+          "dialogueId": "npc-gaut",
+          "nodes": 7
+        },
+        {
+          "npc": "scene.m39.breath",
+          "dialogueId": "scene-m39-breath",
+          "nodes": 8
+        },
+        {
+          "npc": "note-m39-token",
+          "dialogueId": "note-m39-token",
+          "nodes": 2
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 8
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 7
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m39.gaut",
+        "m39.stairhead",
+        "m39.barricade",
+        "m39.hold",
+        "m39.fall",
+        "m39.token",
+        "m39.edric"
+      ]
+    },
+    "m40": {
+      "talks": [
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 8
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "scene-m40-junction-2",
+          "nodes": 7
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "scene-m40-junction-3",
+          "nodes": 7
+        }
+      ],
+      "scripted": [
+        "m40.out: 2 junction talks"
+      ],
+      "order": [
+        "m40.enter",
+        "m40.den1",
+        "m40.sluice",
+        "m40.out"
+      ]
+    },
+    "m41": {
+      "talks": [
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 14
+        },
+        {
+          "npc": "rook",
+          "dialogueId": "npc-rook",
+          "nodes": 8
+        },
+        {
+          "npc": "wystan",
+          "dialogueId": "npc-wystan",
+          "nodes": 6
+        },
+        {
+          "npc": "note-m41-grandfather",
+          "dialogueId": "note-m41-grandfather",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m41-tunnel",
+          "dialogueId": "note-m41-tunnel",
+          "nodes": 2
+        },
+        {
+          "npc": "edric",
+          "dialogueId": "npc-edric",
+          "nodes": 4
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 7
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m41.gather",
+        "m41.edric",
+        "m41.rook",
+        "m41.wystan",
+        "m41.camp",
+        "m41.camp",
+        "m41.search",
+        "m41.search",
+        "m41.ashgate"
+      ]
+    },
+    "m42": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 7
+        },
+        {
+          "npc": "hild-ropewright",
+          "dialogueId": "npc-hild-ropewright",
+          "nodes": 6
+        },
+        {
+          "npc": "note-m42-pack",
+          "dialogueId": "note-m42-pack",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m42-knot",
+          "dialogueId": "note-m42-knot",
+          "nodes": 2
+        },
+        {
+          "npc": "walker-knots",
+          "dialogueId": "npc-walker-knots",
+          "nodes": 5
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 6
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m42.clip",
+        "m42.gate",
+        "m42.shelter1",
+        "m42.striders",
+        "m42.shelter2",
+        "m42.pack",
+        "m42.shelter3",
+        "m42.wraiths",
+        "m42.shelter4",
+        "m42.knot",
+        "m42.camp",
+        "m42.unclip",
+        "m42.report"
+      ]
+    },
+    "m43": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 7
+        },
+        {
+          "npc": "walker-knots",
+          "dialogueId": "npc-walker-knots",
+          "nodes": 7
+        },
+        {
+          "npc": "walker-pyres",
+          "dialogueId": "npc-walker-pyres",
+          "nodes": 5
+        },
+        {
+          "npc": "hrodna",
+          "dialogueId": "npc-hrodna",
+          "nodes": 5
+        },
+        {
+          "npc": "note-m43-count-stones",
+          "dialogueId": "note-m43-count-stones",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m43-spear-rack",
+          "dialogueId": "note-m43-spear-rack",
+          "nodes": 2
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 7
+        }
+      ],
+      "scripted": [
+        "m43.walk (the count): 1 bar struck on the beat",
+        "m43 Storm Walk: walked knot to knot by teleport along the rope (the lees waited out in full)",
+        "m43 Spear-Dance: won in 17 breaks through the damage service, 6 s"
+      ],
+      "order": [
+        "m43.walkTalk",
+        "m43.walk",
+        "m43.pyresTalk",
+        "m43.pyres",
+        "m43.danceTalk",
+        "m43.dance",
+        "m43.lore",
+        "m43.lore",
+        "m43.welcome"
+      ]
+    },
+    "m44": {
+      "talks": [
+        {
+          "npc": "ebba",
+          "dialogueId": "npc-ebba",
+          "nodes": 5
+        },
+        {
+          "npc": "chapel-keeper",
+          "dialogueId": "npc-chapel-keeper",
+          "nodes": 5
+        },
+        {
+          "npc": "note-m44-family-book",
+          "dialogueId": "note-m44-family-book",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-letter",
+          "dialogueId": "note-m44-letter",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-cradle",
+          "dialogueId": "note-m44-cradle",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-toy",
+          "dialogueId": "note-m44-toy",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-sampler",
+          "dialogueId": "note-m44-sampler",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-ledger",
+          "dialogueId": "note-m44-ledger",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m44-graves",
+          "dialogueId": "note-m44-graves",
+          "nodes": 2
+        },
+        {
+          "npc": "chapel-keeper",
+          "dialogueId": "npc-chapel-keeper",
+          "nodes": 7
+        },
+        {
+          "npc": "ebba",
+          "dialogueId": "npc-ebba",
+          "nodes": 7
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "m44.keeper",
+        "m44.house1",
+        "m44.house1",
+        "m44.nest",
+        "m44.house2",
+        "m44.house2",
+        "m44.house3",
+        "m44.house3",
+        "m44.box",
+        "m44.graves",
+        "m44.aedre",
+        "m44.report"
+      ]
+    },
+    "r25": {
+      "talks": [
+        {
+          "npc": "ebba",
+          "dialogueId": "npc-ebba",
+          "nodes": 4
+        },
+        {
+          "npc": "note-r25-name-1",
+          "dialogueId": "note-r25-name-1",
+          "nodes": 2
+        },
+        {
+          "npc": "note-r25-name-2",
+          "dialogueId": "note-r25-name-2",
+          "nodes": 2
+        },
+        {
+          "npc": "note-r25-name-3",
+          "dialogueId": "note-r25-name-3",
+          "nodes": 2
+        },
+        {
+          "npc": "note-r25-register",
+          "dialogueId": "note-r25-register",
+          "nodes": 2
+        },
+        {
+          "npc": "note-r25-letter",
+          "dialogueId": "note-r25-letter",
+          "nodes": 2
+        },
+        {
+          "npc": "chapel-keeper",
+          "dialogueId": "npc-chapel-keeper",
+          "nodes": 5
+        },
+        {
+          "npc": "ebba",
+          "dialogueId": "npc-ebba",
+          "nodes": 6
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "r25.name1",
+        "r25.light1",
+        "r25.name2",
+        "r25.light2",
+        "r25.knot",
+        "r25.name3",
+        "r25.light3",
+        "r25.register",
+        "r25.register",
+        "r25.aedre",
+        "r25.report"
+      ]
+    },
+    "r24": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 8
+        },
+        {
+          "npc": "walker-carter",
+          "dialogueId": "npc-walker-carter",
+          "nodes": 5
+        },
+        {
+          "npc": "note-r24-spring",
+          "dialogueId": "note-r24-spring",
+          "nodes": 2
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 5
+        }
+      ],
+      "scripted": [],
+      "order": [
+        "r24.carter",
+        "r24.spring",
+        "r24.load",
+        "r24.brake1",
+        "r24.brake2",
+        "r24.arrive",
+        "r24.choose",
+        "r24.unload"
+      ]
+    },
+    "m45": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 6
+        },
+        {
+          "npc": "note-m45-plaque-1",
+          "dialogueId": "note-m45-plaque-1",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m45-plaque-2",
+          "dialogueId": "note-m45-plaque-2",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m45-plaque-3",
+          "dialogueId": "note-m45-plaque-3",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m45-tally",
+          "dialogueId": "note-m45-tally",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m45-shard",
+          "dialogueId": "note-m45-shard",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m45-cracked",
+          "dialogueId": "note-m45-cracked",
+          "nodes": 2
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 5
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 6
+        }
+      ],
+      "scripted": [
+        "m45 chime: 3 phrases struck on the beat with the attack keys"
+      ],
+      "order": [
+        "m45.meet",
+        "m45.guard",
+        "m45.plaques",
+        "m45.plaques",
+        "m45.plaques",
+        "m45.search",
+        "m45.search",
+        "m45.search",
+        "m45.chime",
+        "m45.voice",
+        "m45.report"
+      ]
+    },
+    "d08": {
+      "talks": [
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 7
+        },
+        {
+          "npc": "dying-walker",
+          "dialogueId": "npc-dying-walker",
+          "nodes": 6
+        },
+        {
+          "npc": "note-d08-bones",
+          "dialogueId": "note-d08-bones",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d08-gong-rope",
+          "dialogueId": "note-d08-gong-rope",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d08-tablets",
+          "dialogueId": "note-d08-tablets",
+          "nodes": 2
+        },
+        {
+          "npc": "note-d08-niche",
+          "dialogueId": "note-d08-niche",
+          "nodes": 2
+        },
+        {
+          "npc": "wulfhild",
+          "dialogueId": "npc-wulfhild",
+          "nodes": 5
+        }
+      ],
+      "scripted": [
+        "d08 Eormen: defeated through L6's winEormenForTest (gong only at each floor), 17 s"
+      ],
+      "order": [
+        "d08.dying",
+        "d08.enter",
+        "d08.knights",
+        "d08.bones",
+        "d08.rope",
+        "d08.boss",
+        "d08.tablets",
+        "d08.niche",
+        "d08.report"
+      ]
+    },
+    "m46": {
+      "talks": [
+        {
+          "npc": "hrolf",
+          "dialogueId": "npc-hrolf",
+          "nodes": 6
+        },
+        {
+          "npc": "cairn-walker-1",
+          "dialogueId": "npc-cairn-walker-1",
+          "nodes": 4
+        },
+        {
+          "npc": "note-m46-mark-1",
+          "dialogueId": "note-m46-mark-1",
+          "nodes": 2
+        },
+        {
+          "npc": "cairn-walker-2",
+          "dialogueId": "npc-cairn-walker-2",
+          "nodes": 4
+        },
+        {
+          "npc": "note-m46-mark-2",
+          "dialogueId": "note-m46-mark-2",
+          "nodes": 2
+        },
+        {
+          "npc": "cairn-walker-3",
+          "dialogueId": "npc-cairn-walker-3",
+          "nodes": 3
+        },
+        {
+          "npc": "note-m46-lore-1",
+          "dialogueId": "note-m46-lore-1",
+          "nodes": 2
+        },
+        {
+          "npc": "note-m46-lore-2",
+          "dialogueId": "note-m46-lore-2",
+          "nodes": 2
+        },
+        {
+          "npc": "hrolf",
+          "dialogueId": "npc-hrolf",
+          "nodes": 4
+        },
+        {
+          "npc": "scene-lines",
+          "dialogueId": "scene-lines",
+          "nodes": 3
+        }
+      ],
+      "scripted": [
+        "m46.rim: the scene played, 14 s"
+      ],
+      "order": [
+        "m46.keeper1",
+        "m46.wave1",
+        "m46.mark1",
+        "m46.light1",
+        "m46.keeper2",
+        "m46.wave2",
+        "m46.mark2",
+        "m46.light2",
+        "m46.outriders",
+        "m46.keeper3",
+        "m46.wave3",
+        "m46.lore",
+        "m46.lore",
+        "m46.rim",
+        "m46.report"
+      ]
+    }
+  },
+  "generatedBy": "SAVE_PHASE_I_END=1 npm run test:chains -- src/integration/phaseI.runA"
+}

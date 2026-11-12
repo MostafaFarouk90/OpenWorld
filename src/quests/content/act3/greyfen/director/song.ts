@@ -26,7 +26,11 @@ export interface SongPorts {
 export const WIDEN_AFTER = 3;
 /** ...and after this many the next bar is sung for the player. */
 export const ASSIST_AFTER = 5;
-export const WIDE_GOOD_MS = 260;
+/**
+ * Act 4 L14: was 260 ms, but the song's tier-2 bar has strikes 2 steps (319 ms at 94 BPM) apart, so a late press could
+ * claim the next strike and a fair one become a stray. Below half of 319 ms the windows never touch (as the chime's 155).
+ */
+export const WIDE_GOOD_MS = 155;
 
 /** What the song bar draws: the pattern steps, each strike's judgement, the playhead in steps (negative in the count-in). */
 export interface SongView { kind: SongKind; steps: readonly number[]; judged: (Judgement | null)[]; position: number; stepsInBar: number; wide: boolean }

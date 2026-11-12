@@ -3,7 +3,7 @@
 // teleport target that falls inside to the M41 camp (before M41) or the Ashgate refuge rest (after), and the city's
 // stones go dark. Interiors are exempt (their floors are 150 m up and follow the interior rules).
 import { flagConditionHolds, type FlagReader } from '../core/flagCondition';
-import { OCCUPIED_FLAG } from '../region/act4Containment';
+import { harrowmarkOccupied } from '../region/act4Containment';
 import type { PlacementRule } from '../waystones/types';
 import { WAYSTONE_DARK } from '../waystones/tuning';
 import { insideRingPolygon } from './act4/ringWall';
@@ -43,7 +43,7 @@ export function strandTarget(flags: FlagReader): string {
 export function createNoStrandRule(d: NoStrandDeps): PlacementRule {
   const warned = new Set<string>();
   return (t) => {
-    if (!d.flags.getFlag(OCCUPIED_FLAG)) return null;
+    if (!harrowmarkOccupied(d.flags)) return null;
     if (!insideRingWall(t.feet.x, t.feet.z)) return null;
     if (t.feet.y - d.heightAt(t.feet.x, t.feet.z) > INTERIOR_MIN_HEIGHT) return null;
     const id = strandTarget(d.flags);
@@ -63,5 +63,5 @@ export function createNoStrandRule(d: NoStrandDeps): PlacementRule {
 export function stoneIsDark(id: string, at: { x: number; z: number } | undefined, flags: FlagReader): boolean {
   const when = WAYSTONE_DARK[id];
   if (when && flagConditionHolds(when, flags)) return true;
-  return Boolean(at && flags.getFlag(OCCUPIED_FLAG) && insideRingWall(at.x, at.z));
+  return Boolean(at && harrowmarkOccupied(flags) && insideRingWall(at.x, at.z));
 }

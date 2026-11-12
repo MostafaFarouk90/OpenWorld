@@ -1,0 +1,47 @@
+// The anchor ids I read from L1 (plans/act4-L1.md s.16, and the narthex, crypt and knot ids asked for in plans/act4-L11.md s.8).
+// Checked against L1's branch at 9ee0ec3 (src/waste/WASTE_ANCHORS.md). One table, so a rename on L1's side is one edit here. Positions are never copied: anchors that sit beside these are `near`
+// anchors resolved at runtime, and the pacing rows read L1's layout exports.
+export const L1 = {
+  ashgateArch: 'ashgate.arch',
+  hildPost: 'npc-post.hild',
+  campCentre: 'waste.walker-camp',
+  wulfhildCamp: 'npc-post.wulfhild.camp',
+  hrodnaCamp: 'npc-post.hrodna.camp',
+  walkerPost: (n: number) => `npc-post.walker.${n}.camp`,
+  carterCamp: 'npc-post.carter.camp',
+  campGate: 'waste.walker-camp.gate',
+  pyre: (n: number) => `waste.walker-camp.pyre.${n}`,
+  trialRing: 'waste.walker-camp.trial-ring',
+  stormWalkStart: 'waste.walker-camp.storm-walk.start',
+  stormWalkEnd: 'waste.walker-camp.storm-walk.end',
+  stormWalkKnot: (n: number) => `waste.walker-camp.storm-walk.knot.${n}`,
+  stormWalkEndTrigger: 'trg.waste.walker-camp.storm-walk.end',
+  ebbaChapel: 'npc-post.ebba.chapel',
+  chapelDoor: 'waste.cinder-chapel.door',
+  /** The chapel interior's lore spot (R25's register). */
+  chapelNote: 'waste.cinder-chapel.inside.note',
+  chapelCentre: 'waste.cinder-chapel',
+  house: (n: number) => `waste.cinder-chapel.house.${n}`,
+  nest: 'waste.cinder-chapel.house.2.nest',
+  musicBox: 'waste.cinder-chapel.house.3.music-box',
+  /** R25's hearths, one at each burned village round the chapel (L1's `R25_HEARTHS`), and the villages' centres. */
+  r25Hearth: (n: number) => `waste.poi.burned-village.${n}.hearth`,
+  burnedVillage: (n: number) => `waste.poi.burned-village.${n}.centre`,
+  spring: 'waste.spring',
+  strike: 'waste.glasslands.strike',
+  plaque: (n: number) => `waste.glasslands.plaque.${n}`,
+  pillar: (n: number) => `waste.glasslands.pillar.${n}`,
+  shrine: 'waste.glasslands.singing-slag',
+  glasslandsTrigger: 'trg.waste.glasslands',
+  cathedralEntry: 'waste.husk-cathedral.entry',
+  narthex: (what: 'knight-1' | 'knight-2' | 'bones' | 'gong-rope') => `waste.cathedral.narthex.${what}`,
+  /** The crypt opens itself once `boss.eormen.outcome` is set (L1's flag blocker); its reward chest and its note spot. */
+  crypt: (what: 'reward' | 'note') => `waste.cathedral.crypt.${what}`,
+  cairn: (n: number) => `waste.cinder-road.cairn.${n}`,
+  cairnLore: (n: number) => `waste.cinder-road.cairn.${n}.lore`,
+  cairnClearing: (n: number) => `waste.cinder-road.cairn.${n}.clearing`,
+  cairnTrigger: (n: number) => `trg.waste.cinder-road.cairn.${n}`,
+  rimfootFire: 'waste.rimfoot.fire',
+  rimfootCam: 'waste.rimfoot.cam',
+  wulfhildRimfoot: 'npc-post.wulfhild.rimfoot',
+} as const;

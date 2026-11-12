@@ -4,6 +4,10 @@ import type { FavourBand, FavourTrack } from '../state/favour';
 import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
 import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, HILD, WENNA, WULFHILD } from './stock.act4';
 import { ACT4_VENDOR_OPEN_WHEN, ACT4_VENDOR_POSTS } from './refugePosts.act4';
+import { ACT5_SELL_FLAT } from '../items/act5/catalog';
+import { ACT5_VENDOR_OPEN_WHEN, ACT5_VENDOR_POSTS } from './rimCamp.act5';
+import { ALRIC, MAUD_RIM } from './stock.act5';
+import { rowHoldsAfterEnding } from '../afterEnding/posts';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -12,7 +16,9 @@ export type VendorId =
   // Act 3 (v0.7 item 16). Stock rows arrive with K10 and K13; 'ysmeryth' is band-stocked by the dragons' trust from `story.m32.complete`.
   | 'leofa' | 'dudda' | 'gytha' | 'thorgar' | 'eadgyth' | 'ansgar' | 'ysmeryth'
   // Act 4 (v0.8 item 16): Wulfhild at the Ashgate refuge, Hild the Waste's guide. Stock rows arrive with L7.
-  | 'wulfhild' | 'hild';
+  | 'wulfhild' | 'hild'
+  // Act 5 (v0.9 item 15): Alric and Maud at the Rim Camp. Empty and closed until N7 sets their stock and rows.
+  | 'alric' | 'maud-rim';
 
 export interface StockLine {
   itemId: string;
@@ -130,6 +136,10 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
   wenna: WENNA,
   wulfhild: WULFHILD,
   hild: HILD,
+  // v0.9 item 15: reserved, empty until N7 (closed by VENDOR_OPEN_WHEN below).
+  // N7 (economy/stock.act5.ts): unlimited lines only, so neither enters the shop save.
+  alric: ALRIC,
+  'maud-rim': MAUD_RIM,
   slagg: {
     id: 'slagg',
     buys: true,
@@ -196,6 +206,7 @@ export const SELL_FLAT: Readonly<Record<string, number>> = {
   coal: 5,
   'cinder-steel-ingot': 40,
   ...ACT3_SELL_FLAT,
+  ...ACT5_SELL_FLAT,
 };
 
 export const VENDOR_IDS = Object.keys(VENDORS) as VendorId[];
@@ -246,7 +257,12 @@ export function discountPercent(
 export const VENDOR_OPEN_WHEN: Partial<Record<VendorId, FlagCondition>> = {
   // L7 (economy/refugePosts.act4.ts): Wenna from M38, Aldous until M38, Hild from M41, Wulfhild from M43.
   ...ACT4_VENDOR_OPEN_WHEN,
+  // N7 (economy/rimCamp.act5.ts): Alric from M47, Maud's rim kitchen from M49 with F4 Cleanse.
+  ...ACT5_VENDOR_OPEN_WHEN,
 };
+
+/** v0.9 item 15: the Rim Camp's posts move inside the Rim Gate when M49 completes (N7's VENDOR_POSTS and TRAINER_POSTS rows). */
+export const RIM_CAMP_MOVE_FLAG = 'story.m49.complete';
 
 /**
  * A vendor whose shop moves: while `when` holds the `shop:<id>` interactable stands at `anchorId` instead of
@@ -258,12 +274,13 @@ export interface VendorPostRow {
   when: FlagCondition;
 }
 /** L7: the refuge shops from M41, Hild at Ashgate and Wulfhild at the Walker Camp (economy/refugePosts.act4.ts). */
-export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS];
+export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS, ...ACT5_VENDOR_POSTS];
 
 /** The anchor `shop:<id>` stands at now: the last holding VENDOR_POSTS row, else `shop.<id>`. */
 export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly VendorPostRow[] = VENDOR_POSTS): string {
   let at = `shop.${v}`;
-  for (const r of rows) if (r.vendorId === v && flagConditionHolds(r.when, flags)) at = r.anchorId;
+  // N13 (afterEnding/posts.ts): in the world after the ending the refuge and Rim Camp rows stop holding (the shops go home).
+  for (const r of rows) if (r.vendorId === v && flagConditionHolds(r.when, flags) && rowHoldsAfterEnding(r.anchorId, v, flags)) at = r.anchorId;
   return at;
 }
 

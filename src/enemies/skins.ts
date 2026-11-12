@@ -4,7 +4,7 @@
 import type * as THREE from 'three';
 import type { EnemyKind } from './types';
 
-export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk' | 'watch-masked';
+export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk' | 'watch-masked' | 'footman-grisel' | 'wraith-stoker' | 'golem-lava';
 
 export interface EnemySkinDef {
   /** The kind the skin dresses: a spawner with a skin of another kind is a lint error. */
@@ -26,9 +26,17 @@ export const ENEMY_SKINS: Readonly<Record<EnemySkinId, EnemySkinDef>> = {
   // a model (the env prompt list), since no builder reads `extra` yet.
   'footman-soot': { kind: 'blighted-soldier', tint: 0x6e6a66, emissive: 0x220c04 },
   'footman-masked': { kind: 'blighted-soldier', tint: 0xa8b0c4, emissive: 0x000000 },
-  'wraith-husk': { kind: 'ash-wraith' },
+  // L5 (plan act4-L5.md section 5): the cathedral's husks, bone-white ash with a faint ember in place of the wraith's green,
+  // the hat hidden so the head reads bald and shrunken. No new shader: the tint, the emissive and the shipped ash dissolve.
+  'wraith-husk': { kind: 'ash-wraith', tint: 0x8a8580, emissive: 0x3a2e26, hide: ['Mage_Hat'] },
   // L2: Vey's stealth observers (M36's rooftops, R20's stealth checkpoints) in the Regent's colours.
   'watch-masked': { kind: 'watch-guard', tint: 0x8890a0 },
+  // v0.9 item 11 (Act 5): rows that draw like their base until N5 sets the overrides (Grisel's green, the stokers' soot,
+  // the lava golem's crust and glow).
+  // N5: Aldous's loyalists in Grisel green; the stokers' dead in soot with a low ember; the forge-thralls in black crust with a hotter glow.
+  'footman-grisel': { kind: 'blighted-soldier', tint: 0x5f8a58, emissive: 0x061a08 },
+  'wraith-stoker': { kind: 'ash-wraith', tint: 0x4a4540, emissive: 0x3a1608 },
+  'golem-lava': { kind: 'cinder-golem', tint: 0x3a322c, emissive: 0x7a2a08 },
 };
 
 export const ENEMY_SKIN_IDS = Object.keys(ENEMY_SKINS) as EnemySkinId[];

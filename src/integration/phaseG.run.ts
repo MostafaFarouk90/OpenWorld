@@ -18,13 +18,14 @@ import {
 import { newWatch, playPhaseGQuest, wantedFlags, watchDialogueRunner, type PhaseGRun } from './phaseGDriver';
 import { REFUGE_STONE, servicesAfterM41, unreachable, type ServicePorts } from './act4Services';
 import { WAYSTONE_TUNING } from '../waystones/tuning';
-import { seedFixtureRandom } from './fixtureDeterminism';
+import { saveFixture, seedFixtureRandom } from './fixtureDeterminism';
+import { fixtureText } from './act4FixturesGen';
+import { phaseGEndName } from '../save/__fixtures__/act4';
 import { act4TimingMarkdown } from './act4Timing';
 import { evalCondition } from '../quests/conditions';
 import { HARROWMARK_A4_PACE, paceAt } from '../quests/content/act4/harrowmark/pacing';
 import { M37_NEEDS } from '../quests/content/act4/harrowmark/m37.quest';
 import { WASTE_CARD_SEEN_FLAG } from './phaseGCard';
-import { WASTE_OPEN_FLAG } from '../quests/act4Jump';
 import { insideRingWall } from '../harrowmark/noStrand';
 import { vendorOpenByTable } from '../economy/stock';
 
@@ -48,10 +49,15 @@ export interface PhaseGResult {
   travel: unknown[];
 }
 
+/** A point well inside the Ashen Waste (engine x 8000..16000, z 5500..12000), off the Caldera. */
+const WASTE_DEEP = { x: 9000, z: 7000 } as const;
+
 const prog = (h: ChapterHarness) => h.ctx.services.require('progression') as unknown as { xp: number; level: number };
 
-/** Plays the whole of Phase G on a fresh boot of the carried base. */
-export async function runPhaseG(run: 'a' | 'b', c: PhaseGChoices = run === 'a' ? PHASE_G_RUN_A : PHASE_G_RUN_B): Promise<PhaseGResult> {
+/** Plays the whole of Phase G on a fresh boot of the carried base; `atEnd` sees the game at Phase G's end (before dispose). */
+export async function runPhaseG(
+  run: 'a' | 'b', c: PhaseGChoices = run === 'a' ? PHASE_G_RUN_A : PHASE_G_RUN_B, atEnd?: (h: ChapterHarness, r: PhaseGResult) => Promise<void>,
+): Promise<PhaseGResult> {
   watchDialogueRunner();
   // seeded as the fixtures are, so the AI and the waves roll the same in every run (no flaky shard)
   seedFixtureRandom();
@@ -139,7 +145,8 @@ export async function runPhaseG(run: 'a' | 'b', c: PhaseGChoices = run === 'a' ?
     Object.assign(result, {
       world: {
         gautStanding: gaut,
-        held: !h.ctx.state.getBool(WASTE_OPEN_FLAG),
+        // the Waste shut at Phase G's end: M42 not yet accepted, so a point deep in the Waste is closed (the hold is retired)
+        held: !h.ctx.state.getBool('story.m42.started') && !h.ctx.services.require('containment').isOpen(WASTE_DEEP.x, WASTE_DEEP.z),
         cardSeen: h.ctx.state.getBool(WASTE_CARD_SEEN_FLAG),
         insideWalls: insideAfterM41,
         refugeLit: ws.isLit(REFUGE_STONE),
@@ -147,10 +154,40 @@ export async function runPhaseG(run: 'a' | 'b', c: PhaseGChoices = run === 'a' ?
         unreachable: bad,
       },
     });
+    if (atEnd) await atEnd(h, result);
     return result;
   } finally {
     h.dispose();
   }
+}
+
+const SAVE_END = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.SAVE_PHASE_G_END) === '1';
+
+/** What the Phase G end save's meta records (read by phaseH.run.ts). */
+export interface PhaseGEndMeta {
+  run: 'a' | 'b';
+  level: PhaseGResult['level'];
+  xp: PhaseGResult['xp'];
+  deaths: number;
+  spared: number;
+  seconds: Record<string, number>;
+  trails: Record<string, PhaseCTrail>;
+}
+
+/** Writes the Phase G end save of `run` beside the Act 4 fixtures (`act4-phase-g-end-<run>.json`). */
+async function writePhaseGEnd(h: ChapterHarness, run: 'a' | 'b', r: PhaseGResult): Promise<void> {
+  const fsName = 'node:fs';
+  const urlName = 'node:url';
+  const fs = (await import(/* @vite-ignore */ fsName)) as { writeFileSync(p: string, d: string): void };
+  const { fileURLToPath } = (await import(/* @vite-ignore */ urlName)) as { fileURLToPath(u: URL): string };
+  const dir = fileURLToPath(new URL('../save/__fixtures__/act4/', import.meta.url));
+  fs.writeFileSync(`${dir}${phaseGEndName(run)}.json`, fixtureText(await saveFixture(h)));
+  // the meta carries what Phase H's act-wide numbers need from this run: its trails (pacing) and its XP and level
+  const meta: PhaseGEndMeta = {
+    run, level: r.level, xp: r.xp, deaths: r.deaths, spared: r.spared, seconds: r.seconds,
+    trails: Object.fromEntries(Object.entries(r.trails).map(([q, t]) => [q, { talks: t.talks, scripted: t.scripted, order: t.order }])),
+  };
+  fs.writeFileSync(`${dir}${phaseGEndName(run)}.meta.json`, fixtureText(meta));
 }
 
 /** The runs the 51% Phase G gate is asserted on (the others print their share for the report). */
@@ -165,7 +202,8 @@ export function definePhaseGRun(run: 'a' | 'b'): void {
     });
     afterEach(() => vi.restoreAllMocks());
     it('plays M35 to M41 and holds the Waste', async () => {
-      const r = await runPhaseG(run);
+      // SAVE_PHASE_G_END=1 writes the run's end save, the start of Phase H's chain (phaseH.run.ts)
+      const r = await runPhaseG(run, undefined, SAVE_END ? (h, res) => writePhaseGEnd(h, run, res) : undefined);
       const w = (r as unknown as {
         world: { gautStanding: boolean; held: boolean; cardSeen: boolean; insideWalls: boolean; unreachable: string[]; refugeLit: boolean; choices: string[] };
       }).world;

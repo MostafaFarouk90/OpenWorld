@@ -20,6 +20,9 @@ import { heightAt } from '../terrain/heightfield';
 import { regionAt } from '../region/regionMask';
 import { NPC_TUNING } from '../npcs/tuning';
 
+// Boots the whole plugin manifest: the 5 s default is not a safe limit (census B13, Act 4 L14).
+vi.setConfig({ testTimeout: 30_000 });
+
 describe('parseAct1', () => {
   it('accepts every Act 1 quest with &new', () => {
     for (const id of ACT1_JUMP_IDS) expect(parseAct1(`?act1=${id}&new`)).toEqual({ id, fresh: true });

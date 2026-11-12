@@ -35,7 +35,7 @@ export function temperCost(tier: number, toLevel: number): TemperCost | null {
   if (!Number.isInteger(toLevel) || toLevel < 1 || toLevel > GEAR_TUNING.maxTemper) return null;
   if (tier >= 4) {
     // K10: tier 4 (Wyrm-tempered) takes rime-iron and a scale; the tier 4 hide classes pay with hide (`temperCostFor`).
-    return { gold: GEAR_TUNING.goldPerLevel[4] * toLevel, materials: [{ itemId: 'rime-iron', count: 1 }, { itemId: 'shed-wyrm-scale', count: 1 }] };
+    return { gold: GEAR_TUNING.goldPerLevel[tier >= 5 ? 5 : 4] * toLevel, materials: [{ itemId: 'rime-iron', count: 1 }, { itemId: 'shed-wyrm-scale', count: 1 }] };
   }
   const t = tier >= 3 ? 3 : tier === 2 ? 2 : 1;
   const materials: MaterialCost[] =

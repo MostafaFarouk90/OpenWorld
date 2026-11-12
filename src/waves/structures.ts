@@ -8,13 +8,18 @@ import type { Vec3 } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { SURGE } from '../vfx/tuning';
 import { buildCartVisual, type CartVisual } from './cartArt';
-import { CART, CART_HIT_VALUE, CART_MODIFIER } from './tuning';
+import { CART, CART_HIT_VALUE, CART_MODIFIER, RAM } from './tuning';
 
 export type StructureHost = Pick<GameContext, 'scene' | 'actors' | 'combat' | 'damage' | 'events'>;
 
+/** N4: attack ids whose amount a cart takes as given (scripted siege strikes; no player or foe attack uses them). */
+export const CART_EXACT_ATTACKS: ReadonlySet<string> = new Set(['siege.dragon-fire']);
+
 /** What a hit does to a cart, in health: the hit-value table (tuning.ts). 0 for anything that is not a heavy chop or the Surge. */
-export function cartHitValue(req: { kind: string; attackId?: string }): number {
+export function cartHitValue(req: { kind: string; attackId?: string; amount?: number }): number {
   if (req.attackId === undefined) return 0;
+  // N4 (Act 5): the siege's scripted strikes (a dragon's breath on a ram) land their amount as given.
+  if (CART_EXACT_ATTACKS.has(req.attackId)) return Math.max(0, req.amount ?? 0);
   if (req.kind === 'melee' && HEAVY_CHOP_CLIPS.has(req.attackId)) return CART_HIT_VALUE.chop;
   if (req.kind === 'spell' && req.attackId === SURGE.spellId) return CART_HIT_VALUE.surge;
   return 0;
@@ -173,7 +178,7 @@ export class BarricadeFx {
 
 // ---- brazier cart ------------------------------------------------------------------------------------------
 
-export type CartPhase = 'rolling' | 'windup' | 'collapse' | 'vanish' | 'gone';
+export type CartPhase = 'rolling' | 'windup' | 'recoil' | 'collapse' | 'vanish' | 'gone';
 export type CartOutcome = 'arrived' | 'destroyed';
 
 export interface CartSpec {
@@ -184,7 +189,21 @@ export interface CartSpec {
   /** The set's origin: positions are kept as offsets from it, so far coordinates cost no precision. */
   origin: { x: number; z: number };
   onResolve(cart: Cart, how: CartOutcome): void;
+  /** v0.9 item 5: 'ram' for the siege's ram (N4 builds its repeated strikes); default 'brazier', the shipped cart. */
+  role?: CartRole;
+  /**
+   * N4 (a ram only): called at every strike. A ram does not resolve 'arrived' while `canStrike()` holds: it rocks back
+   * and strikes again every `RAM.cycleSeconds`. With no `onStrike` a ram behaves as a brazier cart (one strike).
+   */
+  onStrike?(cart: Cart): void;
+  /** N4 (a ram only): false once there is nothing to strike (the barricade fell); the ram then goes inert ('arrived'). */
+  canStrike?(): boolean;
+  /** N4: the wind-up began (the ram's creak, the HUD's tell). */
+  onWindup?(cart: Cart): void;
 }
+
+/** v0.9: what a cart is; Act 2's data names none and reads as 'brazier'. */
+export type CartRole = 'brazier' | 'ram';
 
 const GRAVITY_FREE_TILT = 0.7;
 
@@ -210,12 +229,17 @@ export class Cart {
   private clock = 0;
   private spill: THREE.Mesh | null = null;
   private disposed = false;
+  private stallLeft = 0;
+  private _strikes = 0;
+  /** v0.9: 'brazier' (the shipped cart) or 'ram'. */
+  readonly role: CartRole;
 
   constructor(
     private readonly host: StructureHost,
     private readonly spec: CartSpec,
   ) {
     this.id = spec.id;
+    this.role = spec.role ?? 'brazier';
     const ex = spec.end.x - spec.start.x;
     const ez = spec.end.z - spec.start.z;
     const len = Math.hypot(ex, ez);
@@ -277,18 +301,46 @@ export class Cart {
     return { x: this.lx + this.dx * this.s, z: this.lz + this.dz * this.s };
   }
 
+  /** N4: strikes landed so far (a ram strikes repeatedly). */
+  get strikes(): number {
+    return this._strikes;
+  }
+
+  /** v0.9: seconds of stall left (0 when moving). */
+  get stalled(): number {
+    return this.stallLeft;
+  }
+
+  /**
+   * v0.9 item 5: holds the cart where it is, rolling or winding up, for `seconds` (the siege's sappers, a dragon's
+   * strike). Stalls do not stack: the longest standing one wins. Ignored once the cart has struck or been destroyed.
+   */
+  stall(seconds: number): void {
+    if (!(seconds > 0) || !Number.isFinite(seconds) || this._outcome !== null) return;
+    if (this._phase !== 'rolling' && this._phase !== 'windup' && this._phase !== 'recoil') return;
+    this.stallLeft = Math.max(this.stallLeft, seconds);
+  }
+
   fixedUpdate(dt: number): void {
     if (this._phase === 'gone') return;
     this.clock += dt;
-    switch (this._phase) {
+    const held = this.stallLeft > 0 && (this._phase === 'rolling' || this._phase === 'windup' || this._phase === 'recoil');
+    if (held) this.stallLeft = Math.max(0, this.stallLeft - dt);
+    else this.stallLeft = 0;
+    switch (held ? 'held' : this._phase) {
       case 'rolling': {
         this.s = Math.min(this.stopAt, this.s + CART.speed * dt);
         this.spinWheels(CART.speed * dt);
         this.place(0);
-        if (this.s >= this.stopAt) {
-          this._phase = 'windup';
-          this.t = 0;
-        }
+        if (this.s >= this.stopAt) this.beginWindup();
+        break;
+      }
+      case 'recoil': {
+        // N4: a ram settles back on its wheels between strikes, then winds up again.
+        this.t += dt;
+        const k = Math.min(1, this.t / this.recoilSeconds);
+        this.place(0.3 * (1 - k));
+        if (this.t >= this.recoilSeconds) this.beginWindup();
         break;
       }
       case 'windup': {
@@ -349,8 +401,34 @@ export class Cart {
     this.visual.release();
   }
 
+  private get repeats(): boolean {
+    return this.role === 'ram' && !!this.spec.onStrike;
+  }
+
+  private get recoilSeconds(): number {
+    return Math.max(0, RAM.cycleSeconds - CART.windupSeconds);
+  }
+
+  private beginWindup(): void {
+    if (this.repeats && this.spec.canStrike && !this.spec.canStrike()) {
+      this.resolve('arrived');
+      return;
+    }
+    this._phase = 'windup';
+    this.t = 0;
+    this.spec.onWindup?.(this);
+  }
+
   private strike(): void {
     this.place(0.3);
+    if (this.repeats && (!this.spec.canStrike || this.spec.canStrike())) {
+      this._strikes++;
+      this._phase = 'recoil';
+      this.t = 0;
+      this.spec.onStrike!(this);
+      return;
+    }
+    this._strikes++;
     this.resolve('arrived');
   }
 

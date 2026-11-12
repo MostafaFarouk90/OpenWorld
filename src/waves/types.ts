@@ -1,4 +1,4 @@
-import type { EnemyKind } from '../enemies/types';
+import type { EnemyKind, WarhostRole } from '../enemies/types';
 import type { AreaId } from '../region/areas';
 
 /** Lane keys of a set: the numbered spawn lanes, plus named ones (the wyrm's approach). */
@@ -13,12 +13,18 @@ export interface WaveSpawnDef {
   delay: number;
   /** Seconds between members. */
   stagger: number;
+  /** N4 (Act 5): the members' Warhost role (`SpawnerDef.role`); the spawner id gains `.r<role>`. */
+  role?: WarhostRole;
+  /** N4 (Act 5): the shield-line id the members join (`SpawnerDef.line`, N5 reads `line ?? tag`); part of the spawner id. */
+  line?: string;
 }
 
 /** A brazier cart, rolling down a numbered lane toward the barricade `delay` seconds after the wave starts. */
 export interface WaveCartDef {
   lane: LaneKey;
   delay: number;
+  /** v0.9 item 5: 'ram' for the siege's ram (N4); default 'brazier', so Act 2's data reads the same. */
+  role?: 'brazier' | 'ram';
 }
 
 export interface WaveDef {
@@ -61,6 +67,25 @@ export interface WaveSetDef {
   /** L10 PR 2: the interior the set is fought in (M39's Keep stairs); it runs while the player is in that interior and
    * pauses in any other. Without it, any interior pauses the set (the shipped rule). */
   interior?: string;
+  /**
+   * N4 (Act 5 siege): at most this many wave members (not gone) plus live carts stand at once; a due spawn or cart waits
+   * for a slot (the schedule's clock keeps running). Absent: every item goes out on its schedule (the shipped rule).
+   */
+  maxAlive?: number;
+  /**
+   * N4 (Act 5 siege): a fallen barricade is a breach, not a failure. `waves.breached` fires, the wave goes on (rams go
+   * inert), and when it clears the barricade is patched to `patchToPct` (0..1) of its health. Absent: the shipped
+   * fail-and-restart.
+   */
+  breach?: { patchToPct: number };
+  /** N4: health a cart takes off the barricade per strike, by role; absent: `CART.impactDamage`. */
+  cartImpact?: { brazier?: number; ram?: number };
+  /**
+   * N4 (Act 5 siege): foot spawns join their lane `metres` short of the `toward` lane's anchor (the line from their lane
+   * anchor to it), so a wave whose lane heads lie past the enemies' dormancy range still comes up in reach of the gate.
+   * Lanes nearer than `metres` spawn at their anchor. Absent: every spawn stands at its lane anchor (the shipped rule).
+   */
+  join?: { metres: number; toward: LaneKey };
 }
 
 export type RunPhase = 'running' | 'intermission' | 'done';

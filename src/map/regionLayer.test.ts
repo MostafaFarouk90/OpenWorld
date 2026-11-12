@@ -81,7 +81,10 @@ describe('openRegionAt', () => {
     expect(openRegionAt(20000, 3000, open)).toBeNull(); // Cinderreach is closed
     expect(openRegionAt(20000, 3000, [...open, 'cinderreach'])).toBe('cinderreach');
     expect(openRegionAt(NaN, 0, open)).toBeNull();
-    expect(openRegionAt(12000, 8000, ['caldera' as RegionId])).toBeNull();
+    // v0.9: the Caldera is built and answers inside its box, before the Waste around it.
+    expect(openRegionAt(12000, 8000, ['caldera' as RegionId])).toBe('caldera');
+    expect(openRegionAt(11000, 8000, ['ashen-waste', 'caldera'] as RegionId[])).toBe('caldera');
+    expect(openRegionAt(11000, 8000, ['ashen-waste'] as RegionId[])).toBe('ashen-waste');
   });
 });
 

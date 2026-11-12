@@ -1,13 +1,14 @@
 import { getItem } from '../inventory/items';
 import type { BeatClock } from '../shrine/beat';
 import { pickAffix } from './affixes';
-import { ALL_FORGE_RECIPES, forgeCost, forgeItem, isTier4Recipe, type ForgeRefusal } from './forge';
+import { ALL_FORGE_RECIPES, forgeCost, forgeItem, isTier4Recipe, isTier5Recipe, type ForgeRefusal } from './forge';
 import { type Judgement, RhythmRun } from './rhythm';
 import { checkTemper, firstTemperOfTier, type GearInventory, isTemperable, MATERIALS, temperCostFor, temperItem, tierOf, type MaterialCost, type TemperRefusal } from './tempering';
 import { GEAR_TUNING } from './tuning';
 
 export type SessionState = 'idle' | 'picking' | 'rhythm' | 'result' | 'affix-reveal';
-export type SessionMode = 'anvil' | 'smith';
+/** `rim` (N7): Alric's anvil at the Rim Camp: forges tier 5 and tempers, and counts as the Anvil for tier 5. */
+export type SessionMode = 'anvil' | 'smith' | 'rim';
 
 /** The persisted part (`gear` v1). */
 export interface GearState {
@@ -63,6 +64,8 @@ export interface SessionPorts {
   makeClock(): BeatClock;
   anvilUsable(): boolean;
   smithUsable(): boolean;
+  /** N7: Alric's rim anvil is lit (M50 complete). Absent means never. */
+  rimUsable?(): boolean;
   /** M14 is active. */
   lessonActive(): boolean;
   emitTempered(p: { itemId: string; level: number; affix?: string }): void;
@@ -103,9 +106,16 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
   };
 
   const free = (): boolean => mode === 'anvil' && ports.lessonActive() && ports.state.lessonRuns < GEAR_TUNING.lessonRuns;
+  const modeUsable = (m: SessionMode | null): boolean => (m === 'anvil' ? ports.anvilUsable() : m === 'rim' ? ports.rimUsable?.() === true : ports.smithUsable());
   const blocked = (id: string): TemperRefusal | null => {
-    if (mode === 'anvil' ? !ports.anvilUsable() : !ports.smithUsable()) return 'locked';
-    if (mode === 'smith' && firstTemperOfTier(ports.state.anvilTiers, tierOf(getItem(id)))) return 'anvil-first';
+    if (!modeUsable(mode)) return 'locked';
+    const tier = tierOf(getItem(id));
+    if (mode === 'smith' && firstTemperOfTier(ports.state.anvilTiers, tier)) return 'anvil-first';
+    // N7: Alric's anvil tempers tier 4 and 5 only; tier 5 counts as the Anvil there, tier 4 keeps the Hushed Anvil's rule.
+    if (mode === 'rim') {
+      if (tier < 4) return 'locked';
+      if (tier < 5 && firstTemperOfTier(ports.state.anvilTiers, tier)) return 'anvil-first';
+    }
     return checkTemper(inv, id, { free: free() });
   };
 
@@ -117,10 +127,10 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
       lastResult = { ok: false, perfect, reason: r.reason };
       return go('result');
     }
-    if (mode === 'anvil') {
+    if (mode === 'anvil' || (mode === 'rim' && tierOf(getItem(id)) >= 5)) {
       const tier = tierOf(getItem(id));
       if (!ports.state.anvilTiers.includes(tier)) ports.state.anvilTiers.push(tier);
-      if (wasFree) ports.state.lessonRuns++;
+      if (wasFree && mode === 'anvil') ports.state.lessonRuns++;
     }
     ports.emitTempered(r.affix ? { itemId: id, level: r.level, affix: r.affix } : { itemId: id, level: r.level });
     lastResult = { ok: true, perfect, level: r.level, ...(r.affix ? { affix: r.affix } : {}) };
@@ -152,7 +162,7 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
     },
     open(m) {
       if (state !== 'idle') return false;
-      if (m === 'anvil' ? !ports.anvilUsable() : !ports.smithUsable()) return false;
+      if (!modeUsable(m)) return false;
       mode = m;
       selected = null;
       lastResult = null;
@@ -169,7 +179,7 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
           const g = inv.gear(id);
           const cost = temperCostFor(id, g.temper + 1);
           // K10: tier 4 forging ("any smith") shows at the smith too; tier 3 forging stays at the Anvil.
-          const fc = mode === 'anvil' || isTier4Recipe(id) ? forgeCost(id) : null;
+          const fc = (mode === 'anvil' || isTier4Recipe(id) || (mode === 'rim' && isTier5Recipe(id))) && (mode === 'rim' || !isTier5Recipe(id)) ? forgeCost(id) : null;
           const why = blocked(id);
           rows.push({
             id,
@@ -257,8 +267,9 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
       apply(selected, a);
     },
     forge(id) {
-      if ((mode !== 'anvil' && !(mode === 'smith' && isTier4Recipe(id))) || (state !== 'picking' && state !== 'result')) return;
-      const usable = mode === 'anvil' ? ports.anvilUsable() : ports.smithUsable();
+      const allowed = mode === 'anvil' ? !isTier5Recipe(id) : mode === 'smith' ? isTier4Recipe(id) : mode === 'rim' ? isTier4Recipe(id) || isTier5Recipe(id) : false;
+      if (!allowed || (state !== 'picking' && state !== 'result')) return;
+      const usable = modeUsable(mode);
       const r = usable ? forgeItem(inv, id) : ({ ok: false, reason: 'locked' } as const);
       lastResult = r.ok ? { ok: true, perfect: false, forged: r.to } : { ok: false, perfect: false, reason: r.reason };
       selected = null;

@@ -24,6 +24,9 @@ import type { Condition } from './types';
 import { POST_RULES, resolvePosts } from './posts';
 import { ACT1_PREREQS } from './act1Jump';
 
+// Boots the whole plugin manifest: the 5 s default is not a safe limit (census B13, Act 4 L14).
+vi.setConfig({ testTimeout: 30_000 });
+
 describe('parseAct2', () => {
   it('accepts every Phase C and Phase D quest, and the ending, with &new and an optional class', () => {
     for (const id of [...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS]) expect(parseAct2(`?act2=${id}&new`)).toEqual({ id, classId: 'knight', fresh: true });

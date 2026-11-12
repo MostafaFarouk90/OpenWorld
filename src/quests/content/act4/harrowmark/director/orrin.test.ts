@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DENSITY_LAYOUT_HM } from '../../../../../harrowmark/density.layout';
 import { ORRIN_AWAY, installOrrin, orrinAway } from './orrin';
+import { M35_ESCORT } from '../m35.quest';
 
 function kit(init: Record<string, boolean>) {
   const flags = new Map(Object.entries(init));
@@ -48,5 +49,22 @@ describe('Orrin in Act 4', () => {
     const spec = DENSITY_LAYOUT_HM.npcs.find((n) => n.id === 'grisel-steward')!;
     expect(spec.absentWhen).toBe(ORRIN_AWAY);
     expect(spec.presentWhen).toBe('story.m22.started');
+  });
+});
+
+describe('Orrin during the Grisel escort (Act 4 L14)', () => {
+  const withEscort = (active: string | null, flags: Record<string, boolean> = { 'story.gate.a4': true }) => ({
+    flag: (x: string) => flags[x] === true,
+    ctx: { services: { get: (id: string) => (id === 'escortsAct4' ? { active: () => active } : undefined) } },
+  }) as never;
+
+  it('steps out only while the Grisel party walks', () => {
+    expect(orrinAway(withEscort(M35_ESCORT('grisel')))).toBe(true);
+    expect(orrinAway(withEscort(M35_ESCORT('halvard')))).toBe(false);
+    expect(orrinAway(withEscort(null))).toBe(false);
+  });
+
+  it('a missing escorts service changes nothing', () => {
+    expect(orrinAway({ flag: () => false, ctx: { services: { get: () => undefined } } } as never)).toBe(false);
   });
 });

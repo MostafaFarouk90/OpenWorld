@@ -42,6 +42,8 @@ export const ESCORT_ALLIES: Readonly<Record<string, AllyLook>> = {
   ),
   // R24: the Ashwalker who pulls the rain-cask cart
   carter: look('walker', 'rogueHooded', 0x8a8478),
+  // Act 5 N10, R26: Oswin's convoy master walks beside the cart (his world body is absent while it is out)
+  'r26-convoy-master': look('walker', 'rogueHooded', 0x7a6a58),
 };
 
 /** Ids an escort def may name as `kind: 'npc'` members. */

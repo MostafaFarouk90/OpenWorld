@@ -8,7 +8,11 @@ import { DRAGONSPINE_POST_RULES } from '../dragonspine/postRules';
 import { SUMMIT_POST_RULES } from './content/act3/summit/postRules';
 import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 import { withAct4Posts } from '../harrowmark/act4/postRules';
+import { withAfterEndingPosts } from '../afterEnding/posts';
 import { withHarrowmarkQuestPosts } from './content/act4/harrowmark/npcs';
+import { withWasteQuestPosts } from './content/act4/waste/npcs';
+import { withRimQuestPosts } from './content/act5/rim/npcs';
+import { withFoundryQuestPosts } from './content/act5/foundry/npcs';
 
 export interface PostRule {
   npcId: string;
@@ -30,7 +34,11 @@ const live = (q: string): Condition => ({ quest: q, state: ['active', 'completed
  * thread 4's). First matching entry wins. NPCs a rule names that are not in the world yet are retried until placed.
  */
 // Act 4 (L2, additive): `withAct4Posts` puts Harrowmark's Act 4 rows in front of each NPC's rows (harrowmark/act4/postRules.ts).
-export const POST_RULES: PostRule[] = withHarrowmarkQuestPosts(withAct4Posts([
+// Act 5 (N10, additive): `withRimQuestPosts` puts the Rim's rows in front (src/quests/content/act5/rim/npcs.ts).
+// Act 5 (N11, additive): the Foundry's rows go outside the Rim's (they win while they match).
+// Act 5 (N13, additive): `withAfterEndingPosts` sends the movers home in the world after the ending (afterEnding/posts.ts),
+// outermost, so it wins once the ending is over.
+export const POST_RULES: PostRule[] = withAfterEndingPosts(withFoundryQuestPosts(withRimQuestPosts(withWasteQuestPosts(withHarrowmarkQuestPosts(withAct4Posts([
   // Act 2 (A4, additive): Deepgate's cast. First, so a row here wins; none of these NPCs has an Act 1 row.
   ...OLDSMOKE_POST_RULES,
   // Act 3 (K3, additive): the Greyfen's movers; none of them has an earlier row.
@@ -140,7 +148,7 @@ export const POST_RULES: PostRule[] = withHarrowmarkQuestPosts(withAct4Posts([
       },
     ],
   },
-]));
+]))))));
 
 /** The anchor each NPC should stand at now. */
 export function resolvePosts(rules: PostRule[], env: ConditionEnv): Record<string, { anchorId: string; home: boolean }> {
