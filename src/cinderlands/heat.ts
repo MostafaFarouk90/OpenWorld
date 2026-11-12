@@ -73,6 +73,9 @@ export function modifiersAt(heat: number): HeatModifierId[] {
   return HEAT_MODIFIERS.filter((m) => h >= m.from).map((m) => m.id);
 }
 
+/** Burning's ignite on the player (shared with G3's Second Hearth): 4 health a second for 3 s. */
+export const BURNING_STATUS = { id: 'cinder-burning', kind: 'ignite', dps: 4, seconds: 3 } as const;
+
 /** Modifier tuning (taste calls, G4 Cinderlands). */
 export const MODIFIER_TUNING = {
   /** Burning: chance an enemy hit applies the burn status. */

@@ -11,7 +11,7 @@ import { showToast } from '../waystones/toast';
 import { warmthTier } from '../shrine/warmth';
 import { BoardModel, openBoard } from './board';
 import { SITE } from './domain';
-import { MODIFIER_TUNING, type HeatModifierId } from './heat';
+import { BURNING_STATUS, MODIFIER_TUNING, type HeatModifierId } from './heat';
 import { CinderMeta, CINDER_SAVE_KEY, CINDER_SAVE_VERSION } from './meta';
 import { RiftRun, RUN_FLAG, type RunPorts, type RunSummary } from './run';
 import { CINDER_ORIGIN_ANCHOR } from './spawners';
@@ -94,7 +94,7 @@ export function setupCinderlands(ctx: GameContext): () => void {
       u.push(
         ctx.events.on('damage.dealt', (r) => {
           if (r.targetId !== playerId() || !r.attackerId || !isRun(r.attackerId) || r.dealt <= 0) return;
-          if (Math.random() < MODIFIER_TUNING.burnChance) status?.apply(playerId(), { id: 'cinder-burning', kind: 'ignite', dps: 4, seconds: 3, sourceId: r.attackerId });
+          if (Math.random() < MODIFIER_TUNING.burnChance) status?.apply(playerId(), { ...BURNING_STATUS, sourceId: r.attackerId });
         }),
       );
     }

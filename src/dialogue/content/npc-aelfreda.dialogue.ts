@@ -38,7 +38,7 @@ export const npcAelfreda: DialogueDef = {
     { when: { all: [d01Active, done('d01', 'o3'), priorOutcome('defeated')] }, node: 'd01-defeated' },
     { when: d01Active, node: 'd01-remind' },
     // G4 Cinderlands: after M10 she tells of the rift arch at the Quenchstone, once.
-    { when: { all: [{ quest: 'm10', state: 'completed' }, { not: { flag: 'cinder.aelfreda.told' } }] }, node: 'cinder-rifts' },
+    { when: { all: [{ quest: 'm10', state: 'completed' }, { not: { flag: 'story.m10.riftsTold' } }] }, node: 'cinder-rifts' },
     { when: { all: [{ quest: 'd01', state: 'completed' }, priorOutcome('released')] }, node: 'idle-released' },
     { when: { all: [{ quest: 'd01', state: 'completed' }, priorOutcome('defeated')] }, node: 'idle-defeated' },
 
@@ -47,7 +47,7 @@ export const npcAelfreda: DialogueDef = {
   nodes: [
     // ---- G4 Cinderlands ----
     { id: 'cinder-rifts', speaker: 'aelfreda', textKey: P + 'cinder-rifts', next: 'cinder-rifts-2' },
-    { id: 'cinder-rifts-2', speaker: 'aelfreda', textKey: P + 'cinder-rifts-2', effects: [{ setFlag: 'cinder.aelfreda.told', value: true }], next: null },
+    { id: 'cinder-rifts-2', speaker: 'aelfreda', textKey: P + 'cinder-rifts-2', effects: [{ setFlag: 'story.m10.riftsTold', value: true }], next: null },
     { id: 'm01-rescued', speaker: 'aelfreda', textKey: P + 'm01-rescued', next: 'm01-rescued-2' },
     { id: 'm01-rescued-2', speaker: 'aelfreda', textKey: P + 'm01-rescued-2', next: 'm01-rescued-3' },
     { id: 'm01-rescued-3', speaker: 'cael', textKey: P + 'm01-rescued-3', next: 'm01-rescued-4' },
