@@ -109,13 +109,19 @@ const save: GamePlugin = {
     const manager = new SaveManager({ ports, store: new IndexedDbSaveStore(), createFallbackStore: () => new MemorySaveStore() });
     // The IndexedDB read runs while the other plugins are still setting up.
     // G3: the parked world (a Second Hearth's other save) is read with the boot save, before the boot decision.
+    // Only a boot with a usable save waits for it (its modal may offer the parked world); the others settle as before.
     let parked: SaveFile | null = null;
-    const bootRead = manager.continue().then(async (r) => {
-      parked = await manager.readParked();
-      return r;
-    });
+    let parkedOccupied = false;
+    let parkedRead = false;
+    const bootRead = manager.continue();
     let boot: Awaited<typeof bootRead> | null = null;
     void bootRead.then((r) => (boot = r));
+    void bootRead
+      .then(async () => {
+        parked = await manager.readParked();
+        parkedOccupied = await manager.hasParked();
+      })
+      .finally(() => (parkedRead = true));
     const bootChoices: BootChoice[] = [];
     if (typeof navigator !== 'undefined') void navigator.storage?.persist?.().catch(() => undefined);
 
@@ -205,15 +211,25 @@ const save: GamePlugin = {
       },
       bootFile: () => (boot?.ok === true && !consumed ? boot.file : null),
       parkedFile: () => parked,
+      parkedOccupied: () => parkedOccupied || parked !== null,
       switchWorld: async (away, next) => {
         const atBoot = !consumed;
-        if (atBoot) consumed = true;
+        consumed = true;
+        // Saves stay locked through the switch: in game until the page reloads (a timer, zone or `pagehide` exit save
+        // would otherwise write the world being left over the new save, review finding 1); at boot until the apply settles.
+        manager.beginLoad();
+        loading = true;
         const r = await manager.park(away, next);
         if (!r.ok) {
-          if (atBoot) unlock();
+          // Nothing was written: back to the world being left (at boot, apply the boot save as Continue does, so a default
+          // world never autosaves over the real one; review finding 2).
+          if (atBoot) return applyFile(away, SLOT_MANUAL).then(() => false);
+          loading = false;
+          manager.endLoad();
           return false;
         }
         parked = away;
+        parkedOccupied = true;
         if (atBoot) return applyFile(next, SLOT_MANUAL);
         return true;
       },
@@ -226,6 +242,7 @@ const save: GamePlugin = {
     let bootHandled = false;
     const handleBoot = () => {
       if (bootHandled || !boot) return;
+      if (boot.ok && !parkedRead) return;
       bootHandled = true;
       // A dev `?act1=`, `?act2=` or `?bellows=1` jump holds saves for the whole session, so it starts fresh without clearing
       // the real save. A refused one (a bad id, a bad class) holds them here instead: the jump plugin returned before its

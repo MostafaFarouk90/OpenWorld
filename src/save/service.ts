@@ -44,6 +44,8 @@ export interface SaveService {
   bootFile?(): SaveFile | null;
   /** G3: the parked world (slot-0.parked) the boot read found, or null. */
   parkedFile?(): SaveFile | null;
+  /** G3: slot-0.parked holds something, readable or not (a new Second Hearth would replace it). */
+  parkedOccupied?(): boolean;
   /**
    * G3: parks `away` and makes `next` the save, in one write. Before the boot decision it also applies `next` (as
    * Continue does); after it, the caller reloads the page (`?continue`) so the world starts from defaults. Resolves false

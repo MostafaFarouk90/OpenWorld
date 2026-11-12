@@ -63,12 +63,19 @@ describe('ContinueModal extra choices (G3)', () => {
     expect(begin).toHaveBeenCalledOnce();
   });
 
-  it('keyboard: Enter on the focused confirm button confirms', () => {
+  it('keyboard: the question focuses Cancel (the key that asked cannot confirm); ArrowUp and Enter confirm', () => {
     const begin = vi.fn();
     const m = make([{ id: 'b', labelKey: 'begin', confirmKey: 'ask', onSelect: begin }]);
     m.w.key('ArrowDown');
     m.w.key('Enter');
     expect(m.labels()).toEqual(['Confirm', 'Cancel']);
+    expect(m.button('Cancel').focus).toHaveBeenCalled();
+    m.w.key('Enter');
+    expect(begin).not.toHaveBeenCalled();
+    expect(m.labels()).toEqual(['Continue', 'Begin a Second Hearth', 'New Game']);
+    m.w.key('ArrowDown');
+    m.w.key('Enter');
+    m.w.key('ArrowUp');
     m.w.key('Enter');
     expect(begin).toHaveBeenCalledOnce();
   });

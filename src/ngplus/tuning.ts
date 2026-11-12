@@ -17,23 +17,6 @@ export const KEPT_QUEST_ITEMS: ReadonlySet<string> = new Set(['crossbow-bolts', 
 /** Enemy level in a Second Hearth (design 12.5: the player's cap). */
 export const NGPLUS_ENEMY_LEVEL = 40;
 
-/**
- * Bosses spawn without a level; this is each one's design level (the act's band at the fight), so the level-40 rule can
- * lift it like any other enemy. Keys are actor kinds. scaling.test.ts checks every boss encounter's kind is here.
- */
-export const BOSS_DESIGN_LEVEL: Readonly<Record<string, number>> = {
-  'gaffer-grimtooth': 6,
-  prior: 9,
-  redmane: 13,
-  skarl: 15,
-  slagmaw: 19,
-  murkjaw: 22,
-  eormen: 31,
-  'bellows-engine': 34,
-  vey: 38,
-  ulthred: 40,
-};
-
 /** Design 12.5: +1 tempering per cycle ("+1 tempering available"); at most this many levels over the base cap. */
 export const TEMPER_BONUS_MAX = 2;
 

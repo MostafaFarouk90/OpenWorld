@@ -23,6 +23,9 @@ import { NGPLUS_BURNING, NGPLUS_KEY, NGPLUS_VERSION, TEMPER_BONUS_MAX } from './
 
 const kindOf = (id: string): string | undefined => getItem(id)?.kind;
 
+/** G4's `INSIDE_FLAG` (src/cinderlands/run.ts): set before a rift's actors spawn, cleared when the run is torn down. */
+export const CINDER_INSIDE_FLAG = 'cinder.run.inside';
+
 /** Where the page goes after a switch: the same page with only `?switched` (a dev jump's own params must not replay). */
 function switchedUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -66,6 +69,8 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
     ctx.events.on('save.loaded', () => {
       if (!sawEntry) applyState({ cycle: 0, endingsSeen: [] });
       sawEntry = false;
+      // Hostiles that spawned before the entry loaded (streamed in at boot) are scaled now; scaled ones are skipped.
+      if (state.cycle > 0) for (const a of ctx.actors.all()) scaling.spawned(a);
       if (state.fresh) {
         fillPending = true;
         state = { cycle: state.cycle, endingsSeen: state.endingsSeen };
@@ -94,7 +99,8 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
   const scaling = new SecondHearthScaling(mult);
   local.push(
     ctx.events.on('actor.spawned', ({ actor }) => {
-      if (state.cycle > 0) scaling.spawned(actor);
+      // A Cinderlands rift runs at its own Heat (G4): its actors are not scaled twice.
+      if (state.cycle > 0 && !ctx.state.getBool(CINDER_INSIDE_FLAG)) scaling.spawned(actor);
     }),
   );
   local.push(ctx.events.on('actor.despawned', ({ actorId }) => scaling.despawned(actorId)));
@@ -141,6 +147,9 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
     return true;
   };
 
+  /** "Replace" when something is parked (a Second Hearth in progress the switch would drop; review finding 3). */
+  const confirmBeginKey = () => (save()?.parkedOccupied?.() ? 'ngplus.confirm.replace' : 'ngplus.confirm.begin');
+
   const service: NgPlusService = {
     cycle: () => state.cycle,
     endingsSeen: () => state.endingsSeen,
@@ -169,7 +178,7 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
         id: 'ngplus-begin',
         labelKey: 'ngplus.begin',
         get confirmKey() {
-          return save()?.parkedFile?.() ? 'ngplus.confirm.replace' : 'ngplus.confirm.begin';
+          return confirmBeginKey();
         },
         when: () => {
           const f = save()?.bootFile?.();
@@ -179,7 +188,9 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
           const f = save()?.bootFile?.();
           if (!f) return;
           const built = buildSecondHearth(f, kindOf, Date.now());
+          // The modal is closed: a refused build continues the ended world rather than leave a locked default one.
           if (built.ok) void switchTo(f, built.file, true);
+          else void save()?.continueNow();
         },
       }),
     );
@@ -217,7 +228,9 @@ export function setupNgPlus(ctx: GameContext, opts: { reload?: (url: string) => 
           pause.addItem({
             id: 'ngplus-begin',
             labelKey: 'ngplus.begin',
-            confirmKey: 'ngplus.confirm.begin',
+            get confirmKey() {
+              return confirmBeginKey();
+            },
             when: () => service.available(),
             onSelect: () => void service.begin(),
           }),

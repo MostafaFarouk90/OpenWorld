@@ -1,7 +1,7 @@
 // G3 (New Game+): the parked world slot (slot-0.parked) and the one-transaction switch.
 import { describe, expect, it, vi } from 'vitest';
 import type { SavePorts } from './ports';
-import { SaveManager, SLOT_AUTOSAVE, SLOT_MANUAL, SLOT_PARKED } from './SaveManager';
+import { SaveManager, SLOT_AUTOSAVE, SLOT_BACKUP, SLOT_MANUAL, SLOT_PARKED } from './SaveManager';
 import type { SaveFile } from './SaveSchema';
 import { MemorySaveStore, type SaveStore } from './SaveStore';
 
@@ -51,6 +51,17 @@ describe('SaveManager parked world (G3)', () => {
     const m2 = new SaveManager({ ports: ports(), store: s2 });
     await m2.continue();
     expect(await m2.park(file('a'), file('b'))).toEqual({ ok: false });
+  });
+
+  it('an unreadable parked world is backed up in the same write that replaces it', async () => {
+    const store = new MemorySaveStore();
+    await store.writeMany([{ slot: SLOT_PARKED, value: { junk: true } }]);
+    const m = new SaveManager({ ports: ports(), store });
+    expect(await m.hasParked()).toBe(true);
+    expect(await m.park(file('ended'), file('hearth'))).toEqual({ ok: true });
+    const b = await store.read(SLOT_BACKUP);
+    expect(b.ok && b.value).toEqual({ junk: true });
+    expect((await m.readParked())?.entries.a!.data).toBe('ended');
   });
 
   it('snapshotFile is the live state', () => {

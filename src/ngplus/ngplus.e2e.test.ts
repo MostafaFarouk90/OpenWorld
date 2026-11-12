@@ -144,6 +144,10 @@ describe('a Second Hearth in the real game (G3)', () => {
     expect(ng.available()).toBe(true);
     expect(await ng.begin()).toBe(true);
     const save = ctx.services.require('save');
+    // saves stay locked until the page reloads: an exit or timer save cannot write the ended world back over it
+    expect(save.loading).toBe(true);
+    expect(await save.saveNow('timer')).toEqual({ ok: false, reason: 'loading' });
+    expect(save.parkedOccupied?.()).toBe(true);
     const parked = save.parkedFile?.();
     expect(parked && (parked.entries['world-state']!.data as any).flags['world.afterEnding']).toBe(true);
   }, TIMEOUT);

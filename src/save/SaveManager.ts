@@ -535,6 +535,17 @@ export class SaveManager {
     }
   }
 
+  /** G3: something is stored in slot-0.parked, readable or not (a Begin would replace it). Never rejects. */
+  async hasParked(): Promise<boolean> {
+    try {
+      if (!this.store.available) return false;
+      const r = await this.safeRead(SLOT_PARKED);
+      return r.ok && r.value !== undefined;
+    } catch {
+      return false;
+    }
+  }
+
   /** G3: the parked world (slot-0.parked), parsed; null when empty, unreadable or newer. Never rejects. */
   async readParked(): Promise<SaveFile | null> {
     try {
@@ -557,11 +568,16 @@ export class SaveManager {
     let ok = false;
     try {
       this.ensureStore();
-      const w = await this.store.writeMany([
-        { slot: SLOT_PARKED, value: away },
-        { slot: SLOT_AUTOSAVE, value: next },
-        { slot: SLOT_MANUAL, value: next },
-      ]);
+      const items: { slot: string; value: unknown }[] = [];
+      // A corrupt main slot found at boot, else an unreadable parked world, is backed up in the same transaction.
+      let backup: unknown = this.pendingBackup?.raw;
+      if (backup === undefined) {
+        const old = await this.safeRead(SLOT_PARKED);
+        if (old.ok && old.value !== undefined && !parseSave(old.value).ok) backup = old.value;
+      }
+      if (backup !== undefined && (await this.mayWriteBackup())) items.push({ slot: SLOT_BACKUP, value: backup });
+      items.push({ slot: SLOT_PARKED, value: away }, { slot: SLOT_AUTOSAVE, value: next }, { slot: SLOT_MANUAL, value: next });
+      const w = await this.store.writeMany(items);
       ok = w.ok;
       if (!w.ok) this.ports.log('error', `save: park failed (${w.reason})`, { error: w.error });
     } catch (error) {

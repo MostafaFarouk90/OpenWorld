@@ -46,7 +46,7 @@ export class SecondHearthScaling {
   constructor(private readonly heatMultiplier: () => number) {}
 
   spawned(actor: Actor): void {
-    if (!scales(actor)) return;
+    if (this.baseLevel.has(actor.id) || actor.dead || !scales(actor)) return;
     const from = actor.level;
     this.baseLevel.set(actor.id, from);
     const k = healthLift(from) * this.heatMultiplier();

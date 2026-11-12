@@ -103,6 +103,9 @@ export function createContinueModal(deps: ContinueModalDeps): ContinueModalWidge
       for (const b of confirmButtons) element.appendChild(b);
       buttons.push(...confirmButtons);
       onActions.push(...confirmActions);
+      // Cancel is the safe default: the Space or Enter that opened the question cannot confirm it (review finding 10).
+      focusAt(1);
+      return;
     } else {
       for (const b of allChoices) element.appendChild(b);
       buttons.push(...allChoices);
