@@ -5,7 +5,7 @@
  * Quenchstone with half banked and no gold pouch.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { ACT2_C_FIXTURES, readAct2CFixture } from '../save/__fixtures__/act2c';
 import { bootFromSave, type ChapterHarness } from '../integration/chapterHarness';
 import { cinderlandsParts, QUENCHSTONE_ANCHOR } from './cinderlands.plugin';
 import { RUN_FLAG } from './run';
@@ -13,7 +13,6 @@ import { SITE } from './domain';
 import { riftTerrain } from './terrain';
 
 const TIMEOUT = 600_000;
-const FIXTURE = JSON.parse(readFileSync('src/save/__fixtures__/act2-m11-start.json', 'utf8'));
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -43,7 +42,7 @@ describe('Cinderlands Rift Walk (booted)', () => {
   it(
     'enters, quells the Warden, comes home and banks the Embers',
     async () => {
-      h = await bootFromSave(FIXTURE, { models: true, virtualClock: true, colliderRadius: 4 });
+      h = await bootFromSave(await readAct2CFixture(ACT2_C_FIXTURES.m11Start), { models: true, virtualClock: true, colliderRadius: 4 });
       expect(h.loaded).toBe(true);
       const p = cinderlandsParts()!;
       expect(p.unlocked()).toBe(true);
@@ -98,7 +97,7 @@ describe('Cinderlands Rift Walk (booted)', () => {
   it(
     'a death in the rift wakes the player at the Quenchstone with half banked and no pouch',
     async () => {
-      h = await bootFromSave(FIXTURE, { models: true, virtualClock: true, colliderRadius: 4 });
+      h = await bootFromSave(await readAct2CFixture(ACT2_C_FIXTURES.m11Start), { models: true, virtualClock: true, colliderRadius: 4 });
       const p = cinderlandsParts()!;
       await startRun(1);
       p.run.embers = 30;
