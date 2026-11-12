@@ -5,6 +5,8 @@ export const CORE_STRINGS_EN: Record<string, string> = {
   'core.pluginFailed': 'Part of the game failed to start ({plugin}). {error}',
   'core.controls':
     'Click to look around · {forward}{left}{back}{right} move · {sprint} run · {jump} jump · Left click or 1-4 attack · {interact} interact',
+  'core.controlsPad':
+    'Right stick to look around · Left stick move · {sprint} run · {jump} jump · {attack} or {heavy} attack · {interact} interact',
   'core.leaveGuard': 'Leave the game? Unsaved progress may be lost.',
   'interact.talk': '{key} Talk to {name}',
   'interact.door': '{key} Open',

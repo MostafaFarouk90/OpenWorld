@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { InputContext } from '../actions';
 import { GamepadInput } from './GamepadInput';
-import { CHOICE_ARM_S, DIALOGUE_FOCUSABLE, MENU_FOCUSABLE, MenuNavigator, NAV_REPEAT, PAD_FOCUS_CLASS, pickInDirection } from './MenuNavigator';
+import { BACK_FALLBACK_S, CHOICE_ARM_S, DIALOGUE_FOCUSABLE, MENU_FOCUSABLE, MenuNavigator, NAV_REPEAT, PAD_FOCUS_CLASS, pickInDirection } from './MenuNavigator';
 import type { NavElement } from './MenuNavigator';
 import { PadBindings } from './PadBindings';
 import { PAD } from './padLayout';
@@ -19,19 +19,20 @@ class El implements NavElement {
 }
 
 /** A 2x2 grid of buttons plus a hidden one, under a menu root. */
-function world(opts: { ctx?: InputContext; empty?: boolean; pauseOpen?: boolean; dialogue?: El[] } = {}) {
+function world(opts: { ctx?: InputContext; empty?: boolean; pauseOpen?: boolean; dialogue?: El[]; extra?: El[] } = {}) {
   const a = new El('a', 0, 0);
   const b = new El('b', 100, 0);
   const c = new El('c', 0, 40);
   const d = new El('d', 100, 40);
   const hidden = new El('hidden', 0, 80, 0, 0);
-  const menu = opts.empty ? [] : [a, b, c, d, hidden];
+  const menu = opts.empty ? [] : [a, b, c, d, hidden, ...(opts.extra ?? [])];
   const state = { ctx: opts.ctx ?? ('menu' as InputContext), pauseOpen: !!opts.pauseOpen, dialogue: opts.dialogue ?? [] };
   const keys: string[] = [];
   const back = vi.fn();
+  const rootObj = { querySelectorAll: (sel: string) => (sel === DIALOGUE_FOCUSABLE ? state.dialogue : sel === MENU_FOCUSABLE ? menu : []) };
   const nav = new MenuNavigator({
     context: () => state.ctx,
-    root: () => ({ querySelectorAll: (sel: string) => (sel === DIALOGUE_FOCUSABLE ? state.dialogue : sel === MENU_FOCUSABLE ? menu : []) }),
+    root: () => rootObj,
     pauseMenu: () => ({ isOpen: state.pauseOpen, back }),
     key: (code, o) => void keys.push(o?.shift ? `Shift+${code}` : code),
   });
@@ -134,6 +135,23 @@ describe('MenuNavigator in a menu', () => {
     tap(PAD.RB);
     tap(PAD.LB);
     expect(keys).toEqual(['Escape', 'Escape', 'Tab', 'Shift+Tab']);
+  });
+
+  it('B on a menu that ignores Escape presses its Close button a moment later; one that closes is left alone', () => {
+    const close = Object.assign(new El('close', 0, 120), { textContent: 'Close' });
+    const w = world({ extra: [close] });
+    w.nav.frame(0.016, w.pad);
+    w.tap(PAD.B);
+    w.nav.frame(0.1, w.pad);
+    expect(close.click).not.toHaveBeenCalled();
+    w.nav.frame(BACK_FALLBACK_S, w.pad);
+    expect(close.click).toHaveBeenCalledTimes(1);
+    const v = world({ extra: [close] });
+    v.nav.frame(0.016, v.pad);
+    v.tap(PAD.B);
+    v.state.ctx = 'gameplay'; // the menu closed on Escape
+    v.nav.frame(BACK_FALLBACK_S, v.pad);
+    expect(close.click).toHaveBeenCalledTimes(1);
   });
 
   it("G1's pause menu backs out through its service, not Escape (the fixed ticks are paused)", () => {

@@ -35,6 +35,10 @@ export const PAD_FOCUS_CLASS = 'owg-pad-focus';
 export const NAV_REPEAT = { first: 0.4, every: 0.12 };
 /** Dialogue choices take A only this long after they appear (or after a D-pad move), so tapping A through lines never picks one. */
 export const CHOICE_ARM_S = 0.4;
+/** After B sends Escape, a menu still open this much later is closed through its own Close (or Back) button. */
+export const BACK_FALLBACK_S = 0.25;
+/** Buttons B may press when a menu ignores Escape (the inventory and skills screens close only on their own key). */
+const CLOSE_LABEL = /^\s*(close|back|leave|done|cancel)\s*$/i;
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 const DIR_KEYS: Record<Dir, string> = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
@@ -90,6 +94,7 @@ export class MenuNavigator implements PadInterceptor {
   private stickDir: Dir | null = null;
   /** Seconds the dialogue choices have been on screen; null outside dialogue choices. */
   private choicesFor: number | null = null;
+  private backPending: { root: NavRoot | null; t: number } | null = null;
 
   constructor(private readonly deps: MenuNavigatorDeps) {}
 
@@ -129,7 +134,10 @@ export class MenuNavigator implements PadInterceptor {
     if (button === PAD.B || button === PAD.START) {
       const pm = this.deps.pauseMenu();
       if (pm?.isOpen) pm.back();
-      else this.deps.key('Escape');
+      else {
+        this.deps.key('Escape');
+        this.backPending = { root: this.deps.root(), t: 0 };
+      }
       this.current = null;
       return true;
     }
@@ -143,6 +151,14 @@ export class MenuNavigator implements PadInterceptor {
   frame(dt: number, pad: GamepadInput): void {
     // Keyboard and mouse players never see the ring or have focus moved under them.
     const mode = pad.active ? this.mode() : null;
+    if (this.backPending) {
+      this.backPending.t += dt > 0 ? dt : 0;
+      if (this.backPending.t >= BACK_FALLBACK_S) {
+        const was = this.backPending.root;
+        this.backPending = null;
+        if (mode === 'menu' && was !== null && this.deps.root() === was) this.closeByButton();
+      }
+    }
     if (mode === 'dialogue') this.choicesFor = (this.choicesFor ?? 0) + (dt > 0 ? dt : 0);
     else this.choicesFor = null;
     if (!mode) {
@@ -169,11 +185,21 @@ export class MenuNavigator implements PadInterceptor {
     }
     const dir = this.held ?? this.stickDir;
     if (!dir || !(dt > 0)) return;
-    this.heldFor += dt;
+    // One long frame (a hitch, a slow machine) counts as at most 0.1 s, so it never fires a burst of repeats.
+    this.heldFor += Math.min(dt, 0.1);
     if (this.heldFor >= this.nextRepeat) {
       this.nextRepeat += NAV_REPEAT.every;
       this.move(dir, mode);
     }
+  }
+
+  private closeByButton(): void {
+    const close = this.candidates('menu').find((el) => {
+      const e = el as NavElement & { textContent?: string | null; getAttribute?(n: string): string | null };
+      const id = e.getAttribute?.('data-id') ?? '';
+      return id === 'close' || id === 'back' || CLOSE_LABEL.test(e.textContent ?? '');
+    });
+    close?.click();
   }
 
   private candidates(mode: 'menu' | 'dialogue'): NavElement[] {

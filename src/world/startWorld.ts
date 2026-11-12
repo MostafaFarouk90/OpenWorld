@@ -115,7 +115,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     ctx.systems.add({ id: 'world.blockingDummies', fixedPhase: 'afterCombat', order: 50, fixedUpdate: (dt) => dummies.updateBlocking(dt) });
   }
   const { strings, hud, events } = game.ctx;
-  const overlay = createOverlay(hud, strings, input.bindings);
+  const overlay = createOverlay(hud, strings, input.bindings, () => input.pad.active);
   const damageNumbers = new DamageNumberSprites(scene);
   const params = new URLSearchParams(window.location.search);
   if (params.has('debug')) installDebugKeys(world);
@@ -294,7 +294,7 @@ interface Overlay {
 }
 
 /** Status, error, hit counter and controls hint as a HUD widget in the top-left slot. */
-function createOverlay(hud: Game['ctx']['hud'], strings: StringTable, bindings: InputBindings): Overlay {
+function createOverlay(hud: Game['ctx']['hud'], strings: StringTable, bindings: InputBindings, padActive?: () => boolean): Overlay {
   const panel = document.createElement('div');
   panel.style.cssText =
     'max-width:min(560px,calc(100vw - 24px));pointer-events:none;' +
@@ -308,6 +308,17 @@ function createOverlay(hud: Game['ctx']['hud'], strings: StringTable, bindings: 
   hud.mount('top-left', { id: 'core.overlay', element: panel, order: 0 });
   const refreshControls = (): void => {
     const g = (a: Parameters<InputBindings['glyph']>[0]) => bindings.glyph(a);
+    // G2: with the controller in use the four move keys are one stick.
+    if (padActive?.()) {
+      help.textContent = strings.t('core.controlsPad', {
+        sprint: g('sprint'),
+        jump: g('jump'),
+        attack: g('attack1'),
+        heavy: g('attack2'),
+        interact: g('interact'),
+      });
+      return;
+    }
     help.textContent = strings.t('core.controls', {
       forward: g('moveForward'),
       left: g('moveLeft'),
