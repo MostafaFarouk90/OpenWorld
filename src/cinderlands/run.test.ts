@@ -309,3 +309,107 @@ describe('containment open area', () => {
     expect(c.isOpen(SITE.x, SITE.z)).toBe(false);
   });
 });
+
+describe('rift run, review fixes', () => {
+  it('a POI left and woken again brings back only the members not yet paid for', async () => {
+    const { run, live, moveTo } = await started();
+    const poi = run.manifest!.pois.find((p) => p.type === 'ember-camp')!;
+    moveTo(poi.x, poi.z);
+    run.tick(1 / 60);
+    const lp = run.pois.get(poi.id)!;
+    const first = lp.actors.size;
+    const [a, b] = [...lp.actors];
+    run.onActorDied(a, 'blighted-soldier');
+    run.onActorDied(b, 'blighted-soldier');
+    moveTo(poi.x + 600, poi.z);
+    run.tick(1 / 60);
+    moveTo(poi.x, poi.z);
+    run.tick(1 / 60);
+    expect(lp.actors.size).toBe(first - 2);
+    const paid = run.embers;
+    for (const x of [...live.keys()]) if (run.isRunActor(x)) run.onActorDied(x, 'ember-hound');
+    expect(lp.state).toBe('cleared');
+    // Leave and come back: a cleared POI never wakes again.
+    moveTo(poi.x + 600, poi.z);
+    run.tick(1 / 60);
+    moveTo(poi.x, poi.z);
+    run.tick(1 / 60);
+    expect(lp.actors.size).toBe(0);
+    expect(run.embers).toBeGreaterThan(paid);
+  });
+
+  it('a death on the way home ends the run as a death, not a full payout', async () => {
+    let release: (v: { ok: boolean }) => void = () => undefined;
+    const { run, flags, ports } = await started();
+    ports.teleport = () => new Promise((r) => (release = r));
+    run.wardenDown = true;
+    run.embers = 40;
+    const leaving = run.leave();
+    expect(flags.get(RUN_FLAG)).toBe(false);
+    expect(flags.get('cinder.run.inside')).toBe(true); // no pouch while still in the rift
+    run.onPlayerDied();
+    release({ ok: true });
+    expect(await leaving).toBeNull();
+    const s = run.onPlayerRespawned();
+    expect(s?.outcome).toBe('died');
+    expect(s!.kept).toBe(20);
+    expect(flags.get('cinder.run.inside')).toBe(false);
+  });
+
+  it('a way home that is not ready keeps the run going', async () => {
+    const { run, flags, ports } = await started();
+    ports.teleport = async () => ({ ok: false });
+    expect(await run.leave()).toBeNull();
+    expect(run.active).toBe(true);
+    expect(flags.get(RUN_FLAG)).toBe(true);
+  });
+
+  it('a load during the start stops it cold: no hold, no ground, no flag', async () => {
+    let release: () => void = () => undefined;
+    const h = makePorts({ saveNow: () => new Promise<void>((r) => (release = r)) });
+    const run = new RiftRun(h.ports, new CinderMeta());
+    const p = run.start({ seed: SEED, fullMode: false });
+    run.abandon();
+    release();
+    expect(await p).toBe(false);
+    expect(h.calls.suspended).toBe(0);
+    expect(h.calls.terrain.every((t) => t === null)).toBe(true);
+    expect(run.phase).toBe('idle');
+    h.ports.saveNow = async () => undefined;
+    expect(await run.start({ seed: SEED, fullMode: false })).toBe(true);
+  });
+
+  it('a port that throws while starting tears everything down', async () => {
+    const h = makePorts({
+      openSite: () => {
+        throw new Error('duplicate');
+      },
+    });
+    const run = new RiftRun(h.ports, new CinderMeta());
+    expect(await run.start({ seed: SEED, fullMode: false })).toBe(false);
+    expect(run.phase).toBe('idle');
+    expect(h.calls.released).toBe(1);
+    expect(h.calls.terrain.at(-1)).toBeNull();
+  });
+
+  it('a failed entry brings the player home before the ground goes', async () => {
+    const trips: Array<{ x: number }> = [];
+    const h = makePorts({
+      teleport: async (f) => {
+        trips.push(f);
+        return { ok: trips.length > 1 };
+      },
+    });
+    const run = new RiftRun(h.ports, new CinderMeta());
+    expect(await run.start({ seed: SEED, fullMode: false })).toBe(false);
+    expect(trips.length).toBe(2);
+    expect(trips[1].x).toBe(965);
+  });
+
+  it('saves once more after a run is banked', async () => {
+    const { run, calls } = await started();
+    const before = calls.saves;
+    await run.leave();
+    expect(calls.saves).toBe(before + 1);
+  });
+});

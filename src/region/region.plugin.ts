@@ -1,6 +1,7 @@
 // Plugin `region`: lays the Brightwater tutorial footprint onto the terrain (anchors, triggers, greybox
 // structures, props, the scarecrow, barley), exposes the `region` service and reports region changes.
 import { modelLibraryFor } from '../assets/swap/ModelLibrary';
+import { inSiteBox } from '../cinderlands/domain';
 import { heightAt } from '../terrain/heightfield';
 import { BuildingLookup } from './buildingLookup';
 import { barleyVariantOf, buildBarley } from './barley';
@@ -229,7 +230,8 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           const baseAccept = grassAcceptFor(layouts, height, physics, lawn);
           // The wards' lawns grow a sparser, drier mix than the meadow outside the walls.
           const mix = cityLawnMixFor(lawn, (x, z) => Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) <= CITY_NO_GRASS_RADIUS);
-          const grass = new GrassField(height, (x, z) => !envOwns(x, z) && baseAccept(x, z), 1, undefined, mix);
+          // G4: no meadow blades in the Cinderlands site (ash ground).
+          const grass = new GrassField(height, (x, z) => !envOwns(x, z) && !inSiteBox(x, z) && baseAccept(x, z), 1, undefined, mix);
           ctx.scene.add(grass.object);
           cleanups.push(() => grass.dispose());
           cleanups.push(

@@ -111,3 +111,21 @@ export function riftOverride(x: number, z: number): number | undefined {
   if (!active || !inSiteBox(x, z)) return undefined;
   return riftHeightAt(x, z, active);
 }
+
+/** Ashfield palette (linear RGB): pale ash dunes, darker cinder in the hollows, black rock on steep faces, rust on the wall. */
+const ASH = { dune: [0.42, 0.4, 0.37], hollow: [0.26, 0.24, 0.22], rock: [0.1, 0.09, 0.09], wall: [0.32, 0.14, 0.07] } as const;
+
+/** Overwrites a chunk vertex colour inside the site box while a rift is live; does nothing elsewhere. */
+export function riftColorAt(x: number, z: number, h: number, up: number, out: Float32Array, o: number): void {
+  if (!active || !inSiteBox(x, z)) return;
+  const t = BIOMES[active.biome].terrain;
+  const lift = smooth(t.base - 6, t.base + t.hills * 0.8, h);
+  const steep = 1 - smooth(0.72, 0.9, up);
+  const wall = smooth(active.radius - 40, active.radius + ASH_WALL_WIDTH * 0.5, Math.hypot(x - SITE.x, z - SITE.z));
+  for (let k = 0; k < 3; k++) {
+    let c = ASH.hollow[k] + (ASH.dune[k] - ASH.hollow[k]) * lift;
+    c += (ASH.rock[k] - c) * steep;
+    c += (ASH.wall[k] - c) * wall;
+    out[o + k] = c;
+  }
+}

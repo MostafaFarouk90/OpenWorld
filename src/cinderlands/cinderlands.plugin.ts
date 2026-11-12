@@ -122,7 +122,6 @@ export function setupCinderlands(ctx: GameContext): () => void {
     return () => u.forEach((f) => f());
   };
 
-  let runSite: { x: number; z: number } | null = null;
   const ports: RunPorts = {
     playerLevel: () => progression()?.level ?? 1,
     classId,
@@ -146,10 +145,7 @@ export function setupCinderlands(ctx: GameContext): () => void {
       else ws?.clearCheckpoint(RIFT_CHECKPOINT);
     },
     pauseKillXp: () => progression()?.pauseKillXp('cinderlands') ?? (() => {}),
-    setTerrain: (p) => {
-      setRiftTerrain(p);
-      runSite = p ? { x: SITE.x, z: SITE.z } : null;
-    },
+    setTerrain: (p) => setRiftTerrain(p),
     openSite: (radius) => {
       const c = ctx.services.get('containment');
       if (!c) return () => {};
@@ -165,7 +161,13 @@ export function setupCinderlands(ctx: GameContext): () => void {
     resetGroup: (id) => ctx.services.get('enemies')?.reset(id),
     home,
     applyModifiers,
-    healthBonus: (f) => progression()?.addMaxHealthModifier('cinder.vigour', () => 1 + f) ?? (() => {}),
+    healthBonus: (f) => {
+      const a = ctx.player.actor;
+      const before = a.maxHealth;
+      const undo = progression()?.addMaxHealthModifier('cinder.vigour', () => 1 + f) ?? (() => {});
+      if (a.maxHealth > before) ctx.damage.heal(a.id, a.maxHealth - before);
+      return undo;
+    },
     damageBonus: (f, isRun) =>
       ctx.damage.addModifier('cinder.mastery', (req, target, attacker) => {
         if (attacker?.id === playerId() && isRun(target.id)) req.amount *= 1 + f;
@@ -204,8 +206,24 @@ export function setupCinderlands(ctx: GameContext): () => void {
   const loose = ctx.events as unknown as { on(name: string, fn: () => void): () => void };
   offs.push(loose.on('settings.quitting', () => run.abandon()));
 
-  ctx.systems.add({ id: 'cinderlands.run', fixedPhase: 'rules', order: 470, fixedUpdate: (dt) => run.tick(dt) });
-  offs.push(() => undefined);
+  // G1's pause menu, looked up lazily (its plugin may set up after this one): "Leave expedition" while a run is live.
+  let menuAdded = false;
+  const addMenuItem = (): void => {
+    if (menuAdded) return;
+    const pauseMenu = svc<PauseMenuLike>('pauseMenu');
+    if (!pauseMenu?.addItem) return;
+    menuAdded = true;
+    offs.push(pauseMenu.addItem({ id: 'cinder-leave', labelKey: 'cinder.menu.leave', confirmKey: 'cinder.menu.leave.confirm', when: () => run.active, onSelect: () => void run.leave().then(report) }));
+  };
+  ctx.systems.add({
+    id: 'cinderlands.run',
+    fixedPhase: 'rules',
+    order: 470,
+    fixedUpdate: (dt) => {
+      addMenuItem();
+      run.tick(dt);
+    },
+  });
 
   // ---- interactables ----
   const archAt = (out: THREE.Vector3): THREE.Vector3 => {
@@ -281,22 +299,17 @@ export function setupCinderlands(ctx: GameContext): () => void {
     }),
   );
 
-  // G1's pause menu, when it is there: "Leave expedition" while a run is live.
-  const pauseMenu = svc<PauseMenuLike>('pauseMenu');
-  if (pauseMenu?.addItem) {
-    offs.push(pauseMenu.addItem({ id: 'cinder-leave', labelKey: 'cinder.menu.leave', confirmKey: 'cinder.menu.leave.confirm', when: () => run.active, onSelect: () => void run.leave().then(report) }));
-  }
-
   // ---- look: the arch, the exit and the HUD line (browser only) ----
   if (ctx.camera) offs.push(mountVisuals(ctx, run, archAt, exitAt, unlocked));
   if (typeof document !== 'undefined') offs.push(mountHud(ctx, run, t));
 
   parts = { run, meta, board: boardModel, unlocked, fullMode };
+  // Dev builds only: a handle for smoke runs (compiled out of the live site).
+  if (import.meta.env?.DEV && typeof window !== 'undefined') Object.assign(window, { __cinder: parts });
   return () => {
     run.abandon();
     for (const f of offs.reverse()) f();
     setRiftTerrain(null);
-    void runSite;
     parts = null;
   };
 }

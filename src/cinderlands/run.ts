@@ -10,6 +10,8 @@ import { formatSeed, runSeedValue, seededRng, type RunSeed } from './seed';
 import { CINDER_KINDS, GROUP_SIZE, POOL_PER_KIND, WARDEN_SPAWNER, poolId, type CinderKind } from './spawners';
 
 export const RUN_FLAG = 'cinder.run.active';
+/** Set from entry until the run is torn down (past RUN_FLAG's early release on the way home): a death here drops no pouch. */
+export const INSIDE_FLAG = 'cinder.run.inside';
 /** POIs wake inside this distance and sleep (despawn, uncleared) past the second. */
 export const POI_WAKE = 180;
 export const POI_SLEEP = 260;
@@ -101,6 +103,12 @@ interface LivePoi {
   state: 'asleep' | 'awake' | 'cleared';
   groups: string[];
   actors: Set<string>;
+  /** Members already paid for, by kind: a POI that sleeps and wakes again brings back only the rest. */
+  gone: Map<CinderKind, number>;
+  /** Live actor -> kind, to count `gone`. */
+  kinds: Map<string, CinderKind>;
+  /** Mystery rifts: rolled on the first wake. */
+  cache?: boolean;
 }
 
 type Phase = 'idle' | 'entering' | 'active' | 'leaving';
@@ -128,6 +136,7 @@ export class RiftRun {
   private patrolTimer = 0;
   private undo: Array<() => void> = [];
   private rng = seededRng(1);
+  private token = 0;
   last: RunSummary | null = null;
 
   constructor(
@@ -145,6 +154,26 @@ export class RiftRun {
   async start(opts: RunStartOptions): Promise<boolean> {
     if (this.phase !== 'idle') return false;
     this.phase = 'entering';
+    const token = ++this.token;
+    try {
+      return await this.enter(opts, token);
+    } catch (e) {
+      this.ports.warn(`the run failed to start: ${String(e)}`);
+      if (this.token === token) {
+        this.teardown();
+        this.phase = 'idle';
+        this.ports.toast('cinder.toast.failed');
+      }
+      return false;
+    }
+  }
+
+  /** A later start, a load or a quit since `token` was taken: the old start must stop where it is. */
+  private stale(token: number): boolean {
+    return this.token !== token || this.phase !== 'entering';
+  }
+
+  private async enter(opts: RunStartOptions, token: number): Promise<boolean> {
     const { seed, fullMode } = opts;
     const biome = BIOMES[seed.biome];
     const lv = runLevel(this.ports.playerLevel(), biome.offset, seed.heat);
@@ -167,14 +196,16 @@ export class RiftRun {
     this.patrolGroups = [];
     this.patrolTimer = PATROL_EVERY;
     for (const k of CINDER_KINDS) this.freeGroups.set(k, Array.from({ length: POOL_PER_KIND }, (_, n) => poolId(k, n)));
-    for (const p of this.manifest.pois) this.pois.set(p.id, { poi: p, state: 'asleep', groups: [], actors: new Set() });
+    for (const p of this.manifest.pois) this.pois.set(p.id, { poi: p, state: 'asleep', groups: [], actors: new Set(), gone: new Map(), kinds: new Map() });
 
     // Save at home first (the run itself is never saved), then hold saves until the run ends.
     await this.ports.saveNow();
+    if (this.stale(token)) return false;
     this.undo.push(this.ports.suspendSaves());
     this.ports.setTerrain(this.params);
     this.undo.push(this.ports.openSite(this.params.radius));
     this.ports.setFlag(RUN_FLAG, true);
+    this.ports.setFlag(INSIDE_FLAG, true);
     this.ports.setRespawnHome(true);
     // D2 (a): no kill XP and no gold during a run; Embers only.
     this.undo.push(this.ports.pauseKillXp());
@@ -186,11 +217,18 @@ export class RiftRun {
 
     const e = this.manifest.entry;
     const res = await this.ports.teleport({ x: e.x, y: this.ports.groundAt(e.x, e.z), z: e.z }, e.yaw);
+    if (this.stale(token)) return false;
     if (!res.ok) {
       this.ports.warn('the rift entry never became solid; the run is called off');
-      this.teardown();
-      this.phase = 'idle';
-      this.ports.toast('cinder.toast.failed');
+      // A safe teleport that gives up may still have put the player at the target: bring them home before the ground goes.
+      this.ports.setFlag(RUN_FLAG, false);
+      const home = this.ports.home();
+      await this.ports.teleport(home.feet, home.yaw);
+      if (this.token === token) {
+        this.teardown();
+        this.phase = 'idle';
+        this.ports.toast('cinder.toast.failed');
+      }
       return false;
     }
     this.startedAt = this.ports.now();
@@ -265,7 +303,9 @@ export class RiftRun {
       this.ports.toast('cinder.toast.warden');
       return;
     }
-    if (lp.poi.type === 'mystery-rift' && this.rng.next() < 0.5) {
+    // A mystery rift is a cache or an ambush once and for all (no re-roll by walking away and back).
+    if (lp.poi.type === 'mystery-rift' && lp.cache === undefined) lp.cache = this.rng.next() < 0.5;
+    if (lp.poi.type === 'mystery-rift' && lp.cache) {
       // A cache, not an ambush.
       this.pay(EMBERS.cache);
       lp.state = 'cleared';
@@ -279,7 +319,11 @@ export class RiftRun {
   private spawnRecipe(lp: LivePoi, at: Vec3, recipe: ReadonlyArray<{ kind: CinderKind; count: number }>): void {
     const s = this.scale();
     for (const r of recipe) {
-      let left = r.count + this.extra();
+      const paid = lp.gone.get(r.kind) ?? 0;
+      lp.gone.set(r.kind, 0);
+      let left = r.count + this.extra() - paid;
+      // `gone` is spent against this wake's counts; what remains of it carries to the next wake.
+      if (left < 0) lp.gone.set(r.kind, -left);
       while (left > 0) {
         const g = this.take(r.kind);
         if (!g) break;
@@ -288,6 +332,7 @@ export class RiftRun {
         lp.groups.push(g);
         for (const id of this.ports.spawnGroup(g, { at, count: n, ...s })) {
           lp.actors.add(id);
+          lp.kinds.set(id, r.kind);
           this.actorPoi.set(id, lp);
         }
       }
@@ -307,6 +352,7 @@ export class RiftRun {
   private sleep(lp: LivePoi): void {
     for (const id of lp.actors) this.actorPoi.delete(id);
     lp.actors.clear();
+    lp.kinds.clear();
     this.release(lp.groups);
     lp.groups = [];
     lp.state = 'asleep';
@@ -376,6 +422,11 @@ export class RiftRun {
       return;
     }
     where.actors.delete(actorId);
+    const k = where.kinds.get(actorId);
+    if (k) {
+      where.kinds.delete(actorId);
+      where.gone.set(k, (where.gone.get(k) ?? 0) + 1);
+    }
     if (where.actors.size === 0 && (where.poi.type !== 'warden' || this.wardenDown)) this.clear(where);
   }
 
@@ -409,13 +460,23 @@ export class RiftRun {
     this.ports.setFlag(RUN_FLAG, false);
     const home = this.ports.home();
     const res = await this.ports.teleport(home.feet, home.yaw);
-    if (!res.ok) this.ports.warn('the way home was not ready; ending the run in place');
+    // A death on the way home ends the run as a death (the respawn finishes it).
+    if (this.pendingDeath) return null;
+    if (this.phase !== 'leaving') return null;
+    if (!res.ok) {
+      // Still in the rift: the run goes on, the player may try again.
+      this.ports.warn('the way home was not ready; the run goes on');
+      this.ports.setFlag(RUN_FLAG, true);
+      this.phase = 'active';
+      this.ports.toast('cinder.toast.failed');
+      return null;
+    }
     return this.finish(outcome);
   }
 
   /** The player died: the run ends with half kept; the respawn takes them home (the checkpoint). */
   onPlayerDied(): RunSummary | null {
-    if (this.phase !== 'active') return null;
+    if (this.phase !== 'active' && !(this.phase === 'leaving' && !this.pendingDeath)) return null;
     this.phase = 'leaving';
     this.pendingDeath = true;
     // The respawn goes home (the checkpoint); the site must not hold it in. The ground stays until it lands.
@@ -435,6 +496,7 @@ export class RiftRun {
   /** A load or the game going away: the run vanishes with nothing paid (it was never saved). */
   abandon(): void {
     if (this.phase === 'idle') return;
+    this.token++;
     this.pendingDeath = false;
     this.teardown();
     this.phase = 'idle';
@@ -462,7 +524,8 @@ export class RiftRun {
     this.last = summary;
     this.teardown();
     this.phase = 'idle';
-    // The release of the save hold runs the deferred save, now at home with the run banked.
+    // Bank it now: the hold's release only saves when a save was deferred meanwhile.
+    void Promise.resolve(this.ports.saveNow()).catch(() => undefined);
     return summary;
   }
 
@@ -475,6 +538,7 @@ export class RiftRun {
     this.actorPoi.clear();
     this.ports.setRespawnHome(false);
     this.ports.setFlag(RUN_FLAG, false);
+    this.ports.setFlag(INSIDE_FLAG, false);
     this.ports.setTerrain(null);
     const undo = this.undo;
     this.undo = [];

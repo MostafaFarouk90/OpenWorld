@@ -7,6 +7,7 @@ import { chunkGround } from './ground';
 import { heightAt } from './heightfield';
 import { tintGround } from './shape/detailGround';
 import type { RiftTerrainParams } from '../cinderlands/domain';
+import { riftColorAt } from '../cinderlands/terrain';
 
 export interface ChunkRequest {
   /** World-space centre of the chunk footprint. */
@@ -181,6 +182,8 @@ export function buildChunkData(req: ChunkRequest): ChunkData {
       surfaceColor(h, ny / len, colors, v);
       tintGround(centerX - half + i * step, centerZ - half + j * step, colors, v);
       if (act2 && ground) act2.vertex(centerX - half + i * step, centerZ - half + j * step, h, ny / len, colors, v, ground, (j * row + i) * 2);
+      // G4: the live rift's own palette inside the expedition site (a no-op everywhere else).
+      riftColorAt(centerX - half + i * step, centerZ - half + j * step, h, ny / len, colors, v);
       if (h < minY) minY = h;
       if (h > maxY) maxY = h;
     }
