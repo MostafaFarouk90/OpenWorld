@@ -4,6 +4,7 @@
 
 import { buildChunkData, type ChunkRequest } from '../chunkGeometry';
 import { validateChunkRequest, type ChunkReplyMessage } from '../workerProtocol';
+import { setRiftTerrain } from '../../cinderlands/terrain';
 
 export interface WorkerReply {
   message: ChunkReplyMessage;
@@ -18,7 +19,10 @@ export function handleChunkMessage(data: unknown): WorkerReply {
   if (problem) return { message: { id, ok: false, error: problem }, transfer: [] };
 
   try {
-    const chunk = buildChunkData(raw.request as ChunkRequest);
+    const request = raw.request as ChunkRequest;
+    // G4: the worker's height module follows each request's rift (none = the world shape everywhere).
+    setRiftTerrain(request.rift ?? null);
+    const chunk = buildChunkData(request);
     return {
       message: { id, ok: true, data: chunk },
       transfer: chunk.ground

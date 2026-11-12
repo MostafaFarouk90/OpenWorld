@@ -67,6 +67,16 @@ export interface XZ {
   z: number;
 }
 
+/**
+ * G4 (additive): an open circle that may lie outside WORLD_BOUNDS and every region (the Cinderlands expedition site),
+ * open while `openWhen` holds. Live keep-ins still apply inside it.
+ */
+export interface ContainmentOpenAreaDef {
+  id: string;
+  circle: CircleXZ;
+  openWhen: FlagCondition;
+}
+
 export interface ContainmentService {
   /** True when (x, z) lies in the open area for the current flags. */
   isOpen(x: number, z: number): boolean;
@@ -84,6 +94,8 @@ export interface ContainmentService {
   addKeepIn(def: ContainmentKeepInDef): () => void;
   /** v0.9: the ids of the keep-ins live right now, registration order. */
   liveKeepIns(): string[];
+  /** G4: adds an open area (circle, may lie outside the world). Throws on a duplicate id or an empty circle; returns the undo. */
+  addOpenArea(def: ContainmentOpenAreaDef): () => void;
   /**
    * v0.9: the toast for a push from (x, z): the first live keep-in's `toastKey` when the point is outside every live
    * keep-in, else null (the caller's generic toast).
@@ -122,6 +134,7 @@ export class Containment implements ContainmentService {
   private readonly corridors = new Map<string, CorridorDef>();
   private readonly holes = new Map<string, ContainmentHoleDef>();
   private readonly keepIns = new Map<string, ContainmentKeepInDef>();
+  private readonly openAreas = new Map<string, ContainmentOpenAreaDef>();
 
   constructor(
     private readonly state: FlagReader,
@@ -163,6 +176,20 @@ export class Containment implements ContainmentService {
     };
   }
 
+  addOpenArea(def: ContainmentOpenAreaDef): () => void {
+    if (this.openAreas.has(def.id)) throw new Error(`containment: open area "${def.id}" is already registered`);
+    if (!validShape(def)) throw new Error(`containment: open area "${def.id}" has an empty shape`);
+    this.openAreas.set(def.id, def);
+    return () => {
+      if (this.openAreas.get(def.id) === def) this.openAreas.delete(def.id);
+    };
+  }
+
+  private inLiveOpenArea(x: number, z: number): boolean {
+    for (const a of this.openAreas.values()) if (inShape(a, x, z) && flagConditionHolds(a.openWhen, this.state)) return true;
+    return false;
+  }
+
   liveKeepIns(): string[] {
     return this.liveKeepInDefs().map((k) => k.id);
   }
@@ -199,7 +226,9 @@ export class Containment implements ContainmentService {
   }
 
   isOpen(x: number, z: number): boolean {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || !inBounds(x, z)) return false;
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+    if (this.openAreas.size > 0 && this.inLiveOpenArea(x, z)) return !this.outsideKeepIns(x, z, this.liveKeepInDefs());
+    if (!inBounds(x, z)) return false;
     if (this.outsideKeepIns(x, z, this.liveKeepInDefs())) return false;
     if (this.inClosedHole(x, z, this.closedHoleDefs())) return false;
     return this.inOpenArea(x, z);

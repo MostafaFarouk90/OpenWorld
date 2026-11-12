@@ -13,6 +13,7 @@ import { ACT3_MIN_FLOOR, WORLD_PROTECTED_BOXES } from './shape/act3';
 import { detailRelief } from './shape/detailRelief';
 import { wasteRelief } from './shape/waste';
 import { buildShaper } from './shaping';
+import { riftOverride } from '../cinderlands/terrain';
 
 const warpNoise = createNoise2D(TERRAIN.seed);
 const continentNoise = createNoise2D(TERRAIN.seed + 1);
@@ -108,6 +109,10 @@ const shaper = buildShaper(WORLD_SHAPE, baseHeight, WORLD_SHAPER_OPTIONS);
 
 /** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
 export function heightAt(x: number, z: number): number {
+  // G4 Cinderlands: the expedition site east of the world (outside WORLD_BOUNDS) while a rift is live; undefined
+  // everywhere else and whenever no rift is live, so the world shape is unchanged.
+  const rift = riftOverride(x, z);
+  if (rift !== undefined) return rift;
   // Act 4 (L1): the Waste's dunes, 0 outside the Waste and on every lane and site.
   return shaper.heightAt(x, z) + detailRelief(x, z) + wasteRelief(x, z);
 }

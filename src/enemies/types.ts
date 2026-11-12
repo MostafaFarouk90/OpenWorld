@@ -391,6 +391,13 @@ export interface SpawnOptions {
   moves?: readonly string[];
   healthScale?: number;
   damageScale?: number;
+  /**
+   * G4 (additive): every member's level, overriding the band, block and area rolls (the Cinderlands set it per run from
+   * the player's level and the biome offset). Rounded and clamped to 1..cap; ignored when not finite.
+   */
+  level?: number;
+  /** G4 (additive): move speed multiplier, 1..2 (the Cinderlands' Swift modifier). Not finite or out of range reads as 1. */
+  speedScale?: number;
   /** Notice the player at once. */
   aggro?: boolean;
   /**

@@ -14,6 +14,14 @@ import { heightAt } from './heightfield';
 import { buildPhysicsHeightfield, type PhysicsHeightfield } from './physicsHeightfield';
 import { LodQuadtree, type QuadNode, type QuadtreeHost } from './quadtree';
 import { WorkerPool, type WorkerFactory } from './WorkerPool';
+import { riftTerrain } from '../cinderlands/terrain';
+import { SITE_BOX } from '../cinderlands/domain';
+
+/** True when a chunk footprint overlaps the Cinderlands site box (G4). */
+export function touchesSiteBox(cx: number, cz: number, size: number): boolean {
+  const h = size / 2;
+  return cx + h > SITE_BOX.x0 && cx - h < SITE_BOX.x1 && cz + h > SITE_BOX.z0 && cz - h < SITE_BOX.z1;
+}
 
 export interface TerrainStats {
   /** Chunk meshes currently resident. */
@@ -124,6 +132,9 @@ export class TerrainManager {
       segments: TERRAIN.chunkSegments,
       skirtDepth: skirtDepthFor(node.size),
     };
+    // G4 Cinderlands: a chunk touching the expedition site carries the live rift, so the worker builds the same ground.
+    const rift = riftTerrain();
+    if (rift && touchesSiteBox(node.centerX, node.centerZ, node.size)) request.rift = rift;
     const id = this.pool.request(request, {
       onDone: (data) => {
         this.jobs.delete(node);

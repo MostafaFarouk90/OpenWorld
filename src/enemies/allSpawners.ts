@@ -21,6 +21,7 @@ import { ACT4_QUEST_SPAWNERS } from '../quests/content/act4';
 import { ACT5_QUEST_SPAWNERS } from '../quests/content/act5';
 import { WASTE_SPAWNERS } from './waste/spawners';
 import { CALDERA_AMBIENT_SPAWNERS } from './act5/spawners';
+import { CINDER_SPAWNERS } from '../cinderlands/spawners';
 import type { SpawnerDef } from './types';
 
 export const ALL_SPAWNERS: readonly SpawnerDef[] = [
@@ -46,4 +47,5 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...CALDERA_AMBIENT_SPAWNERS,
   ...EORMEN_SPAWNERS,
   ...VEY_SPAWNERS,
+  ...CINDER_SPAWNERS,
 ];

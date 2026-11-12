@@ -112,6 +112,8 @@ export class Enemy {
   readonly slug: string;
   readonly spawnerId: string | null;
   readonly damageScale: number;
+  /** G4: the spawn's `speedScale` (Swift), 1 by default. */
+  readonly speedScale: number;
   private readonly host: EnemyHost;
   private readonly mover: EnemyMover;
   private readonly steering = new Steering();
@@ -175,6 +177,8 @@ export class Enemy {
     this.slug = spawn.slug;
     this.spawnerId = spawn.spawnerId;
     this.damageScale = spawn.damageScale * (spawn.options.damageScale ?? 1);
+    const sp = spawn.options.speedScale;
+    this.speedScale = typeof sp === 'number' && Number.isFinite(sp) && sp >= 1 && sp <= 2 ? sp : 1;
     this.observerOnly = spawn.options.observerOnly ?? this.def.observerOnly ?? false;
     this.peaceful = spawn.options.peaceful === true;
     this.path = new PathFollower(() => env.nav(), (m) => host.warn(m), env.pathBudget);
@@ -641,6 +645,7 @@ export class Enemy {
       intent.face = this.facePoint;
     }
     if (status.speedScale < 1) intent.speed *= status.speedScale;
+    if (this.speedScale !== 1) intent.speed *= this.speedScale;
     this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
     if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal && senses.targetPos && intent.goal.x === senses.targetPos.x && intent.goal.z === senses.targetPos.z) {
       // A plain chase heads straight for the target (the circling goal is somewhere else); a pair spreads onto opposite flanks instead.

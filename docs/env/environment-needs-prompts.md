@@ -434,3 +434,12 @@ Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre piv
 | crack-anvil-a | a small anvil block of black iron on a stone stump, a deep crack across its face, the crack a separate emissive material named Glow (the game lights it when the anvil cracks) | the island (3; N6's crack-anvils) | scripted stand-in `public/assets/env-standin/crack-anvil-a.glb` | 1.2 x 2 x 1 |
 | spirit-flame-post-a | a slim bronze post with a shallow dish on top for a pale spirit flame, verdigris at the foot | the island (10; N6's spirit-flame posts) | scripted stand-in `public/assets/env-standin/spirit-flame-post-a.glb` | 0.6 x 0.6 x 2.2 |
 | lava-gantry-a | a heavy drawbridge gantry: a plank deck on two riveted iron girders with low chain rails, a hinge bar across the near end (-Z), the landing end toward +Z; built to lie flat over a lava channel | the Lava Stair's second and fifth channels (2; lowered by M48's gantry levers) | scripted stand-in `public/assets/env-standin/lava-gantry-a.glb` | 2.4 x 6.6 x 1.2 |
+
+## X. The Cinderlands, Rift Walks (added 2026-11-12 by G4 phase 1, "Build Cinderlands endless mode phase 1"; procedural stand-ins until these arrive)
+
+| id | prompt | where (count) | now | size (m, W x D x H) |
+| --- | --- | --- | --- | --- |
+| rift-arch-a | a free-standing arch of two leaning black-stone slabs whose tops nearly meet, the gap between them filled with a hanging sheet of orange fire (emissive material named Glow), cracked ember veins in the stone, a ring of ash on the ground under it, front (+Z) the side you walk into | beside the Quenchstone basin, 6 m east (1; `use:cinder-arch`, src/cinderlands/cinderlands.plugin.ts) | a glowing torus (`cinder-arch`) | 3 x 1.2 x 4 |
+| rift-exit-a | the same arch grown huge and steady, the fire calm and gold (emissive Glow), cinders drifting up from its foot, broken Warden armour scattered round it | the Rift Warden's ring in every expedition (1 per run; `use:cinder-exit`) | a large glowing torus (`cinder-exit`) | 6 x 2 x 7 |
+| ember-camp-a | a cold expedition camp: a ring of ash-grey tents with scorched canvas, an iron brazier, a small chest, a lone waystone-like pillar | Ember camp POIs (about 1 in 3 POIs) | nothing (the POI pad and its fight only) | 14 x 14 x 4 |
+| ruined-hamlet-a | two or three roofless cottages of grey stone half buried in ash dunes, door frames charred, a collapsed well | Ruined hamlet POIs | nothing (pad and fight only) | 20 x 20 x 5 |

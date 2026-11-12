@@ -691,7 +691,8 @@ export class CombatVerbs {
     c?.enterAction('dying');
     this.deadModifier ??= ctx.player.addMoveModifier('player-dead', { lockMove: true, lockActions: DEAD_LOCKED_ACTIONS });
     this.timeline.onDied();
-    this.pouch.drop({ ...ctx.player.feet }, this.inventory(), ctx.state.getBool('tutorial.complete'));
+    // G4 Cinderlands: a death in a rift drops no gold pouch (the rift is gone when the player wakes at the Quenchstone).
+    if (!ctx.state.getBool('cinder.run.active')) this.pouch.drop({ ...ctx.player.feet }, this.inventory(), ctx.state.getBool('tutorial.complete'));
     ctx.events.emit('player.died', {});
   }
 

@@ -2,6 +2,7 @@
 // both sides: workers reject malformed requests, and the pool ignores malformed replies.
 
 import { chunkVertexCount, type ChunkData, type ChunkRequest } from './chunkGeometry';
+import { isRiftTerrainParams } from '../cinderlands/domain';
 
 /** Upper bound on segments per chunk edge, to keep a bad request from allocating gigabytes. */
 export const MAX_SEGMENTS = 512;
@@ -33,6 +34,7 @@ export function validateChunkRequest(request: unknown): string | null {
     return `segments must be an integer in 1..${MAX_SEGMENTS}`;
   }
   if (!isFiniteNumber(skirtDepth) || skirtDepth < 0) return 'skirtDepth must be a non-negative number';
+  if (request.rift !== undefined && !isRiftTerrainParams(request.rift)) return 'rift params are malformed';
   return null;
 }
 

@@ -62,6 +62,8 @@ export const dialogueStrings: Record<string, string> = {
   // ---- Sister Aelfreda ----
   'dialogue.npc-aelfreda.shard': 'The Heartshard leaves marks on the air around you, {name}, like heat shimmering over a summer road.',
   'dialogue.npc-aelfreda.shard2': 'The ash wraiths can feel it. Steady hands and slow breaths, and come back to the chapel if you need rest.',
+  'dialogue.npc-aelfreda.cinder-rifts': "Since the courier's road, the Quenchstone has been dreaming, {name}. A rift has opened beside the basin: a door into a copy of Valdren that burns and does not end.",
+  'dialogue.npc-aelfreda.cinder-rifts-2': 'Walk it if you would. Quell what waits at the far end and the land settles a little. The embers you bring back buy small comforts for the next walk, and nothing else.',
   'dialogue.npc-aelfreda.idle': 'The brazier is lit and the stew is on, {name}. Come in out of the wind whenever you like.',
 
   // ---- Sir Gaut ----

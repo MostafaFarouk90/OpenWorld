@@ -6,6 +6,7 @@
 import { chunkGround } from './ground';
 import { heightAt } from './heightfield';
 import { tintGround } from './shape/detailGround';
+import type { RiftTerrainParams } from '../cinderlands/domain';
 
 export interface ChunkRequest {
   /** World-space centre of the chunk footprint. */
@@ -17,6 +18,8 @@ export interface ChunkRequest {
   segments: number;
   /** How far skirt vertices hang below their border vertex. */
   skirtDepth: number;
+  /** G4 Cinderlands: the live rift's params for a chunk touching the expedition site (the worker builds the same ground). */
+  rift?: RiftTerrainParams;
 }
 
 export interface ChunkData {

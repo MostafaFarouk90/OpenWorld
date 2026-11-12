@@ -169,7 +169,7 @@ export class SpawnerRegistry {
       if (slots[slot] !== null || (onlySlot !== undefined && slot !== onlySlot)) continue;
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
-      const level = this.levelFor(def, band, anchor.position);
+      const level = typeof opts.level === 'number' && Number.isFinite(opts.level) ? Math.min(LEVEL.cap, Math.max(1, Math.round(opts.level))) : this.levelFor(def, band, anchor.position);
       const area = this.areaOf(def, anchor.position) ?? undefined;
       const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
       if (def.memberAnchors?.[slot] && !own) {
